@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.1.0)"
+        required: true
 
 permissions:
   contents: write
@@ -27,6 +32,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - uses: pnpm/action-setup@v4
         with:
@@ -55,8 +62,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Pinote ${{ github.ref_name }}
+          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          releaseName: Pinote ${{ github.event.inputs.tag || github.ref_name }}
           releaseBody: "See the assets below to download Pinote for your platform."
           releaseDraft: false
           prerelease: false
