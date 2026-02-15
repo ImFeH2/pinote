@@ -17,6 +17,19 @@ pub fn run() {
             shortcut::setup_shortcuts(&handle)?;
 
             let window = app.get_webview_window("main").unwrap();
+
+            #[cfg(target_os = "macos")]
+            window_vibrancy::apply_vibrancy(
+                &window,
+                window_vibrancy::NSVisualEffectMaterial::HudWindow,
+                None,
+                None,
+            )
+            .ok();
+
+            #[cfg(target_os = "windows")]
+            window_vibrancy::apply_acrylic(&window, Some((0, 0, 0, 0))).ok();
+
             window.on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     api.prevent_close();
