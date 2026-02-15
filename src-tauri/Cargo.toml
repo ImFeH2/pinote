@@ -23,3 +23,11 @@ tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-fs = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-opener = "2"
+
+[package.metadata.release]
+tag-prefix = ""
+tag-name = "v{{version}}"
+pre-release-replacements = [
+    { file = "tauri.conf.json", search = "\"version\": \"[^\"]+\"", replace = "\"version\": \"{{version}}\"", exactly = 1 },
+    { file = "../package.json", search = "\"version\": \"[^\"]+\"", replace = "\"version\": \"{{version}}\"", exactly = 1 },
+]
