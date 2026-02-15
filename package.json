@@ -13,9 +13,7 @@
     "format": "prettier --write src",
     "format:check": "prettier --check src",
     "typecheck": "tsc --noEmit",
-    "release:patch": "cd src-tauri && cargo release patch",
-    "release:minor": "cd src-tauri && cargo release minor",
-    "release:major": "cd src-tauri && cargo release major",
+    "release": "cd src-tauri && cargo release",
     "prepare": "husky"
   },
   "lint-staged": {
