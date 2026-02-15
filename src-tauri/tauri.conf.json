@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "pinote",
+  "productName": "Pinote",
   "version": "0.1.1",
   "identifier": "im.feh2.pinote",
   "build": {
