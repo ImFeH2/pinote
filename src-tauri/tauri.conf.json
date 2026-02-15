@@ -12,9 +12,14 @@
   "app": {
     "windows": [
       {
-        "title": "pinote",
-        "width": 800,
-        "height": 600
+        "label": "main",
+        "title": "Pinote",
+        "width": 400,
+        "height": 500,
+        "decorations": false,
+        "transparent": true,
+        "resizable": true,
+        "visible": true
       }
     ],
     "security": {
