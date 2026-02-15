@@ -1,11 +1,10 @@
 [package]
 name = "pinote"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "A lightweight floating markdown scratchpad app"
+authors = ["ImFeH2 <i@feh2.im>"]
+repository = "https://github.com/ImFeH2/pinote"
+edition = "2024"
 
 [lib]
 # The `_lib` suffix may seem redundant but it is necessary
@@ -18,10 +17,9 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
-tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tauri-plugin-fs = "2.4.5"
-tauri-plugin-global-shortcut = "2.3.1"
-
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-fs = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-opener = "2"
