@@ -29,6 +29,7 @@ tauri-plugin-opener = "2"
 tag-prefix = ""
 tag-name = "v{{version}}"
 tag-message = "Release {{version}}"
+pre-release-commit-message = "chore: release Pinote v{{version}}"
 sign-commit = true
 sign-tag = true
 publish = false
