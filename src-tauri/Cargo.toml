@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "A lightweight floating markdown scratchpad app"
 authors = ["ImFeH2 <i@feh2.im>"]
 repository = "https://github.com/ImFeH2/pinote"
+license = "Apache-2.0"
 edition = "2024"
 
 [lib]
