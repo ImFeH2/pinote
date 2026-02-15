@@ -1,0 +1,8 @@
+pnpm exec lint-staged
+pnpm typecheck
+
+cd src-tauri
+cargo fmt
+git add -A src/
+cargo clippy -- -D warnings
+cargo test

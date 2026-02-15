@@ -39,10 +39,14 @@
     border-color: var(--color-border);
   }
 
-  html, body {
+  html,
+  body {
     background: transparent;
     color: var(--color-foreground);
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
     margin: 0;
     padding: 0;
     overflow: hidden;

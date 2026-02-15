@@ -22,10 +22,7 @@ export function TitleBar({
       className="flex h-9 shrink-0 items-center justify-between border-b border-border bg-background/80 px-2 backdrop-blur-sm"
     >
       <div data-tauri-drag-region className="flex-1 select-none pl-1">
-        <span
-          data-tauri-drag-region
-          className="text-xs font-medium text-muted-foreground"
-        >
+        <span data-tauri-drag-region className="text-xs font-medium text-muted-foreground">
           Pinote
         </span>
       </div>

@@ -1,13 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export function useWindowControl() {
   const [alwaysOnTop, setAlwaysOnTop] = useState(false);
-  const appWindow = getCurrentWindow();
+  const appWindow = useMemo(() => getCurrentWindow(), []);
 
   useEffect(() => {
-    appWindow.isAlwaysOnTop().then(setAlwaysOnTop).catch(() => {});
-  }, []);
+    appWindow
+      .isAlwaysOnTop()
+      .then(setAlwaysOnTop)
+      .catch(() => {});
+  }, [appWindow]);
 
   const toggleAlwaysOnTop = useCallback(async () => {
     try {
@@ -18,7 +21,7 @@ export function useWindowControl() {
     } catch (e) {
       console.error("Failed to toggle always on top:", e);
     }
-  }, []);
+  }, [appWindow]);
 
   const hideWindow = useCallback(async () => {
     try {
@@ -26,7 +29,7 @@ export function useWindowControl() {
     } catch (e) {
       console.error("Failed to hide window:", e);
     }
-  }, []);
+  }, [appWindow]);
 
   return { alwaysOnTop, toggleAlwaysOnTop, hideWindow };
 }

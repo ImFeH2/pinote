@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
   Editor as MilkdownEditorCore,
   rootCtx,
@@ -24,7 +24,9 @@ interface EditorInnerProps {
 
 function EditorInner({ defaultValue, onChange }: EditorInnerProps) {
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
   const [loading, getInstance] = useInstance();
 
   useEditor(
@@ -34,11 +36,9 @@ function EditorInner({ defaultValue, onChange }: EditorInnerProps) {
         .config((ctx) => {
           ctx.set(rootCtx, root);
           ctx.set(defaultValueCtx, defaultValue);
-          ctx
-            .get(listenerCtx)
-            .markdownUpdated((_ctx, markdown) => {
-              onChangeRef.current(markdown);
-            });
+          ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
+            onChangeRef.current(markdown);
+          });
         })
         .use(commonmark)
         .use(gfm)
@@ -88,10 +88,7 @@ function EditorInner({ defaultValue, onChange }: EditorInnerProps) {
   );
 
   return (
-    <div
-      className="mx-1 flex min-h-0 flex-1 cursor-text flex-col"
-      onClick={handleContainerClick}
-    >
+    <div className="mx-1 flex min-h-0 flex-1 cursor-text flex-col" onClick={handleContainerClick}>
       <Milkdown />
     </div>
   );

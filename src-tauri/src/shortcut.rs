@@ -5,9 +5,10 @@ use crate::window::toggle_window_visibility;
 pub fn setup_shortcuts(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let shortcut = Shortcut::new(Some(Modifiers::ALT), Code::KeyN);
 
-    app.global_shortcut().on_shortcut(shortcut, |app, _shortcut, _event| {
-        toggle_window_visibility(app);
-    })?;
+    app.global_shortcut()
+        .on_shortcut(shortcut, |app, _shortcut, _event| {
+            toggle_window_visibility(app);
+        })?;
 
     Ok(())
 }

@@ -3,9 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 type Theme = "light" | "dark";
 
 function getSystemTheme(): Theme {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function getStoredTheme(): Theme | null {
@@ -15,9 +13,7 @@ function getStoredTheme(): Theme | null {
 }
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(
-    () => getStoredTheme() ?? getSystemTheme(),
-  );
+  const [theme, setThemeState] = useState<Theme>(() => getStoredTheme() ?? getSystemTheme());
 
   const applyTheme = useCallback((t: Theme) => {
     document.documentElement.setAttribute("data-theme", t);

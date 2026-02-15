@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import {
-  readTextFile,
-  writeTextFile,
-  mkdir,
-  exists,
-  BaseDirectory,
-} from "@tauri-apps/plugin-fs";
+import { readTextFile, writeTextFile, mkdir, exists, BaseDirectory } from "@tauri-apps/plugin-fs";
 
 const DEBOUNCE_MS = 500;
 const NOTES_DIR = "notes";
