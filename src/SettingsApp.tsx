@@ -1,10 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { TitleBar } from "@/components/TitleBar";
 import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
+import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { updateToggleWindowShortcut } from "@/lib/api";
 
 const shortcutItems = [
@@ -30,6 +31,8 @@ export function SettingsApp() {
   useTheme();
   const { settings, updateSettings } = useSettings();
   const [shortcutError, setShortcutError] = useState<string | null>(null);
+  const [startupError, setStartupError] = useState<string | null>(null);
+  const [startupBusy, setStartupBusy] = useState(false);
   const opacityPercent = Math.round(settings.opacity * 100);
 
   const updateShortcut = useCallback(
@@ -58,6 +61,40 @@ export function SettingsApp() {
     },
     [updateSettings],
   );
+
+  const handleLaunchAtStartup = useCallback(async () => {
+    const next = !settings.launchAtStartup;
+    setStartupBusy(true);
+    try {
+      if (next) {
+        await enable();
+      } else {
+        await disable();
+      }
+      setStartupError(null);
+      updateSettings({ launchAtStartup: next });
+    } catch (error) {
+      setStartupError(getErrorMessage(error));
+    } finally {
+      setStartupBusy(false);
+    }
+  }, [settings.launchAtStartup, updateSettings]);
+
+  useEffect(() => {
+    let active = true;
+    isEnabled()
+      .then((enabled) => {
+        if (!active) return;
+        updateSettings({ launchAtStartup: enabled });
+      })
+      .catch((error) => {
+        if (!active) return;
+        setStartupError(getErrorMessage(error));
+      });
+    return () => {
+      active = false;
+    };
+  }, [updateSettings]);
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
@@ -115,6 +152,27 @@ export function SettingsApp() {
             className="h-1 w-full cursor-pointer accent-primary"
           />
         </div>
+
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-medium text-muted-foreground">Launch At Startup</div>
+          <button
+            type="button"
+            disabled={startupBusy}
+            onClick={() => {
+              void handleLaunchAtStartup();
+            }}
+            className={cn(
+              "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+              settings.launchAtStartup
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-muted-foreground hover:bg-accent",
+              startupBusy && "cursor-not-allowed opacity-60",
+            )}
+          >
+            {settings.launchAtStartup ? "Enabled" : "Disabled"}
+          </button>
+        </div>
+        {startupError && <div className="text-xs text-destructive">{startupError}</div>}
 
         <div className="flex flex-col gap-2">
           <div className="text-xs font-medium text-muted-foreground">Shortcuts</div>

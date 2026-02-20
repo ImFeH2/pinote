@@ -6,6 +6,7 @@ export interface Settings {
   theme: Theme;
   alwaysOnTop: boolean;
   opacity: number;
+  launchAtStartup: boolean;
   shortcuts: {
     toggleWindow: string;
     toggleAlwaysOnTop: string;
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   alwaysOnTop: false,
   opacity: 1.0,
+  launchAtStartup: false,
   shortcuts: {
     toggleWindow: "Alt+N",
     toggleAlwaysOnTop: "Ctrl+Shift+T",
