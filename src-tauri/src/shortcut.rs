@@ -23,11 +23,11 @@ struct StoredShortcuts {
 pub fn setup_shortcuts(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let shortcut = load_toggle_window_shortcut(app)
         .unwrap_or_else(|| DEFAULT_TOGGLE_WINDOW_SHORTCUT.to_string());
-    update_toggle_window_shortcut(app, &shortcut).map_err(std::io::Error::other)?;
+    register_toggle_window_shortcut(app, &shortcut).map_err(std::io::Error::other)?;
     Ok(())
 }
 
-pub fn update_toggle_window_shortcut(
+fn register_toggle_window_shortcut(
     app: &tauri::AppHandle,
     shortcut_text: &str,
 ) -> Result<(), String> {

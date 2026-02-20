@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
 import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { Settings } from "@/stores/settings";
 
 type SettingsEventPayload = {
@@ -8,12 +8,46 @@ type SettingsEventPayload = {
   source: string;
 };
 
-export async function openSettingsWindow() {
-  await invoke("open_settings_window");
+const SETTINGS_WINDOW_LABEL = "settings";
+
+async function createSettingsWindow() {
+  const settingsWindow = new WebviewWindow(SETTINGS_WINDOW_LABEL, {
+    url: "index.html?view=settings",
+    title: "Pinote Settings",
+    width: 360,
+    height: 420,
+    minWidth: 320,
+    minHeight: 360,
+    decorations: false,
+    resizable: true,
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    settingsWindow
+      .once("tauri://created", () => {
+        resolve();
+      })
+      .catch(reject);
+    settingsWindow
+      .once("tauri://error", (event) => {
+        reject(event.payload);
+      })
+      .catch(reject);
+  });
+
+  await settingsWindow.onCloseRequested((event) => {
+    event.preventDefault();
+    void settingsWindow.hide();
+  });
+
+  return settingsWindow;
 }
 
-export async function updateToggleWindowShortcut(shortcut: string) {
-  await invoke("update_toggle_window_shortcut", { shortcut });
+export async function openSettingsWindow() {
+  const existing = await WebviewWindow.getByLabel(SETTINGS_WINDOW_LABEL);
+  const settingsWindow = existing ?? (await createSettingsWindow());
+  await settingsWindow.show();
+  await settingsWindow.setFocus();
 }
 
 export async function emitSettingsUpdated(settings: Settings) {

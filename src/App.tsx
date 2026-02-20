@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
 import { Editor } from "@/components/Editor";
 import { TitleBar } from "@/components/TitleBar";
 import { useTheme } from "@/hooks/useTheme";
@@ -15,6 +17,8 @@ function App({ noteId }: { noteId: string }) {
   const { toggleAlwaysOnTop, hideWindow } = useWindowControl();
   const { settings } = useSettings();
   const [initialContent, setInitialContent] = useState<string | null>(null);
+  const hasAppliedShortcutUpdate = useRef(false);
+  const activeToggleShortcut = useRef(settings.shortcuts.toggleWindow);
 
   useEffect(() => {
     load().then((content) => {
@@ -30,8 +34,60 @@ function App({ noteId }: { noteId: string }) {
   );
 
   const openSettings = useCallback(() => {
-    openSettingsWindow().catch(() => {});
+    openSettingsWindow().catch((error) => {
+      console.error("Failed to open settings window:", error);
+    });
   }, []);
+
+  const toggleWindowVisibilityByShortcut = useCallback(async () => {
+    const appWindow = getCurrentWindow();
+    try {
+      const visible = await appWindow.isVisible();
+      if (visible) {
+        await appWindow.hide();
+        return;
+      }
+      await appWindow.show();
+      await appWindow.setFocus();
+    } catch (error) {
+      console.error("Failed to toggle window visibility:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasAppliedShortcutUpdate.current) {
+      hasAppliedShortcutUpdate.current = true;
+      activeToggleShortcut.current = settings.shortcuts.toggleWindow;
+      return;
+    }
+
+    const previousShortcut = activeToggleShortcut.current;
+    const nextShortcut = settings.shortcuts.toggleWindow;
+    if (previousShortcut === nextShortcut) return;
+
+    let disposed = false;
+    const updateShortcutRegistration = async () => {
+      try {
+        await register(nextShortcut, (event) => {
+          if (event.state !== "Pressed") return;
+          void toggleWindowVisibilityByShortcut();
+        });
+        if (disposed) {
+          await unregister(nextShortcut).catch(() => {});
+          return;
+        }
+        await unregister(previousShortcut).catch(() => {});
+        activeToggleShortcut.current = nextShortcut;
+      } catch (error) {
+        console.error(`Failed to update global shortcut ${nextShortcut}:`, error);
+      }
+    };
+
+    void updateShortcutRegistration();
+    return () => {
+      disposed = true;
+    };
+  }, [settings.shortcuts.toggleWindow, toggleWindowVisibilityByShortcut]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

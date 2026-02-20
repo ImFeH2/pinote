@@ -6,7 +6,6 @@ import { TitleBar } from "@/components/TitleBar";
 import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { updateToggleWindowShortcut } from "@/lib/api";
 
 const shortcutItems = [
   { key: "toggleWindow", label: "Toggle Window" },
@@ -36,20 +35,11 @@ export function SettingsApp() {
   const opacityPercent = Math.round(settings.opacity * 100);
 
   const updateShortcut = useCallback(
-    async (key: (typeof shortcutItems)[number]["key"], value: string) => {
+    (key: (typeof shortcutItems)[number]["key"], value: string) => {
       const normalized = normalizeShortcut(value);
       if (!normalized) {
         setShortcutError("Invalid shortcut.");
         return;
-      }
-
-      if (key === "toggleWindow") {
-        try {
-          await updateToggleWindowShortcut(normalized);
-        } catch (error) {
-          setShortcutError(getErrorMessage(error));
-          return;
-        }
       }
 
       setShortcutError(null);
