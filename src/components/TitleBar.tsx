@@ -12,7 +12,9 @@ export function TitleBar({ title, showSettings, onOpenSettings }: TitleBarProps)
   const appWindow = getCurrentWindow();
 
   const handleMinimize = useCallback(() => {
-    appWindow.minimize().catch(() => {});
+    appWindow.minimize().catch((error) => {
+      console.error("Failed to minimize window:", error);
+    });
   }, [appWindow]);
 
   const handleToggleMaximize = useCallback(() => {
@@ -24,11 +26,15 @@ export function TitleBar({ title, showSettings, onOpenSettings }: TitleBarProps)
         }
         return appWindow.maximize();
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.error("Failed to toggle maximize window:", error);
+      });
   }, [appWindow]);
 
   const handleClose = useCallback(() => {
-    appWindow.close().catch(() => {});
+    appWindow.close().catch((error) => {
+      console.error("Failed to close window:", error);
+    });
   }, [appWindow]);
 
   return (
