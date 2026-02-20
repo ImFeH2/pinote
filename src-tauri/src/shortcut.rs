@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::str::FromStr;
 use tauri::Manager;
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 use crate::window::toggle_window_visibility;
 
@@ -40,7 +40,10 @@ pub fn update_toggle_window_shortcut(
         .map_err(|error| format!("failed to clear global shortcuts: {error}"))?;
 
     manager
-        .on_shortcut(shortcut, |app, _shortcut, _event| {
+        .on_shortcut(shortcut, |app, _shortcut, event| {
+            if event.state != ShortcutState::Pressed {
+                return;
+            }
             toggle_window_visibility(app);
         })
         .map_err(|error| {
