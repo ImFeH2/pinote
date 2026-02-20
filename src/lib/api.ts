@@ -12,6 +12,10 @@ export async function openSettingsWindow() {
   await invoke("open_settings_window");
 }
 
+export async function updateToggleWindowShortcut(shortcut: string) {
+  await invoke("update_toggle_window_shortcut", { shortcut });
+}
+
 export async function emitSettingsUpdated(settings: Settings) {
   await emit<SettingsEventPayload>("settings-updated", {
     settings,

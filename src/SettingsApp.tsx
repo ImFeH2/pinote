@@ -1,7 +1,18 @@
+import { useCallback, useState } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { TitleBar } from "@/components/TitleBar";
+import { ShortcutInput } from "@/components/ShortcutInput";
+import { normalizeShortcut } from "@/lib/shortcuts";
+import { updateToggleWindowShortcut } from "@/lib/api";
+
+const shortcutItems = [
+  { key: "toggleWindow", label: "Toggle Window" },
+  { key: "toggleAlwaysOnTop", label: "Toggle Always On Top" },
+  { key: "toggleTheme", label: "Toggle Theme" },
+  { key: "hideWindow", label: "Hide Window" },
+] as const;
 
 const themeOptions = [
   { value: "system", label: "System" },
@@ -9,10 +20,44 @@ const themeOptions = [
   { value: "dark", label: "Dark" },
 ] as const;
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return "Unknown error";
+}
+
 export function SettingsApp() {
   useTheme();
   const { settings, updateSettings } = useSettings();
+  const [shortcutError, setShortcutError] = useState<string | null>(null);
   const opacityPercent = Math.round(settings.opacity * 100);
+
+  const updateShortcut = useCallback(
+    async (key: (typeof shortcutItems)[number]["key"], value: string) => {
+      const normalized = normalizeShortcut(value);
+      if (!normalized) {
+        setShortcutError("Invalid shortcut.");
+        return;
+      }
+
+      if (key === "toggleWindow") {
+        try {
+          await updateToggleWindowShortcut(normalized);
+        } catch (error) {
+          setShortcutError(getErrorMessage(error));
+          return;
+        }
+      }
+
+      setShortcutError(null);
+      updateSettings({
+        shortcuts: {
+          [key]: normalized,
+        },
+      });
+    },
+    [updateSettings],
+  );
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
@@ -69,6 +114,20 @@ export function SettingsApp() {
             onChange={(e) => updateSettings({ opacity: Number(e.target.value) / 100 })}
             className="h-1 w-full cursor-pointer accent-primary"
           />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <div className="text-xs font-medium text-muted-foreground">Shortcuts</div>
+          {shortcutItems.map((item) => (
+            <ShortcutInput
+              key={item.key}
+              label={item.label}
+              value={settings.shortcuts[item.key]}
+              onChange={(value) => updateShortcut(item.key, value)}
+            />
+          ))}
+          <div className="text-xs text-muted-foreground">Toggle Window is global.</div>
+          {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
         </div>
       </div>
     </div>

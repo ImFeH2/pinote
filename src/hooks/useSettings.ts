@@ -3,9 +3,13 @@ import { createElement, type ReactNode } from "react";
 import { type Settings, DEFAULT_SETTINGS, loadSettings, saveSettings } from "@/stores/settings";
 import { emitSettingsUpdated, listenSettingsUpdated } from "@/lib/api";
 
+type SettingsPatch = Partial<Omit<Settings, "shortcuts">> & {
+  shortcuts?: Partial<Settings["shortcuts"]>;
+};
+
 interface SettingsContextValue {
   settings: Settings;
-  updateSettings: (patch: Partial<Settings>) => void;
+  updateSettings: (patch: SettingsPatch) => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue>({
@@ -20,10 +24,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     loadSettings().then(setSettings);
   }, []);
 
-  const updateSettings = useCallback((patch: Partial<Settings>) => {
+  const updateSettings = useCallback((patch: SettingsPatch) => {
     setSettings((prev) => {
       if (!prev) return prev;
-      const next = { ...prev, ...patch };
+      const next = {
+        ...prev,
+        ...patch,
+        shortcuts: {
+          ...prev.shortcuts,
+          ...patch.shortcuts,
+        },
+      };
       saveSettings(next);
       void emitSettingsUpdated(next);
       return next;

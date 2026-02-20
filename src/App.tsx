@@ -6,6 +6,7 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 import { useWindowControl } from "@/hooks/useWindowControl";
 import { useSettings } from "@/hooks/useSettings";
 import { openSettingsWindow } from "@/lib/api";
+import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import "@/styles/App.css";
 
 function App({ noteId }: { noteId: string }) {
@@ -34,21 +35,31 @@ function App({ noteId }: { noteId: string }) {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (shortcutMatchesEvent(settings.shortcuts.hideWindow, e)) {
+        e.preventDefault();
         hideWindow();
+        return;
       }
-      if (e.ctrlKey && e.shiftKey && e.key === "T") {
+      if (shortcutMatchesEvent(settings.shortcuts.toggleAlwaysOnTop, e)) {
         e.preventDefault();
         toggleAlwaysOnTop();
+        return;
       }
-      if (e.ctrlKey && e.shiftKey && e.key === "D") {
+      if (shortcutMatchesEvent(settings.shortcuts.toggleTheme, e)) {
         e.preventDefault();
         toggleTheme();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [hideWindow, toggleAlwaysOnTop, toggleTheme]);
+  }, [
+    hideWindow,
+    settings.shortcuts.hideWindow,
+    settings.shortcuts.toggleAlwaysOnTop,
+    settings.shortcuts.toggleTheme,
+    toggleAlwaysOnTop,
+    toggleTheme,
+  ]);
 
   if (initialContent === null) {
     return (

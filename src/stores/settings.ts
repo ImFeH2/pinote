@@ -28,6 +28,17 @@ export const DEFAULT_SETTINGS: Settings = {
 
 const SETTINGS_FILE = "settings.json";
 
+function mergeSettings(stored: Partial<Settings>): Settings {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    shortcuts: {
+      ...DEFAULT_SETTINGS.shortcuts,
+      ...stored.shortcuts,
+    },
+  };
+}
+
 export async function loadSettings(): Promise<Settings> {
   try {
     const fileExists = await exists(SETTINGS_FILE, {
@@ -38,8 +49,11 @@ export async function loadSettings(): Promise<Settings> {
     const content = await readTextFile(SETTINGS_FILE, {
       baseDir: BaseDirectory.AppData,
     });
-    const stored = JSON.parse(content);
-    return { ...DEFAULT_SETTINGS, ...stored };
+    const parsed = JSON.parse(content) as Partial<Settings>;
+    if (!parsed || typeof parsed !== "object") {
+      return { ...DEFAULT_SETTINGS };
+    }
+    return mergeSettings(parsed);
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
