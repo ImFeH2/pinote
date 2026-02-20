@@ -5,5 +5,7 @@ type LogContext = {
 };
 
 export function setupLogging(context: LogContext) {
-  info(`frontend_ready url=${context.url}`);
+  if (import.meta.env.DEV) {
+    info(`frontend_ready url=${context.url}`);
+  }
 }

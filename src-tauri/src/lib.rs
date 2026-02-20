@@ -2,18 +2,24 @@ mod shortcut;
 mod tray;
 mod window;
 
-use log::info;
+use log::{LevelFilter, info};
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(
+        .plugin({
+            let level = if cfg!(debug_assertions) {
+                LevelFilter::Debug
+            } else {
+                LevelFilter::Warn
+            };
             tauri_plugin_log::Builder::new()
+                .level(level)
                 .targets([Target::new(TargetKind::Stdout)])
-                .build(),
-        )
+                .build()
+        })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
