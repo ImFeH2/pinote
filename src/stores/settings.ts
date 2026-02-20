@@ -7,6 +7,7 @@ export interface Settings {
   alwaysOnTop: boolean;
   opacity: number;
   launchAtStartup: boolean;
+  lastUpdateCheckAt?: string;
   shortcuts: {
     toggleWindow: string;
     toggleAlwaysOnTop: string;

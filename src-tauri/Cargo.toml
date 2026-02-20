@@ -27,6 +27,8 @@ tauri-plugin-fs = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-log = "2"
 tauri-plugin-opener = "2"
+tauri-plugin-process = "2.3.1"
+tauri-plugin-updater = "2"
 window-vibrancy = "0.7.1"
 
 [package.metadata.release]

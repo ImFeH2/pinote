@@ -28,6 +28,8 @@
     "fs:allow-write-file",
     "log:default",
     "autostart:default",
+    "process:default",
+    "updater:default",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
     "global-shortcut:allow-is-registered"
