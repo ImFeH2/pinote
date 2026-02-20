@@ -2,11 +2,18 @@ mod shortcut;
 mod tray;
 mod window;
 
+use log::info;
 use tauri::Manager;
+use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .targets([Target::new(TargetKind::Stdout)])
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -15,6 +22,8 @@ pub fn run() {
             let handle = app.handle().clone();
             tray::setup_tray(&handle)?;
             shortcut::setup_shortcuts(&handle)?;
+
+            info!("app_ready");
 
             let window = app.get_webview_window("main").unwrap();
 
@@ -34,6 +43,7 @@ pub fn run() {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                     api.prevent_close();
                     if let Some(win) = handle.get_webview_window("main") {
+                        info!("main_window_hide");
                         let _ = win.hide();
                     }
                 }
