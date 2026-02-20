@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, type MouseEvent } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Settings2, Minus, Square, X } from "lucide-react";
 
@@ -10,6 +10,21 @@ interface TitleBarProps {
 
 export function TitleBar({ title, showSettings, onOpenSettings }: TitleBarProps) {
   const appWindow = getCurrentWindow();
+
+  const handleStartDrag = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      appWindow.startDragging().catch(() => {
+        appWindow
+          .setFocus()
+          .then(() => appWindow.startDragging())
+          .catch((error) => {
+            console.error("Failed to start dragging window:", error);
+          });
+      });
+    },
+    [appWindow],
+  );
 
   const handleMinimize = useCallback(() => {
     appWindow.minimize().catch((error) => {
@@ -39,10 +54,8 @@ export function TitleBar({ title, showSettings, onOpenSettings }: TitleBarProps)
 
   return (
     <div className="flex h-9 shrink-0 items-center justify-between border-b border-border bg-background/80 px-2 backdrop-blur-sm">
-      <div data-tauri-drag-region className="flex flex-1 select-none items-center pl-1">
-        <span data-tauri-drag-region className="text-xs font-medium text-muted-foreground">
-          {title}
-        </span>
+      <div onMouseDown={handleStartDrag} className="flex flex-1 select-none items-center pl-1">
+        <span className="text-xs font-medium text-muted-foreground">{title}</span>
       </div>
 
       <div className="flex items-center gap-0.5">
