@@ -3,12 +3,13 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
 
-use crate::window::toggle_window_visibility;
+use crate::window::{show_settings_window, toggle_window_visibility};
 
 pub fn setup_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let show_hide = MenuItem::with_id(app, "show_hide", "Show/Hide", true, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show_hide, &quit])?;
+    let menu = Menu::with_items(app, &[&show_hide, &settings, &quit])?;
 
     let _tray = TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
@@ -16,6 +17,12 @@ pub fn setup_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Erro
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show_hide" => {
                 toggle_window_visibility(app);
+            }
+            "settings" => {
+                let handle = app.clone();
+                std::thread::spawn(move || {
+                    let _ = show_settings_window(&handle);
+                });
             }
             "quit" => {
                 app.exit(0);

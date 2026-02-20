@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
-import { TitleBar } from "@/components/TitleBar";
 import { Editor } from "@/components/Editor";
+import { TitleBar } from "@/components/TitleBar";
 import { useTheme } from "@/hooks/useTheme";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useWindowControl } from "@/hooks/useWindowControl";
 import { useSettings } from "@/hooks/useSettings";
+import { openSettingsWindow } from "@/lib/api";
 import "@/styles/App.css";
 
-function App() {
-  const { theme, toggleTheme } = useTheme();
-  const { save, load } = useAutoSave();
-  const { alwaysOnTop, toggleAlwaysOnTop, hideWindow } = useWindowControl();
-  const { settings, updateSettings } = useSettings();
+function App({ noteId }: { noteId: string }) {
+  const { toggleTheme } = useTheme();
+  const { save, load } = useAutoSave(noteId);
+  const { toggleAlwaysOnTop, hideWindow } = useWindowControl();
+  const { settings } = useSettings();
   const [initialContent, setInitialContent] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,6 +27,10 @@ function App() {
     },
     [save],
   );
+
+  const openSettings = useCallback(() => {
+    openSettingsWindow().catch(() => {});
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -57,15 +62,7 @@ function App() {
     <div className="relative flex h-screen flex-col overflow-hidden rounded-lg shadow-lg">
       <div className="absolute inset-0 bg-background" style={{ opacity: settings.opacity }} />
       <div className="relative flex flex-1 flex-col overflow-hidden">
-        <TitleBar
-          alwaysOnTop={alwaysOnTop}
-          theme={theme}
-          opacity={settings.opacity}
-          onToggleAlwaysOnTop={toggleAlwaysOnTop}
-          onToggleTheme={toggleTheme}
-          onOpacityChange={(opacity) => updateSettings({ opacity })}
-          onClose={hideWindow}
-        />
+        <TitleBar title="Pinote" showSettings onOpenSettings={openSettings} />
         <Editor defaultValue={initialContent} onChange={handleChange} />
       </div>
     </div>

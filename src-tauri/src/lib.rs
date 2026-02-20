@@ -23,7 +23,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![])
+        .invoke_handler(tauri::generate_handler![open_settings_window])
         .setup(|app| {
             let handle = app.handle().clone();
             tray::setup_tray(&handle)?;
@@ -59,4 +59,10 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+async fn open_settings_window(app: tauri::AppHandle) -> Result<(), String> {
+    info!("settings_window_command");
+    window::show_settings_window(&app).map_err(|e| e.to_string())
 }

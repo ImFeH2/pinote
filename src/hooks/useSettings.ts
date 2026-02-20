@@ -1,6 +1,7 @@
 import { createContext, useContext, useCallback, useEffect, useState } from "react";
 import { createElement, type ReactNode } from "react";
 import { type Settings, DEFAULT_SETTINGS, loadSettings, saveSettings } from "@/stores/settings";
+import { emitSettingsUpdated, listenSettingsUpdated } from "@/lib/api";
 
 interface SettingsContextValue {
   settings: Settings;
@@ -24,8 +25,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (!prev) return prev;
       const next = { ...prev, ...patch };
       saveSettings(next);
+      void emitSettingsUpdated(next);
       return next;
     });
+  }, []);
+
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    listenSettingsUpdated((next) => {
+      setSettings(next);
+    }).then((handler) => {
+      unlisten = handler;
+    });
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
   }, []);
 
   if (!settings) return null;
