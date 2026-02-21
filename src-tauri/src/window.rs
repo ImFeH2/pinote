@@ -27,10 +27,10 @@ pub fn show_settings_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> 
         WebviewUrl::App("index.html?view=settings".into()),
     )
     .title("Pinote Settings")
-    .inner_size(360.0, 420.0)
+    .inner_size(920.0, 620.0)
     .decorations(false)
     .resizable(true)
-    .min_inner_size(320.0, 360.0)
+    .min_inner_size(760.0, 520.0)
     .build()?;
 
     let window_clone = window.clone();

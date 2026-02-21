@@ -14,10 +14,10 @@ async function createSettingsWindow() {
   const settingsWindow = new WebviewWindow(SETTINGS_WINDOW_LABEL, {
     url: "index.html?view=settings",
     title: "Pinote Settings",
-    width: 360,
-    height: 420,
-    minWidth: 320,
-    minHeight: 360,
+    width: 560,
+    height: 700,
+    minWidth: 500,
+    minHeight: 620,
     decorations: false,
     resizable: true,
   });
