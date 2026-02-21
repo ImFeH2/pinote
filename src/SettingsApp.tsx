@@ -28,6 +28,31 @@ const themeOptions = [
   { value: "dark", label: "Dark" },
 ] as const;
 
+const sections = [
+  {
+    id: "appearance",
+    label: "Appearance",
+    description: "Theme and visual style settings.",
+  },
+  {
+    id: "window",
+    label: "Window",
+    description: "Window behavior and startup settings.",
+  },
+  {
+    id: "updates",
+    label: "Updates",
+    description: "Check, download, and install updates.",
+  },
+  {
+    id: "shortcuts",
+    label: "Shortcuts",
+    description: "Keyboard shortcut customization.",
+  },
+] as const;
+
+type SettingsSection = (typeof sections)[number]["id"];
+
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
@@ -59,8 +84,9 @@ function getUpdateStatusText(snapshot: UpdateSnapshot) {
     }
     return "Downloading update...";
   }
-  if (snapshot.state === "readyToRestart")
+  if (snapshot.state === "readyToRestart") {
     return "Download complete. Restart to install the update.";
+  }
   if (snapshot.state === "error") return snapshot.error ?? "Update failed.";
   return "Update status is unavailable.";
 }
@@ -68,12 +94,15 @@ function getUpdateStatusText(snapshot: UpdateSnapshot) {
 export function SettingsApp() {
   useTheme();
   const { settings, updateSettings } = useSettings();
+  const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
   const [shortcutError, setShortcutError] = useState<string | null>(null);
   const [startupError, setStartupError] = useState<string | null>(null);
   const [startupBusy, setStartupBusy] = useState(false);
   const [updateBusy, setUpdateBusy] = useState(false);
   const [updateActionError, setUpdateActionError] = useState<string | null>(null);
   const [updateSnapshot, setUpdateSnapshot] = useState<UpdateSnapshot>(() => getUpdateState());
+
+  const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const opacityPercent = Math.round(settings.opacity * 100);
   const canDownloadUpdate =
     updateSnapshot.state === "available" ||
@@ -194,169 +223,209 @@ export function SettingsApp() {
     <div className="flex h-screen flex-col bg-background text-foreground">
       <TitleBar title="Settings" showSettings={false} />
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
-        <div className="flex flex-col gap-2">
-          <div className="text-xs font-medium text-muted-foreground">Theme</div>
-          <div className="flex items-center gap-2">
-            {themeOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => updateSettings({ theme: option.value })}
-                className={cn(
-                  "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                  settings.theme === option.value
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:bg-accent",
-                )}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="text-xs font-medium text-muted-foreground">Always On Top</div>
-          <button
-            type="button"
-            onClick={() => updateSettings({ alwaysOnTop: !settings.alwaysOnTop })}
-            className={cn(
-              "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-              settings.alwaysOnTop
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background text-muted-foreground hover:bg-accent",
-            )}
-          >
-            {settings.alwaysOnTop ? "Enabled" : "Disabled"}
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-medium text-muted-foreground">Opacity</div>
-            <div className="text-xs text-muted-foreground">{opacityPercent}%</div>
-          </div>
-          <input
-            type="range"
-            min={30}
-            max={100}
-            value={opacityPercent}
-            onChange={(e) => updateSettings({ opacity: Number(e.target.value) / 100 })}
-            className="h-1 w-full cursor-pointer accent-primary"
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="text-xs font-medium text-muted-foreground">Launch At Startup</div>
-          <button
-            type="button"
-            disabled={startupBusy}
-            onClick={() => {
-              void handleLaunchAtStartup();
-            }}
-            className={cn(
-              "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-              settings.launchAtStartup
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background text-muted-foreground hover:bg-accent",
-              startupBusy && "cursor-not-allowed opacity-60",
-            )}
-          >
-            {settings.launchAtStartup ? "Enabled" : "Disabled"}
-          </button>
-        </div>
-        {startupError && <div className="text-xs text-destructive">{startupError}</div>}
-
-        <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-medium text-muted-foreground">Updates</div>
+      <div className="flex min-h-0 flex-1">
+        <aside className="flex w-48 shrink-0 flex-col border-r border-border bg-background/60 p-2">
+          {sections.map((section) => (
             <button
+              key={section.id}
               type="button"
-              disabled={updateBusy || isCheckingUpdate || isDownloadingUpdate}
-              onClick={() => {
-                void handleManualUpdateCheck();
-              }}
+              onClick={() => setActiveSection(section.id)}
               className={cn(
-                "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                "border-border bg-background text-muted-foreground hover:bg-accent",
-                (updateBusy || isCheckingUpdate || isDownloadingUpdate) &&
-                  "cursor-not-allowed opacity-60",
+                "mb-1 rounded-md px-3 py-2 text-left text-xs font-medium transition-colors",
+                activeSection === section.id
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
               )}
             >
-              {isCheckingUpdate ? "Checking..." : "Check Updates"}
+              {section.label}
             </button>
-          </div>
-
-          <div className="text-xs text-muted-foreground">{updateStatusText}</div>
-
-          {updateSnapshot.latestVersion && (
-            <div className="text-xs text-muted-foreground">
-              {`Current ${updateSnapshot.currentVersion || "unknown"} -> Latest ${updateSnapshot.latestVersion}`}
-            </div>
-          )}
-
-          {isDownloadingUpdate && updateSnapshot.downloadProgress !== null && (
-            <div className="text-xs text-muted-foreground">{`Progress ${updateSnapshot.downloadProgress}%`}</div>
-          )}
-
-          {canDownloadUpdate && (
-            <button
-              type="button"
-              disabled={updateBusy || isDownloadingUpdate || isCheckingUpdate}
-              onClick={() => {
-                void handleDownloadUpdate();
-              }}
-              className={cn(
-                "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                "border-primary bg-primary text-primary-foreground hover:opacity-90",
-                (updateBusy || isDownloadingUpdate || isCheckingUpdate) &&
-                  "cursor-not-allowed opacity-60",
-              )}
-            >
-              {isDownloadingUpdate ? "Downloading..." : "Download Update"}
-            </button>
-          )}
-
-          {canInstallUpdate && (
-            <button
-              type="button"
-              disabled={updateBusy}
-              onClick={() => {
-                void handleInstallUpdate();
-              }}
-              className={cn(
-                "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                "border-primary bg-primary text-primary-foreground hover:opacity-90",
-                updateBusy && "cursor-not-allowed opacity-60",
-              )}
-            >
-              {updateBusy ? "Installing..." : "Restart to Install"}
-            </button>
-          )}
-
-          {settings.lastUpdateCheckAt && (
-            <div className="text-[11px] text-muted-foreground">
-              {`Last checked at ${formatDateTime(settings.lastUpdateCheckAt)}`}
-            </div>
-          )}
-
-          {updateError && <div className="text-xs text-destructive">{updateError}</div>}
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="text-xs font-medium text-muted-foreground">Shortcuts</div>
-          {shortcutItems.map((item) => (
-            <ShortcutInput
-              key={item.key}
-              label={item.label}
-              value={settings.shortcuts[item.key]}
-              onChange={(value) => updateShortcut(item.key, value)}
-            />
           ))}
-          <div className="text-xs text-muted-foreground">Toggle Window is global.</div>
-          {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
-        </div>
+        </aside>
+
+        <main className="min-w-0 flex-1 overflow-y-auto px-5 py-4">
+          <div className="mb-4">
+            <div className="text-sm font-semibold text-foreground">{activeSectionInfo.label}</div>
+            <div className="text-xs text-muted-foreground">{activeSectionInfo.description}</div>
+          </div>
+
+          {activeSection === "appearance" && (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">Theme</div>
+                <div className="flex items-center gap-2">
+                  {themeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => updateSettings({ theme: option.value })}
+                      className={cn(
+                        "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                        settings.theme === option.value
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-muted-foreground hover:bg-accent",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-medium text-muted-foreground">Opacity</div>
+                  <div className="text-xs text-muted-foreground">{opacityPercent}%</div>
+                </div>
+                <input
+                  type="range"
+                  min={30}
+                  max={100}
+                  value={opacityPercent}
+                  onChange={(event) =>
+                    updateSettings({ opacity: Number(event.target.value) / 100 })
+                  }
+                  className="h-1 w-full cursor-pointer accent-primary"
+                />
+              </div>
+            </div>
+          )}
+
+          {activeSection === "window" && (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">Always On Top</div>
+                <button
+                  type="button"
+                  onClick={() => updateSettings({ alwaysOnTop: !settings.alwaysOnTop })}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                    settings.alwaysOnTop
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-accent",
+                  )}
+                >
+                  {settings.alwaysOnTop ? "Enabled" : "Disabled"}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">Launch At Startup</div>
+                <button
+                  type="button"
+                  disabled={startupBusy}
+                  onClick={() => {
+                    void handleLaunchAtStartup();
+                  }}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                    settings.launchAtStartup
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-accent",
+                    startupBusy && "cursor-not-allowed opacity-60",
+                  )}
+                >
+                  {settings.launchAtStartup ? "Enabled" : "Disabled"}
+                </button>
+              </div>
+
+              {startupError && <div className="text-xs text-destructive">{startupError}</div>}
+            </div>
+          )}
+
+          {activeSection === "updates" && (
+            <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-medium text-muted-foreground">Updates</div>
+                <button
+                  type="button"
+                  disabled={updateBusy || isCheckingUpdate || isDownloadingUpdate}
+                  onClick={() => {
+                    void handleManualUpdateCheck();
+                  }}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                    "border-border bg-background text-muted-foreground hover:bg-accent",
+                    (updateBusy || isCheckingUpdate || isDownloadingUpdate) &&
+                      "cursor-not-allowed opacity-60",
+                  )}
+                >
+                  {isCheckingUpdate ? "Checking..." : "Check Updates"}
+                </button>
+              </div>
+
+              <div className="text-xs text-muted-foreground">{updateStatusText}</div>
+
+              {updateSnapshot.latestVersion && (
+                <div className="text-xs text-muted-foreground">
+                  {`Current ${updateSnapshot.currentVersion || "unknown"} -> Latest ${updateSnapshot.latestVersion}`}
+                </div>
+              )}
+
+              {isDownloadingUpdate && updateSnapshot.downloadProgress !== null && (
+                <div className="text-xs text-muted-foreground">{`Progress ${updateSnapshot.downloadProgress}%`}</div>
+              )}
+
+              {canDownloadUpdate && (
+                <button
+                  type="button"
+                  disabled={updateBusy || isDownloadingUpdate || isCheckingUpdate}
+                  onClick={() => {
+                    void handleDownloadUpdate();
+                  }}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                    "border-primary bg-primary text-primary-foreground hover:opacity-90",
+                    (updateBusy || isDownloadingUpdate || isCheckingUpdate) &&
+                      "cursor-not-allowed opacity-60",
+                  )}
+                >
+                  {isDownloadingUpdate ? "Downloading..." : "Download Update"}
+                </button>
+              )}
+
+              {canInstallUpdate && (
+                <button
+                  type="button"
+                  disabled={updateBusy}
+                  onClick={() => {
+                    void handleInstallUpdate();
+                  }}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                    "border-primary bg-primary text-primary-foreground hover:opacity-90",
+                    updateBusy && "cursor-not-allowed opacity-60",
+                  )}
+                >
+                  {updateBusy ? "Installing..." : "Restart to Install"}
+                </button>
+              )}
+
+              {settings.lastUpdateCheckAt && (
+                <div className="text-[11px] text-muted-foreground">
+                  {`Last checked at ${formatDateTime(settings.lastUpdateCheckAt)}`}
+                </div>
+              )}
+
+              {updateError && <div className="text-xs text-destructive">{updateError}</div>}
+            </div>
+          )}
+
+          {activeSection === "shortcuts" && (
+            <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+              <div className="text-xs font-medium text-muted-foreground">Shortcuts</div>
+              {shortcutItems.map((item) => (
+                <ShortcutInput
+                  key={item.key}
+                  label={item.label}
+                  value={settings.shortcuts[item.key]}
+                  onChange={(value) => updateShortcut(item.key, value)}
+                />
+              ))}
+              <div className="text-xs text-muted-foreground">Toggle Window is global.</div>
+              {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );
