@@ -9,6 +9,7 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Global Shortcut** — Press `Alt+N` to show/hide from anywhere
 - **Shortcut Customization** — Configure global and local shortcuts in settings
 - **Auto Save** — Content is saved automatically, no manual saving needed
+- **Multi-Note Windows** — Open multiple note windows at once and edit different markdown files in parallel
 - **System Tray** — Runs quietly in the background, always one click away
 - **Dark / Light Theme** — Switch with `Ctrl+Shift+D` or follow your system preference
 - **Minimal UI** — No menus, no clutter, just your notes

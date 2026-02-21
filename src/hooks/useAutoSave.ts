@@ -1,14 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
 import { readTextFile, writeTextFile, mkdir, exists, BaseDirectory } from "@tauri-apps/plugin-fs";
+import { getNoteFilename } from "@/lib/notes";
 
 const DEBOUNCE_MS = 500;
 const NOTES_DIR = "notes";
-
-function normalizeNoteId(noteId: string) {
-  const value = noteId.trim();
-  const safe = value.replace(/[^a-zA-Z0-9_-]/g, "");
-  return safe.length > 0 ? safe : "default";
-}
 
 async function ensureNotesDir() {
   const dirExists = await exists(NOTES_DIR, {
@@ -24,7 +19,7 @@ async function ensureNotesDir() {
 
 export function useAutoSave(noteId = "default") {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const filename = `notes/${normalizeNoteId(noteId)}.md`;
+  const filename = getNoteFilename(noteId);
 
   const save = useCallback(
     (content: string) => {

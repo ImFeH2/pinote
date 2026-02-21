@@ -1,14 +1,22 @@
 import { useCallback, type MouseEvent } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Settings2, Minus, Square, X } from "lucide-react";
+import { FilePlus2, Settings2, Minus, Square, X } from "lucide-react";
 
 interface TitleBarProps {
   title: string;
   showSettings: boolean;
+  showNewNote?: boolean;
+  onOpenNewNote?: () => void;
   onOpenSettings?: () => void;
 }
 
-export function TitleBar({ title, showSettings, onOpenSettings }: TitleBarProps) {
+export function TitleBar({
+  title,
+  showSettings,
+  showNewNote = false,
+  onOpenNewNote,
+  onOpenSettings,
+}: TitleBarProps) {
   const appWindow = getCurrentWindow();
 
   const handleStartDrag = useCallback(
@@ -59,6 +67,15 @@ export function TitleBar({ title, showSettings, onOpenSettings }: TitleBarProps)
       </div>
 
       <div className="flex items-center gap-0.5">
+        {showNewNote && (
+          <button
+            onClick={onOpenNewNote}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <FilePlus2 size={13} />
+          </button>
+        )}
+
         {showSettings && (
           <button
             onClick={onOpenSettings}

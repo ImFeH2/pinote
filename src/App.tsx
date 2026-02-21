@@ -7,7 +7,8 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useWindowControl } from "@/hooks/useWindowControl";
 import { useSettings } from "@/hooks/useSettings";
-import { openSettingsWindow } from "@/lib/api";
+import { openNoteWindow, openSettingsWindow } from "@/lib/api";
+import { buildGeneratedNoteId, DEFAULT_NOTE_ID } from "@/lib/notes";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import "@/styles/App.css";
 
@@ -19,6 +20,7 @@ function App({ noteId }: { noteId: string }) {
   const [initialContent, setInitialContent] = useState<string | null>(null);
   const hasAppliedShortcutUpdate = useRef(false);
   const activeToggleShortcut = useRef(settings.shortcuts.toggleWindow);
+  const isMainWindow = getCurrentWindow().label === "main";
 
   useEffect(() => {
     load().then((content) => {
@@ -39,6 +41,15 @@ function App({ noteId }: { noteId: string }) {
     });
   }, []);
 
+  const openNote = useCallback(() => {
+    const value = window.prompt("Open note ID (leave blank to create a new note)", "");
+    if (value === null) return;
+    const targetNoteId = value.trim().length > 0 ? value : buildGeneratedNoteId();
+    openNoteWindow(targetNoteId).catch((error) => {
+      console.error("Failed to open note window:", error);
+    });
+  }, []);
+
   const toggleWindowVisibilityByShortcut = useCallback(async () => {
     const appWindow = getCurrentWindow();
     try {
@@ -55,6 +66,8 @@ function App({ noteId }: { noteId: string }) {
   }, []);
 
   useEffect(() => {
+    if (!isMainWindow) return;
+
     if (!hasAppliedShortcutUpdate.current) {
       hasAppliedShortcutUpdate.current = true;
       activeToggleShortcut.current = settings.shortcuts.toggleWindow;
@@ -87,7 +100,7 @@ function App({ noteId }: { noteId: string }) {
     return () => {
       disposed = true;
     };
-  }, [settings.shortcuts.toggleWindow, toggleWindowVisibilityByShortcut]);
+  }, [isMainWindow, settings.shortcuts.toggleWindow, toggleWindowVisibilityByShortcut]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -125,11 +138,19 @@ function App({ noteId }: { noteId: string }) {
     );
   }
 
+  const title = noteId === DEFAULT_NOTE_ID ? "Pinote" : `Pinote - ${noteId}`;
+
   return (
     <div className="relative flex h-screen flex-col overflow-hidden rounded-lg shadow-lg">
       <div className="absolute inset-0 bg-background" style={{ opacity: settings.opacity }} />
       <div className="relative flex flex-1 flex-col overflow-hidden">
-        <TitleBar title="Pinote" showSettings onOpenSettings={openSettings} />
+        <TitleBar
+          title={title}
+          showSettings
+          showNewNote
+          onOpenSettings={openSettings}
+          onOpenNewNote={openNote}
+        />
         <Editor defaultValue={initialContent} onChange={handleChange} />
       </div>
     </div>

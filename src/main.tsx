@@ -4,6 +4,7 @@ import App from "@/App";
 import { SettingsProvider } from "@/hooks/useSettings";
 import { SettingsApp } from "@/SettingsApp";
 import { setupLogging } from "@/lib/logging";
+import { DEFAULT_NOTE_ID, normalizeNoteId } from "@/lib/notes";
 import { checkForUpdates } from "@/lib/updater";
 
 setupLogging(window.location.href);
@@ -17,7 +18,7 @@ function getView() {
 
 function getNoteId() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("note") ?? "default";
+  return normalizeNoteId(params.get("note") ?? DEFAULT_NOTE_ID);
 }
 
 function Root() {
