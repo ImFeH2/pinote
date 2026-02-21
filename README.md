@@ -14,7 +14,8 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Minimal UI** — No menus, no clutter, just your notes
 - **Settings Window** — Adjust theme, window behavior, opacity, and shortcuts
 - **Launch at Startup** — Enable or disable app launch at system login
-- **In-App Updates** — Silent startup checks plus manual update checks in Settings
+- **In-App Updates** — Silent startup checks plus manual check/download/install in About
+- **About Panel** — View current version and open the GitHub homepage
 
 ## Keyboard Shortcuts
 

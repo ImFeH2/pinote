@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,10 @@ import {
   type UpdateSnapshot,
 } from "@/lib/updater";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { Github } from "lucide-react";
+
+const REPOSITORY_URL = "https://github.com/ImFeH2/pinote";
 
 const shortcutItems = [
   { key: "toggleWindow", label: "Toggle Window" },
@@ -40,14 +45,14 @@ const sections = [
     description: "Window behavior and startup settings.",
   },
   {
-    id: "updates",
-    label: "Updates",
-    description: "Check, download, and install updates.",
-  },
-  {
     id: "shortcuts",
     label: "Shortcuts",
     description: "Keyboard shortcut customization.",
+  },
+  {
+    id: "about",
+    label: "About",
+    description: "Version, updates, and project resources.",
   },
 ] as const;
 
@@ -101,6 +106,8 @@ export function SettingsApp() {
   const [updateBusy, setUpdateBusy] = useState(false);
   const [updateActionError, setUpdateActionError] = useState<string | null>(null);
   const [updateSnapshot, setUpdateSnapshot] = useState<UpdateSnapshot>(() => getUpdateState());
+  const [appVersion, setAppVersion] = useState("loading...");
+  const [aboutError, setAboutError] = useState<string | null>(null);
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const opacityPercent = Math.round(settings.opacity * 100);
@@ -185,6 +192,15 @@ export function SettingsApp() {
     }
   }, []);
 
+  const handleOpenRepository = useCallback(async () => {
+    try {
+      await openUrl(REPOSITORY_URL);
+      setAboutError(null);
+    } catch (error) {
+      setAboutError(getErrorMessage(error));
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
     isEnabled()
@@ -218,6 +234,22 @@ export function SettingsApp() {
     if (settings.lastUpdateCheckAt === updateSnapshot.lastCheckedAt) return;
     updateSettings({ lastUpdateCheckAt: updateSnapshot.lastCheckedAt });
   }, [settings.lastUpdateCheckAt, updateSettings, updateSnapshot.lastCheckedAt]);
+
+  useEffect(() => {
+    let active = true;
+    getVersion()
+      .then((version) => {
+        if (!active) return;
+        setAppVersion(version);
+      })
+      .catch(() => {
+        if (!active) return;
+        setAppVersion("unknown");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
@@ -332,84 +364,6 @@ export function SettingsApp() {
             </div>
           )}
 
-          {activeSection === "updates" && (
-            <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-medium text-muted-foreground">Updates</div>
-                <button
-                  type="button"
-                  disabled={updateBusy || isCheckingUpdate || isDownloadingUpdate}
-                  onClick={() => {
-                    void handleManualUpdateCheck();
-                  }}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                    "border-border bg-background text-muted-foreground hover:bg-accent",
-                    (updateBusy || isCheckingUpdate || isDownloadingUpdate) &&
-                      "cursor-not-allowed opacity-60",
-                  )}
-                >
-                  {isCheckingUpdate ? "Checking..." : "Check Updates"}
-                </button>
-              </div>
-
-              <div className="text-xs text-muted-foreground">{updateStatusText}</div>
-
-              {updateSnapshot.latestVersion && (
-                <div className="text-xs text-muted-foreground">
-                  {`Current ${updateSnapshot.currentVersion || "unknown"} -> Latest ${updateSnapshot.latestVersion}`}
-                </div>
-              )}
-
-              {isDownloadingUpdate && updateSnapshot.downloadProgress !== null && (
-                <div className="text-xs text-muted-foreground">{`Progress ${updateSnapshot.downloadProgress}%`}</div>
-              )}
-
-              {canDownloadUpdate && (
-                <button
-                  type="button"
-                  disabled={updateBusy || isDownloadingUpdate || isCheckingUpdate}
-                  onClick={() => {
-                    void handleDownloadUpdate();
-                  }}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                    "border-primary bg-primary text-primary-foreground hover:opacity-90",
-                    (updateBusy || isDownloadingUpdate || isCheckingUpdate) &&
-                      "cursor-not-allowed opacity-60",
-                  )}
-                >
-                  {isDownloadingUpdate ? "Downloading..." : "Download Update"}
-                </button>
-              )}
-
-              {canInstallUpdate && (
-                <button
-                  type="button"
-                  disabled={updateBusy}
-                  onClick={() => {
-                    void handleInstallUpdate();
-                  }}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                    "border-primary bg-primary text-primary-foreground hover:opacity-90",
-                    updateBusy && "cursor-not-allowed opacity-60",
-                  )}
-                >
-                  {updateBusy ? "Installing..." : "Restart to Install"}
-                </button>
-              )}
-
-              {settings.lastUpdateCheckAt && (
-                <div className="text-[11px] text-muted-foreground">
-                  {`Last checked at ${formatDateTime(settings.lastUpdateCheckAt)}`}
-                </div>
-              )}
-
-              {updateError && <div className="text-xs text-destructive">{updateError}</div>}
-            </div>
-          )}
-
           {activeSection === "shortcuts" && (
             <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
               <div className="text-xs font-medium text-muted-foreground">Shortcuts</div>
@@ -423,6 +377,119 @@ export function SettingsApp() {
               ))}
               <div className="text-xs text-muted-foreground">Toggle Window is global.</div>
               {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
+            </div>
+          )}
+
+          {activeSection === "about" && (
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">Application</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground">Name</div>
+                  <div className="text-xs font-medium text-foreground">Pinote</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground">Current Version</div>
+                  <div className="text-xs font-medium text-foreground">{appVersion}</div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-muted-foreground">Release Channel</div>
+                  <div className="text-xs font-medium text-foreground">Stable</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-medium text-muted-foreground">Updates</div>
+                  <button
+                    type="button"
+                    disabled={updateBusy || isCheckingUpdate || isDownloadingUpdate}
+                    onClick={() => {
+                      void handleManualUpdateCheck();
+                    }}
+                    className={cn(
+                      "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                      "border-border bg-background text-muted-foreground hover:bg-accent",
+                      (updateBusy || isCheckingUpdate || isDownloadingUpdate) &&
+                        "cursor-not-allowed opacity-60",
+                    )}
+                  >
+                    {isCheckingUpdate ? "Checking..." : "Check Updates"}
+                  </button>
+                </div>
+
+                <div className="text-xs text-muted-foreground">{updateStatusText}</div>
+
+                {updateSnapshot.latestVersion && (
+                  <div className="text-xs text-muted-foreground">
+                    {`Current ${updateSnapshot.currentVersion || "unknown"} -> Latest ${updateSnapshot.latestVersion}`}
+                  </div>
+                )}
+
+                {isDownloadingUpdate && updateSnapshot.downloadProgress !== null && (
+                  <div className="text-xs text-muted-foreground">{`Progress ${updateSnapshot.downloadProgress}%`}</div>
+                )}
+
+                {canDownloadUpdate && (
+                  <button
+                    type="button"
+                    disabled={updateBusy || isDownloadingUpdate || isCheckingUpdate}
+                    onClick={() => {
+                      void handleDownloadUpdate();
+                    }}
+                    className={cn(
+                      "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                      "border-primary bg-primary text-primary-foreground hover:opacity-90",
+                      (updateBusy || isDownloadingUpdate || isCheckingUpdate) &&
+                        "cursor-not-allowed opacity-60",
+                    )}
+                  >
+                    {isDownloadingUpdate ? "Downloading..." : "Download Update"}
+                  </button>
+                )}
+
+                {canInstallUpdate && (
+                  <button
+                    type="button"
+                    disabled={updateBusy}
+                    onClick={() => {
+                      void handleInstallUpdate();
+                    }}
+                    className={cn(
+                      "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                      "border-primary bg-primary text-primary-foreground hover:opacity-90",
+                      updateBusy && "cursor-not-allowed opacity-60",
+                    )}
+                  >
+                    {updateBusy ? "Installing..." : "Restart to Install"}
+                  </button>
+                )}
+
+                {settings.lastUpdateCheckAt && (
+                  <div className="text-[11px] text-muted-foreground">
+                    {`Last checked at ${formatDateTime(settings.lastUpdateCheckAt)}`}
+                  </div>
+                )}
+
+                {updateError && <div className="text-xs text-destructive">{updateError}</div>}
+              </div>
+
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">Project</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void handleOpenRepository();
+                  }}
+                  className="inline-flex items-center gap-2 self-start rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+                >
+                  <Github size={14} />
+                  <span>Pinote</span>
+                </button>
+                <div className="truncate text-[11px] text-muted-foreground">{REPOSITORY_URL}</div>
+              </div>
+
+              {aboutError && <div className="text-xs text-destructive">{aboutError}</div>}
             </div>
           )}
         </main>
