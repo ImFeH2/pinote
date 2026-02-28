@@ -12,6 +12,7 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Multi-Note Windows** — Open multiple note windows at once and edit different markdown files in parallel
 - **System Tray** — Runs quietly in the background, always one click away
 - **Dark / Light Theme** — Switch with `Ctrl+Shift+D` or follow your system preference
+- **Typography Controls** — Tune editor font family, size, and line height from settings
 - **Minimal UI** — No menus, no clutter, just your notes
 - **Settings Window** — Adjust theme, window behavior, opacity, and shortcuts
 - **Launch at Startup** — Enable or disable app launch at system login

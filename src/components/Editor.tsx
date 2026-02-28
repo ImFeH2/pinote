@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type CSSProperties } from "react";
 import {
   Editor as MilkdownEditorCore,
   rootCtx,
@@ -97,11 +97,12 @@ function EditorInner({ defaultValue, onChange }: EditorInnerProps) {
 interface EditorProps {
   defaultValue: string;
   onChange: (markdown: string) => void;
+  style?: CSSProperties;
 }
 
-export function Editor({ defaultValue, onChange }: EditorProps) {
+export function Editor({ defaultValue, onChange, style }: EditorProps) {
   return (
-    <div className="milkdown-editor min-h-0 flex-1">
+    <div className="milkdown-editor min-h-0 flex-1" style={style}>
       <MilkdownProvider>
         <EditorInner defaultValue={defaultValue} onChange={onChange} />
       </MilkdownProvider>

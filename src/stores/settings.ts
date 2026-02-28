@@ -1,11 +1,15 @@
 import { readTextFile, writeTextFile, exists, BaseDirectory } from "@tauri-apps/plugin-fs";
 
 type Theme = "light" | "dark" | "system";
+export type EditorFontFamily = "system" | "serif" | "mono";
 
 export interface Settings {
   theme: Theme;
   alwaysOnTop: boolean;
   opacity: number;
+  editorFontFamily: EditorFontFamily;
+  editorFontSize: number;
+  editorLineHeight: number;
   launchAtStartup: boolean;
   lastUpdateCheckAt?: string;
   shortcuts: {
@@ -20,6 +24,9 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   alwaysOnTop: false,
   opacity: 1.0,
+  editorFontFamily: "system",
+  editorFontSize: 14,
+  editorLineHeight: 1.6,
   launchAtStartup: false,
   shortcuts: {
     toggleWindow: "Alt+N",

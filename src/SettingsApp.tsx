@@ -33,6 +33,12 @@ const themeOptions = [
   { value: "dark", label: "Dark" },
 ] as const;
 
+const fontFamilyOptions = [
+  { value: "system", label: "System" },
+  { value: "serif", label: "Serif" },
+  { value: "mono", label: "Monospace" },
+] as const;
+
 const sections = [
   {
     id: "appearance",
@@ -111,6 +117,7 @@ export function SettingsApp() {
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const opacityPercent = Math.round(settings.opacity * 100);
+  const lineHeightText = settings.editorLineHeight.toFixed(1);
   const canDownloadUpdate =
     updateSnapshot.state === "available" ||
     (updateSnapshot.available && updateSnapshot.state === "error");
@@ -318,6 +325,67 @@ export function SettingsApp() {
                   }
                   className="h-1 w-full cursor-pointer accent-primary"
                 />
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">Typography</div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="text-xs text-muted-foreground">Font Family</div>
+                  <div className="flex items-center gap-2">
+                    {fontFamilyOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => updateSettings({ editorFontFamily: option.value })}
+                        className={cn(
+                          "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                          settings.editorFontFamily === option.value
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-muted-foreground hover:bg-accent",
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">Font Size</div>
+                    <div className="text-xs text-muted-foreground">{`${settings.editorFontSize}px`}</div>
+                  </div>
+                  <input
+                    type="range"
+                    min={12}
+                    max={24}
+                    step={1}
+                    value={settings.editorFontSize}
+                    onChange={(event) =>
+                      updateSettings({ editorFontSize: Number(event.target.value) })
+                    }
+                    className="h-1 w-full cursor-pointer accent-primary"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">Line Height</div>
+                    <div className="text-xs text-muted-foreground">{lineHeightText}</div>
+                  </div>
+                  <input
+                    type="range"
+                    min={1.3}
+                    max={2.2}
+                    step={0.1}
+                    value={settings.editorLineHeight}
+                    onChange={(event) =>
+                      updateSettings({ editorLineHeight: Number(event.target.value) })
+                    }
+                    className="h-1 w-full cursor-pointer accent-primary"
+                  />
+                </div>
               </div>
             </div>
           )}

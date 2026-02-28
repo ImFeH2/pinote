@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
 import { Editor } from "@/components/Editor";
@@ -11,6 +11,16 @@ import { openNoteWindow, openSettingsWindow } from "@/lib/api";
 import { buildGeneratedNoteId, DEFAULT_NOTE_ID } from "@/lib/notes";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import "@/styles/App.css";
+
+function resolveEditorFontFamily(value: "system" | "serif" | "mono") {
+  if (value === "serif") {
+    return 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif';
+  }
+  if (value === "mono") {
+    return '"JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+  }
+  return "system-ui, -apple-system, sans-serif";
+}
 
 function App({ noteId }: { noteId: string }) {
   const { toggleTheme } = useTheme();
@@ -130,6 +140,17 @@ function App({ noteId }: { noteId: string }) {
     toggleTheme,
   ]);
 
+  const title = noteId === DEFAULT_NOTE_ID ? "Pinote" : `Pinote - ${noteId}`;
+  const editorStyle = useMemo(
+    () =>
+      ({
+        "--editor-font-family": resolveEditorFontFamily(settings.editorFontFamily),
+        "--editor-font-size": `${settings.editorFontSize}px`,
+        "--editor-line-height": settings.editorLineHeight.toString(),
+      }) as CSSProperties,
+    [settings.editorFontFamily, settings.editorFontSize, settings.editorLineHeight],
+  );
+
   if (initialContent === null) {
     return (
       <div className="flex h-screen items-center justify-center rounded-lg bg-background shadow-lg">
@@ -137,8 +158,6 @@ function App({ noteId }: { noteId: string }) {
       </div>
     );
   }
-
-  const title = noteId === DEFAULT_NOTE_ID ? "Pinote" : `Pinote - ${noteId}`;
 
   return (
     <div className="relative flex h-screen flex-col overflow-hidden rounded-lg shadow-lg">
@@ -151,7 +170,7 @@ function App({ noteId }: { noteId: string }) {
           onOpenSettings={openSettings}
           onOpenNewNote={openNote}
         />
-        <Editor defaultValue={initialContent} onChange={handleChange} />
+        <Editor defaultValue={initialContent} onChange={handleChange} style={editorStyle} />
       </div>
     </div>
   );
