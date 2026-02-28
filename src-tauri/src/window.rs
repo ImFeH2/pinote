@@ -28,6 +28,7 @@ pub fn show_settings_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> 
     )
     .title("Pinote Settings")
     .inner_size(920.0, 620.0)
+    .center()
     .decorations(false)
     .resizable(true)
     .min_inner_size(760.0, 520.0)

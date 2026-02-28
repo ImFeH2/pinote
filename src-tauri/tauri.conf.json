@@ -17,6 +17,7 @@
         "title": "Pinote",
         "width": 400,
         "height": 500,
+        "center": true,
         "decorations": false,
         "transparent": true,
         "resizable": true,

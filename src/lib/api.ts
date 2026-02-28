@@ -36,6 +36,7 @@ async function createSettingsWindow() {
     title: "Pinote Settings",
     width: 920,
     height: 620,
+    center: true,
     minWidth: 760,
     minHeight: 520,
     decorations: false,

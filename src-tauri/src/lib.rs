@@ -37,6 +37,7 @@ pub fn run() {
             info!("app_ready");
 
             let window = app.get_webview_window("main").unwrap();
+            let _ = window.center();
 
             #[cfg(target_os = "macos")]
             window_vibrancy::apply_vibrancy(
