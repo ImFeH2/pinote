@@ -4,11 +4,13 @@ import { DEFAULT_NOTE_ID } from "@/lib/notes";
 type Theme = "light" | "dark" | "system";
 export type EditorFontFamily = "system" | "serif" | "mono";
 export type WheelResizeModifier = "alt" | "ctrl" | "shift" | "meta";
+const NOTE_OPACITY_MIN = 0.3;
+const NOTE_OPACITY_MAX = 1;
 
 export interface Settings {
   theme: Theme;
   noteAlwaysOnTop: Record<string, boolean>;
-  opacity: number;
+  noteOpacity: Record<string, number>;
   editorFontFamily: EditorFontFamily;
   editorFontSize: number;
   editorLineHeight: number;
@@ -30,7 +32,9 @@ export const DEFAULT_SETTINGS: Settings = {
   noteAlwaysOnTop: {
     [DEFAULT_NOTE_ID]: false,
   },
-  opacity: 1.0,
+  noteOpacity: {
+    [DEFAULT_NOTE_ID]: 1,
+  },
   editorFontFamily: "system",
   editorFontSize: 15,
   editorLineHeight: 1.2,
@@ -50,6 +54,7 @@ const SETTINGS_FILE = "settings.json";
 
 interface StoredSettings extends Partial<Settings> {
   alwaysOnTop?: boolean;
+  opacity?: number;
 }
 
 function sanitizeNoteAlwaysOnTop(value: unknown): Record<string, boolean> {
@@ -60,8 +65,22 @@ function sanitizeNoteAlwaysOnTop(value: unknown): Record<string, boolean> {
   return Object.fromEntries(entries) as Record<string, boolean>;
 }
 
+function normalizeOpacity(value: unknown): number | null {
+  if (typeof value !== "number" || Number.isNaN(value)) return null;
+  return Math.min(Math.max(value, NOTE_OPACITY_MIN), NOTE_OPACITY_MAX);
+}
+
+function sanitizeNoteOpacity(value: unknown): Record<string, number> {
+  if (!value || typeof value !== "object") return {};
+  const entries = Object.entries(value as Record<string, unknown>)
+    .map(([key, item]) => [key, normalizeOpacity(item)] as const)
+    .filter(([key, item]) => key.trim().length > 0 && item !== null)
+    .map(([key, item]) => [key, item ?? 1]);
+  return Object.fromEntries(entries) as Record<string, number>;
+}
+
 function mergeSettings(stored: StoredSettings): Settings {
-  const { shortcuts, noteAlwaysOnTop, alwaysOnTop, ...rest } = stored;
+  const { shortcuts, noteAlwaysOnTop, alwaysOnTop, noteOpacity, opacity, ...rest } = stored;
   const mergedNoteAlwaysOnTop = {
     ...DEFAULT_SETTINGS.noteAlwaysOnTop,
     ...sanitizeNoteAlwaysOnTop(noteAlwaysOnTop),
@@ -69,10 +88,19 @@ function mergeSettings(stored: StoredSettings): Settings {
   if (typeof alwaysOnTop === "boolean" && noteAlwaysOnTop === undefined) {
     mergedNoteAlwaysOnTop[DEFAULT_NOTE_ID] = alwaysOnTop;
   }
+  const mergedNoteOpacity = {
+    ...DEFAULT_SETTINGS.noteOpacity,
+    ...sanitizeNoteOpacity(noteOpacity),
+  };
+  const legacyOpacity = normalizeOpacity(opacity);
+  if (legacyOpacity !== null && noteOpacity === undefined) {
+    mergedNoteOpacity[DEFAULT_NOTE_ID] = legacyOpacity;
+  }
   return {
     ...DEFAULT_SETTINGS,
     ...rest,
     noteAlwaysOnTop: mergedNoteAlwaysOnTop,
+    noteOpacity: mergedNoteOpacity,
     shortcuts: {
       ...DEFAULT_SETTINGS.shortcuts,
       ...shortcuts,

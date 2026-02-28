@@ -125,7 +125,8 @@ export function SettingsApp() {
   const [aboutError, setAboutError] = useState<string | null>(null);
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
-  const opacityPercent = Math.round(settings.opacity * 100);
+  const mainNoteOpacity = settings.noteOpacity[DEFAULT_NOTE_ID] ?? 1;
+  const opacityPercent = Math.round(mainNoteOpacity * 100);
   const lineHeightText = settings.editorLineHeight.toFixed(1);
   const paddingXText = `${settings.editorPaddingX}px`;
   const paddingYText = `${settings.editorPaddingY}px`;
@@ -327,7 +328,7 @@ export function SettingsApp() {
 
               <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-medium text-muted-foreground">Opacity</div>
+                  <div className="text-xs font-medium text-muted-foreground">Main Note Opacity</div>
                   <div className="text-xs text-muted-foreground">{opacityPercent}%</div>
                 </div>
                 <input
@@ -336,10 +337,17 @@ export function SettingsApp() {
                   max={100}
                   value={opacityPercent}
                   onChange={(event) =>
-                    updateSettings({ opacity: Number(event.target.value) / 100 })
+                    updateSettings({
+                      noteOpacity: {
+                        [DEFAULT_NOTE_ID]: Number(event.target.value) / 100,
+                      },
+                    })
                   }
                   className="h-1 w-full cursor-pointer accent-primary"
                 />
+                <div className="text-xs text-muted-foreground">
+                  Other notes can adjust opacity from each note context menu.
+                </div>
               </div>
 
               <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">

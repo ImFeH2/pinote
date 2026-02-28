@@ -31,8 +31,11 @@ const WINDOW_MAX_HEIGHT = 2160;
 const WINDOW_RESIZE_WIDTH_STEP = 24;
 const WINDOW_RESIZE_HEIGHT_STEP = 30;
 const CONTEXT_MENU_WIDTH = 224;
-const CONTEXT_MENU_HEIGHT = 320;
+const CONTEXT_MENU_HEIGHT = 420;
 const CONTEXT_MENU_GAP = 8;
+const NOTE_OPACITY_MIN = 0.3;
+const NOTE_OPACITY_MAX = 1;
+const NOTE_OPACITY_STEP = 0.05;
 
 interface ContextMenuState {
   x: number;
@@ -85,7 +88,7 @@ function App({ noteId }: { noteId: string }) {
   const { toggleTheme } = useTheme();
   const { save, load } = useAutoSave(noteId);
   const { alwaysOnTop, toggleAlwaysOnTop, hideWindow } = useWindowControl(noteId);
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const [initialContent, setInitialContent] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const hasAppliedShortcutUpdate = useRef(false);
@@ -498,6 +501,32 @@ function App({ noteId }: { noteId: string }) {
   }, [contextMenu]);
 
   const title = noteId === DEFAULT_NOTE_ID ? "Pinote" : `Pinote - ${noteId}`;
+  const noteOpacity = settings.noteOpacity[noteId] ?? 1;
+  const noteOpacityPercent = Math.round(noteOpacity * 100);
+
+  const setNoteOpacity = useCallback(
+    (value: number) => {
+      updateSettings({
+        noteOpacity: {
+          [noteId]: clamp(value, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX),
+        },
+      });
+    },
+    [noteId, updateSettings],
+  );
+
+  const increaseNoteOpacity = useCallback(() => {
+    setNoteOpacity(noteOpacity + NOTE_OPACITY_STEP);
+  }, [noteOpacity, setNoteOpacity]);
+
+  const decreaseNoteOpacity = useCallback(() => {
+    setNoteOpacity(noteOpacity - NOTE_OPACITY_STEP);
+  }, [noteOpacity, setNoteOpacity]);
+
+  const resetNoteOpacity = useCallback(() => {
+    setNoteOpacity(1);
+  }, [setNoteOpacity]);
+
   const editorStyle = useMemo(
     () =>
       ({
@@ -531,7 +560,7 @@ function App({ noteId }: { noteId: string }) {
       onContextMenu={openContextMenu}
       onWheelCapture={handleWindowWheel}
     >
-      <div className="absolute inset-0 bg-background" style={{ opacity: settings.opacity }} />
+      <div className="absolute inset-0 bg-background" style={{ opacity: noteOpacity }} />
       <div
         onMouseDown={startWindowDrag}
         className="absolute left-0 right-0 top-0 z-20 h-1.5 cursor-grab"
@@ -557,7 +586,7 @@ function App({ noteId }: { noteId: string }) {
           }}
         >
           <div className="truncate px-2 py-1 text-[11px] font-medium text-muted-foreground">
-            {title}
+            {`${title} (${noteOpacityPercent}%)`}
           </div>
           <div className="my-1 h-px bg-border" />
           <button
@@ -579,6 +608,36 @@ function App({ noteId }: { noteId: string }) {
             className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             Open Settings
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              closeContextMenu();
+              increaseNoteOpacity();
+            }}
+            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            Increase Opacity
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              closeContextMenu();
+              decreaseNoteOpacity();
+            }}
+            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            Decrease Opacity
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              closeContextMenu();
+              resetNoteOpacity();
+            }}
+            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            Reset Opacity
           </button>
           <button
             type="button"

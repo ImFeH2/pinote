@@ -10,7 +10,7 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Cursor-centered Resize** — `Alt+Wheel` by default, with support for `Ctrl` / `Shift` / `Meta`
 - **Shortcut & Interaction Customization** — Configure keyboard shortcuts and wheel resize modifier in Settings
 - **Quick Access** — Global shortcut (`Alt+N`) and system tray show/hide workflow
-- **Personalized Appearance** — Theme, opacity, typography, page spacing, and modern scrollbar styling
+- **Personalized Appearance** — Theme, per-note opacity, typography, page spacing, and modern scrollbar styling
 - **Desktop Integration** — Main and Settings windows open centered on startup/first creation, with launch-at-startup support
 - **In-app Maintenance** — Built-in updater, version info, and repository link in About
 

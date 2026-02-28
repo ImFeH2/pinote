@@ -6,6 +6,7 @@ import { emitSettingsUpdated, listenSettingsUpdated } from "@/lib/api";
 type SettingsPatch = Partial<Omit<Settings, "shortcuts">> & {
   shortcuts?: Partial<Settings["shortcuts"]>;
   noteAlwaysOnTop?: Partial<Settings["noteAlwaysOnTop"]>;
+  noteOpacity?: Partial<Settings["noteOpacity"]>;
 };
 
 interface SettingsContextValue {
@@ -38,6 +39,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         noteAlwaysOnTop: {
           ...prev.noteAlwaysOnTop,
           ...patch.noteAlwaysOnTop,
+        },
+        noteOpacity: {
+          ...prev.noteOpacity,
+          ...patch.noteOpacity,
         },
       };
       saveSettings(next);
