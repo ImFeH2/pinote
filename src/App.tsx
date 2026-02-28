@@ -300,41 +300,54 @@ function App({ noteId }: { noteId: string }) {
     };
   }, [scheduleMiddleDragPosition, toggleAlwaysOnTop]);
 
-  const resizeWindowByWheel = useCallback(async (deltaY: number) => {
-    if (deltaY === 0 || wheelResizeLock.current) return;
+  const resizeWindowByWheel = useCallback(
+    async (deltaY: number, anchorX: number, anchorY: number) => {
+      if (deltaY === 0 || wheelResizeLock.current) return;
 
-    wheelResizeLock.current = true;
-    try {
-      const direction = deltaY < 0 ? 1 : -1;
-      const appWindow = getCurrentWindow();
-      const size = await appWindow.innerSize();
-      const width = clamp(
-        size.width + WINDOW_RESIZE_WIDTH_STEP * direction,
-        WINDOW_MIN_WIDTH,
-        WINDOW_MAX_WIDTH,
-      );
-      const height = clamp(
-        size.height + WINDOW_RESIZE_HEIGHT_STEP * direction,
-        WINDOW_MIN_HEIGHT,
-        WINDOW_MAX_HEIGHT,
-      );
-      if (width === size.width && height === size.height) return;
-      await appWindow.setSize(new PhysicalSize(width, height));
-    } catch (error) {
-      console.error("Failed to resize window by wheel:", error);
-    } finally {
-      window.setTimeout(() => {
-        wheelResizeLock.current = false;
-      }, 16);
-    }
-  }, []);
+      wheelResizeLock.current = true;
+      try {
+        const direction = deltaY < 0 ? 1 : -1;
+        const appWindow = getCurrentWindow();
+        const [size, position] = await Promise.all([
+          appWindow.innerSize(),
+          appWindow.outerPosition(),
+        ]);
+        const width = clamp(
+          size.width + WINDOW_RESIZE_WIDTH_STEP * direction,
+          WINDOW_MIN_WIDTH,
+          WINDOW_MAX_WIDTH,
+        );
+        const height = clamp(
+          size.height + WINDOW_RESIZE_HEIGHT_STEP * direction,
+          WINDOW_MIN_HEIGHT,
+          WINDOW_MAX_HEIGHT,
+        );
+        if (width === size.width && height === size.height) return;
+        const viewportWidth = Math.max(window.innerWidth, 1);
+        const viewportHeight = Math.max(window.innerHeight, 1);
+        const anchorRatioX = clamp(anchorX / viewportWidth, 0, 1);
+        const anchorRatioY = clamp(anchorY / viewportHeight, 0, 1);
+        const nextX = Math.round(position.x + (size.width - width) * anchorRatioX);
+        const nextY = Math.round(position.y + (size.height - height) * anchorRatioY);
+        await appWindow.setSize(new PhysicalSize(width, height));
+        await appWindow.setPosition(new PhysicalPosition(nextX, nextY));
+      } catch (error) {
+        console.error("Failed to resize window by wheel:", error);
+      } finally {
+        window.setTimeout(() => {
+          wheelResizeLock.current = false;
+        }, 16);
+      }
+    },
+    [],
+  );
 
   const handleWindowWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
       if (!event.ctrlKey) return;
       event.preventDefault();
       closeContextMenu();
-      void resizeWindowByWheel(event.deltaY);
+      void resizeWindowByWheel(event.deltaY, event.clientX, event.clientY);
     },
     [closeContextMenu, resizeWindowByWheel],
   );
