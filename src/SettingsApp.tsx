@@ -376,7 +376,7 @@ export function SettingsApp() {
                   </div>
                   <input
                     type="range"
-                    min={1.3}
+                    min={1.2}
                     max={2.2}
                     step={0.1}
                     value={settings.editorLineHeight}

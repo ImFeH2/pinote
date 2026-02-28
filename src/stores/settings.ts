@@ -25,8 +25,8 @@ export const DEFAULT_SETTINGS: Settings = {
   alwaysOnTop: false,
   opacity: 1.0,
   editorFontFamily: "system",
-  editorFontSize: 14,
-  editorLineHeight: 1.6,
+  editorFontSize: 15,
+  editorLineHeight: 1.2,
   launchAtStartup: false,
   shortcuts: {
     toggleWindow: "Alt+N",
