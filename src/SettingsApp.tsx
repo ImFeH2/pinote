@@ -440,7 +440,7 @@ export function SettingsApp() {
                   <input
                     type="range"
                     min={0}
-                    max={48}
+                    max={64}
                     step={1}
                     value={settings.editorPaddingY}
                     onChange={(event) =>

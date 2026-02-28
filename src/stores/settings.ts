@@ -38,8 +38,8 @@ export const DEFAULT_SETTINGS: Settings = {
   editorFontFamily: "system",
   editorFontSize: 15,
   editorLineHeight: 1.2,
-  editorPaddingX: 6,
-  editorPaddingY: 6,
+  editorPaddingX: 10,
+  editorPaddingY: 10,
   launchAtStartup: false,
   wheelResizeModifier: "alt",
   shortcuts: {
