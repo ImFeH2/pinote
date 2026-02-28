@@ -8,7 +8,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { PhysicalSize } from "@tauri-apps/api/dpi";
+import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
 import { Editor } from "@/components/Editor";
@@ -36,6 +36,18 @@ interface ContextMenuState {
   y: number;
 }
 
+interface MiddleDragState {
+  pointerStartX: number;
+  pointerStartY: number;
+  pointerCurrentX: number;
+  pointerCurrentY: number;
+  windowStartX: number;
+  windowStartY: number;
+  scaleFactor: number;
+  moved: boolean;
+  ready: boolean;
+}
+
 function resolveEditorFontFamily(value: "system" | "serif" | "mono") {
   if (value === "serif") {
     return 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif';
@@ -61,6 +73,10 @@ function App({ noteId }: { noteId: string }) {
   const activeToggleShortcut = useRef(settings.shortcuts.toggleWindow);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const wheelResizeLock = useRef(false);
+  const middleDragState = useRef<MiddleDragState | null>(null);
+  const middleDragPendingPosition = useRef<{ x: number; y: number } | null>(null);
+  const middleDragLastPosition = useRef<{ x: number; y: number } | null>(null);
+  const middleDragFrame = useRef<number | null>(null);
   const isMainWindow = getCurrentWindow().label === "main";
 
   useEffect(() => {
@@ -136,6 +152,27 @@ function App({ noteId }: { noteId: string }) {
     setContextMenu(null);
   }, []);
 
+  const applyMiddleDragPosition = useCallback(() => {
+    middleDragFrame.current = null;
+    const target = middleDragPendingPosition.current;
+    if (!target) return;
+    const last = middleDragLastPosition.current;
+    if (last && last.x === target.x && last.y === target.y) return;
+    middleDragLastPosition.current = target;
+    getCurrentWindow()
+      .setPosition(new PhysicalPosition(target.x, target.y))
+      .catch((error) => {
+        console.error("Failed to move window by middle drag:", error);
+      });
+  }, []);
+
+  const scheduleMiddleDragPosition = useCallback(() => {
+    if (middleDragFrame.current !== null) return;
+    middleDragFrame.current = window.requestAnimationFrame(() => {
+      applyMiddleDragPosition();
+    });
+  }, [applyMiddleDragPosition]);
+
   const openContextMenu = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     event.preventDefault();
     const x = clamp(
@@ -151,15 +188,115 @@ function App({ noteId }: { noteId: string }) {
     setContextMenu({ x, y });
   }, []);
 
-  const handleMiddleClick = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
+  useEffect(() => {
+    const handleMiddleAuxClick = (event: MouseEvent) => {
+      if (event.button !== 1) return;
+      event.preventDefault();
+    };
+
+    const handleMiddleMouseDown = (event: MouseEvent) => {
       if (event.button !== 1) return;
       event.preventDefault();
       closeContextMenu();
-      toggleAlwaysOnTop();
-    },
-    [closeContextMenu, toggleAlwaysOnTop],
-  );
+      const nextState: MiddleDragState = {
+        pointerStartX: event.screenX,
+        pointerStartY: event.screenY,
+        pointerCurrentX: event.screenX,
+        pointerCurrentY: event.screenY,
+        windowStartX: 0,
+        windowStartY: 0,
+        scaleFactor: 1,
+        moved: false,
+        ready: false,
+      };
+      middleDragState.current = nextState;
+      middleDragPendingPosition.current = null;
+      middleDragLastPosition.current = null;
+      const appWindow = getCurrentWindow();
+      Promise.all([appWindow.outerPosition(), appWindow.scaleFactor()])
+        .then(([position, scaleFactor]) => {
+          const state = middleDragState.current;
+          if (!state) return;
+          if (state !== nextState) return;
+          state.windowStartX = position.x;
+          state.windowStartY = position.y;
+          state.scaleFactor = scaleFactor;
+          state.ready = true;
+          const deltaX = state.pointerCurrentX - state.pointerStartX;
+          const deltaY = state.pointerCurrentY - state.pointerStartY;
+          if (deltaX === 0 && deltaY === 0) return;
+          middleDragPendingPosition.current = {
+            x: state.windowStartX + Math.round(deltaX * state.scaleFactor),
+            y: state.windowStartY + Math.round(deltaY * state.scaleFactor),
+          };
+          scheduleMiddleDragPosition();
+        })
+        .catch((error) => {
+          console.error("Failed to prepare middle drag state:", error);
+        });
+    };
+
+    window.addEventListener("auxclick", handleMiddleAuxClick, true);
+    window.addEventListener("mousedown", handleMiddleMouseDown, true);
+    return () => {
+      window.removeEventListener("auxclick", handleMiddleAuxClick, true);
+      window.removeEventListener("mousedown", handleMiddleMouseDown, true);
+    };
+  }, [closeContextMenu, scheduleMiddleDragPosition]);
+
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      const state = middleDragState.current;
+      if (!state) return;
+      state.pointerCurrentX = event.screenX;
+      state.pointerCurrentY = event.screenY;
+      const deltaX = state.pointerCurrentX - state.pointerStartX;
+      const deltaY = state.pointerCurrentY - state.pointerStartY;
+      if (deltaX === 0 && deltaY === 0) return;
+      if (!state.moved && Math.abs(deltaX) + Math.abs(deltaY) >= 3) {
+        state.moved = true;
+      }
+      if (!state.ready) return;
+      middleDragPendingPosition.current = {
+        x: state.windowStartX + Math.round(deltaX * state.scaleFactor),
+        y: state.windowStartY + Math.round(deltaY * state.scaleFactor),
+      };
+      scheduleMiddleDragPosition();
+    };
+
+    const finishMiddleInteraction = (shouldToggleAlwaysOnTop: boolean) => {
+      const state = middleDragState.current;
+      middleDragState.current = null;
+      middleDragPendingPosition.current = null;
+      middleDragLastPosition.current = null;
+      if (middleDragFrame.current !== null) {
+        window.cancelAnimationFrame(middleDragFrame.current);
+        middleDragFrame.current = null;
+      }
+      if (!state) return;
+      if (shouldToggleAlwaysOnTop && !state.moved) {
+        toggleAlwaysOnTop();
+      }
+    };
+
+    const handleMouseUp = (event: MouseEvent) => {
+      if (event.button !== 1) return;
+      finishMiddleInteraction(true);
+    };
+
+    const handleBlur = () => {
+      finishMiddleInteraction(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove, true);
+    window.addEventListener("mouseup", handleMouseUp, true);
+    window.addEventListener("blur", handleBlur);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove, true);
+      window.removeEventListener("mouseup", handleMouseUp, true);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, [scheduleMiddleDragPosition, toggleAlwaysOnTop]);
 
   const resizeWindowByWheel = useCallback(async (deltaY: number) => {
     if (deltaY === 0 || wheelResizeLock.current) return;
@@ -342,7 +479,6 @@ function App({ noteId }: { noteId: string }) {
     <div
       className="relative flex h-screen flex-col overflow-hidden rounded-lg shadow-lg"
       onContextMenu={openContextMenu}
-      onMouseDownCapture={handleMiddleClick}
       onWheelCapture={handleWindowWheel}
     >
       <div className="absolute inset-0 bg-background" style={{ opacity: settings.opacity }} />
