@@ -400,8 +400,8 @@ export function SettingsApp() {
                   </div>
                   <input
                     type="range"
-                    min={8}
-                    max={40}
+                    min={0}
+                    max={64}
                     step={1}
                     value={settings.editorPaddingX}
                     onChange={(event) =>
@@ -418,8 +418,8 @@ export function SettingsApp() {
                   </div>
                   <input
                     type="range"
-                    min={8}
-                    max={32}
+                    min={0}
+                    max={48}
                     step={1}
                     value={settings.editorPaddingY}
                     onChange={(event) =>

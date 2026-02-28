@@ -29,8 +29,8 @@ export const DEFAULT_SETTINGS: Settings = {
   editorFontFamily: "system",
   editorFontSize: 15,
   editorLineHeight: 1.2,
-  editorPaddingX: 16,
-  editorPaddingY: 12,
+  editorPaddingX: 6,
+  editorPaddingY: 6,
   launchAtStartup: false,
   shortcuts: {
     toggleWindow: "Alt+N",
