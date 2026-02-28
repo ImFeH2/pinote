@@ -12,7 +12,6 @@ import { PhysicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
 import { Editor } from "@/components/Editor";
-import { TitleBar } from "@/components/TitleBar";
 import { useTheme } from "@/hooks/useTheme";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useWindowControl } from "@/hooks/useWindowControl";
@@ -29,7 +28,7 @@ const WINDOW_MAX_HEIGHT = 2160;
 const WINDOW_RESIZE_WIDTH_STEP = 24;
 const WINDOW_RESIZE_HEIGHT_STEP = 30;
 const CONTEXT_MENU_WIDTH = 224;
-const CONTEXT_MENU_HEIGHT = 220;
+const CONTEXT_MENU_HEIGHT = 320;
 const CONTEXT_MENU_GAP = 8;
 
 interface ContextMenuState {
@@ -100,6 +99,39 @@ function App({ noteId }: { noteId: string }) {
       });
   }, []);
 
+  const toggleMaximizeWindow = useCallback(() => {
+    const appWindow = getCurrentWindow();
+    appWindow
+      .isMaximized()
+      .then((maximized) => {
+        if (maximized) {
+          return appWindow.unmaximize();
+        }
+        return appWindow.maximize();
+      })
+      .catch((error) => {
+        console.error("Failed to toggle maximize window:", error);
+      });
+  }, []);
+
+  const closeWindow = useCallback(() => {
+    getCurrentWindow()
+      .close()
+      .catch((error) => {
+        console.error("Failed to close window:", error);
+      });
+  }, []);
+
+  const startWindowDrag = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    getCurrentWindow()
+      .startDragging()
+      .catch((error) => {
+        console.error("Failed to start dragging window:", error);
+      });
+  }, []);
+
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
@@ -158,12 +190,14 @@ function App({ noteId }: { noteId: string }) {
     }
   }, []);
 
-  const handleTitleBarWheel = useCallback(
+  const handleWindowWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
+      if (!event.ctrlKey) return;
       event.preventDefault();
+      closeContextMenu();
       void resizeWindowByWheel(event.deltaY);
     },
-    [resizeWindowByWheel],
+    [closeContextMenu, resizeWindowByWheel],
   );
 
   const toggleWindowVisibilityByShortcut = useCallback(async () => {
@@ -309,17 +343,14 @@ function App({ noteId }: { noteId: string }) {
       className="relative flex h-screen flex-col overflow-hidden rounded-lg shadow-lg"
       onContextMenu={openContextMenu}
       onMouseDownCapture={handleMiddleClick}
+      onWheelCapture={handleWindowWheel}
     >
       <div className="absolute inset-0 bg-background" style={{ opacity: settings.opacity }} />
+      <div
+        onMouseDown={startWindowDrag}
+        className="absolute left-0 right-0 top-0 z-20 h-1.5 cursor-grab"
+      />
       <div className="relative flex flex-1 flex-col overflow-hidden">
-        <TitleBar
-          title={title}
-          showSettings
-          showNewNote
-          onOpenSettings={openSettings}
-          onOpenNewNote={openNote}
-          onWheel={handleTitleBarWheel}
-        />
         <Editor defaultValue={initialContent} onChange={handleChange} style={editorStyle} />
       </div>
       {contextMenu && (
@@ -331,6 +362,10 @@ function App({ noteId }: { noteId: string }) {
             top: `${contextMenu.y}px`,
           }}
         >
+          <div className="truncate px-2 py-1 text-[11px] font-medium text-muted-foreground">
+            {title}
+          </div>
+          <div className="my-1 h-px bg-border" />
           <button
             type="button"
             onClick={() => {
@@ -375,11 +410,31 @@ function App({ noteId }: { noteId: string }) {
             type="button"
             onClick={() => {
               closeContextMenu();
+              toggleMaximizeWindow();
+            }}
+            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            Toggle Maximize
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              closeContextMenu();
               hideWindow();
             }}
             className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             Hide Window
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              closeContextMenu();
+              closeWindow();
+            }}
+            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            Close Window
           </button>
         </div>
       )}

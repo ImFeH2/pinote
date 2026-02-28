@@ -14,7 +14,8 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Dark / Light Theme** — Switch with `Ctrl+Shift+D` or follow your system preference
 - **Typography Controls** — Tune editor font family, size, and line height from settings
 - **Page Margin Controls** — Adjust horizontal and vertical editor spacing from settings
-- **Mouse Gestures & Context Menu** — Middle-click toggles always on top, right-click opens common actions, titlebar wheel resizes window
+- **Mouse Gestures & Context Menu** — Middle-click toggles always on top, right-click opens common actions, `Ctrl+Wheel` resizes window
+- **Titleless Note Window** — Note windows run without a title bar for a cleaner writing surface
 - **Modern Scrollbars** — Polished slim scrollbars across editor and settings scroll areas
 - **Minimal UI** — No menus, no clutter, just your notes
 - **Settings Window** — Adjust theme, window behavior, opacity, and shortcuts
