@@ -4,25 +4,15 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 
 ## Features
 
-- **WYSIWYG Markdown** — Powered by Milkdown, type markdown and see it rendered instantly
-- **Always on Top** — Pin the window above other apps when you need it visible
-- **Pinned State Indicator** — Border glow and a pin badge make always-on-top status obvious
-- **Global Shortcut** — Press `Alt+N` to show/hide from anywhere
-- **Shortcut Customization** — Configure keyboard shortcuts and wheel resize modifier in settings
-- **Auto Save** — Content is saved automatically, no manual saving needed
-- **Multi-Note Windows** — Open multiple note windows at once and edit different markdown files in parallel
-- **System Tray** — Runs quietly in the background, always one click away
-- **Dark / Light Theme** — Switch with `Ctrl+Shift+D` or follow your system preference
-- **Typography Controls** — Tune editor font family, size, and line height from settings
-- **Page Margin Controls** — Adjust horizontal and vertical editor spacing from settings
-- **Mouse Gestures & Context Menu** — Middle-click toggles always on top, right-click opens common actions, `Alt+Wheel` (default) resizes window
-- **Titleless Note Window** — Note windows run without a title bar for a cleaner writing surface
-- **Modern Scrollbars** — Polished slim scrollbars across editor and settings scroll areas
-- **Minimal UI** — No menus, no clutter, just your notes
-- **Settings Window** — Adjust theme, window behavior, opacity, and shortcuts
-- **Launch at Startup** — Enable or disable app launch at system login
-- **In-App Updates** — Silent startup checks plus manual check/download/install in About
-- **About Panel** — View current version and open the GitHub homepage
+- **Markdown Workspace** — WYSIWYG editing with auto-save and multi-note windows
+- **Always-on-Top Clarity** — Pin notes above other apps and identify state with border glow and a pin badge
+- **Mouse-first Window Control** — Middle-click toggles pin, middle-drag moves the window, right-click opens quick actions
+- **Cursor-centered Resize** — `Alt+Wheel` by default, with support for `Ctrl` / `Shift` / `Meta`
+- **Shortcut & Interaction Customization** — Configure keyboard shortcuts and wheel resize modifier in Settings
+- **Quick Access** — Global shortcut (`Alt+N`) and system tray show/hide workflow
+- **Personalized Appearance** — Theme, opacity, typography, page spacing, and modern scrollbar styling
+- **Desktop Integration** — Main and Settings windows open centered on startup/first creation, with launch-at-startup support
+- **In-app Maintenance** — Built-in updater, version info, and repository link in About
 
 ## Keyboard Shortcuts
 
@@ -34,6 +24,17 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 | `Esc`            | Hide window          |
 
 Shortcuts can be changed in the Settings window.
+
+## Mouse Interactions
+
+| Default Interaction | Action                                |
+| ------------------- | ------------------------------------- |
+| `Alt+Wheel`         | Resize window around cursor           |
+| `Middle Click`      | Toggle always on top                  |
+| `Middle Drag`       | Move window                           |
+| `Right Click`       | Open context menu with common actions |
+
+`Alt+Wheel` modifier can be changed to `Ctrl`, `Shift`, or `Meta` in Settings.
 
 ## Development
 
