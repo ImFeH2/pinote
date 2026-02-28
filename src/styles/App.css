@@ -82,6 +82,20 @@
     line-height: var(--editor-line-height, 1.625);
   }
 
+  .milkdown-editor .milkdown-theme-nord {
+    font-size: var(--editor-font-size, 0.875rem);
+    line-height: var(--editor-line-height, 1.625);
+  }
+
+  .milkdown-editor .milkdown-theme-nord p,
+  .milkdown-editor .milkdown-theme-nord li,
+  .milkdown-editor .milkdown-theme-nord ul,
+  .milkdown-editor .milkdown-theme-nord ol,
+  .milkdown-editor .milkdown-theme-nord blockquote {
+    font-size: var(--editor-font-size, 0.875rem) !important;
+    line-height: var(--editor-line-height, 1.625) !important;
+  }
+
   .milkdown-editor .editor h1 {
     font-size: 1.5rem;
     font-weight: 700;
