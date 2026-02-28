@@ -491,12 +491,11 @@ function App({ noteId }: { noteId: string }) {
       />
       <div
         className={cn(
-          "pinote-pinned-badge pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-all duration-200",
+          "pinote-pinned-badge pointer-events-none absolute right-3 top-3 z-30 flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200",
           alwaysOnTop ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0",
         )}
       >
-        <Pin size={10} />
-        <span>Pinned</span>
+        <Pin size={11} />
       </div>
       <div className="relative flex flex-1 flex-col overflow-hidden">
         <Editor defaultValue={initialContent} onChange={handleChange} style={editorStyle} />
