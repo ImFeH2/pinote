@@ -79,7 +79,7 @@
 
 @layer components {
   .pinote-window {
-    border: 1px solid transparent;
+    border: 0 solid transparent;
     transition:
       border-color 180ms ease,
       box-shadow 220ms ease;
@@ -99,6 +99,7 @@
   }
 
   .pinote-window[data-pinned="true"] {
+    border-width: 1px;
     border-color: var(--color-pinned-border);
     box-shadow: 0 16px 36px -18px var(--color-pinned-shadow);
   }

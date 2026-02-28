@@ -471,7 +471,7 @@ function App({ noteId }: { noteId: string }) {
 
   if (initialContent === null) {
     return (
-      <div className="flex h-screen items-center justify-center rounded-lg bg-background shadow-lg">
+      <div className="flex h-screen items-center justify-center rounded-lg bg-background">
         <div className="text-sm text-muted-foreground">Loading...</div>
       </div>
     );
@@ -480,7 +480,7 @@ function App({ noteId }: { noteId: string }) {
   return (
     <div
       data-pinned={alwaysOnTop ? "true" : "false"}
-      className="pinote-window relative flex h-screen flex-col overflow-hidden rounded-lg shadow-lg"
+      className="pinote-window relative flex h-screen flex-col overflow-hidden rounded-lg"
       onContextMenu={openContextMenu}
       onWheelCapture={handleWindowWheel}
     >
