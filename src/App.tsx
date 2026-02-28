@@ -121,9 +121,7 @@ function App({ noteId }: { noteId: string }) {
   }, []);
 
   const openNote = useCallback(() => {
-    const value = window.prompt("Open note ID (leave blank to create a new note)", "");
-    if (value === null) return;
-    const targetNoteId = value.trim().length > 0 ? value : buildGeneratedNoteId();
+    const targetNoteId = buildGeneratedNoteId();
     openNoteWindow(targetNoteId).catch((error) => {
       console.error("Failed to open note window:", error);
     });
