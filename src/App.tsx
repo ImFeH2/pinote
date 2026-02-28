@@ -21,6 +21,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { openNoteWindow, openSettingsWindow } from "@/lib/api";
 import { buildGeneratedNoteId, DEFAULT_NOTE_ID } from "@/lib/notes";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
+import { type WheelResizeModifier } from "@/stores/settings";
 import "@/styles/App.css";
 
 const WINDOW_MIN_WIDTH = 320;
@@ -62,6 +63,22 @@ function resolveEditorFontFamily(value: "system" | "serif" | "mono") {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function wheelModifierMatchesEvent(
+  event: ReactWheelEvent<HTMLDivElement>,
+  modifier: WheelResizeModifier,
+) {
+  if (modifier === "alt") {
+    return event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey;
+  }
+  if (modifier === "ctrl") {
+    return event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey;
+  }
+  if (modifier === "shift") {
+    return event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
+  }
+  return event.metaKey && !event.altKey && !event.ctrlKey && !event.shiftKey;
 }
 
 function App({ noteId }: { noteId: string }) {
@@ -344,12 +361,12 @@ function App({ noteId }: { noteId: string }) {
 
   const handleWindowWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
-      if (!event.ctrlKey) return;
+      if (!wheelModifierMatchesEvent(event, settings.wheelResizeModifier)) return;
       event.preventDefault();
       closeContextMenu();
       void resizeWindowByWheel(event.deltaY, event.clientX, event.clientY);
     },
-    [closeContextMenu, resizeWindowByWheel],
+    [closeContextMenu, resizeWindowByWheel, settings.wheelResizeModifier],
   );
 
   const toggleWindowVisibilityByShortcut = useCallback(async () => {

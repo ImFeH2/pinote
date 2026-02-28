@@ -6,16 +6,16 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 
 - **WYSIWYG Markdown** — Powered by Milkdown, type markdown and see it rendered instantly
 - **Always on Top** — Pin the window above other apps when you need it visible
-- **Pinned State Indicator** — Border glow and a `Pinned` badge make always-on-top status obvious
+- **Pinned State Indicator** — Border glow and a pin badge make always-on-top status obvious
 - **Global Shortcut** — Press `Alt+N` to show/hide from anywhere
-- **Shortcut Customization** — Configure global and local shortcuts in settings
+- **Shortcut Customization** — Configure keyboard shortcuts and wheel resize modifier in settings
 - **Auto Save** — Content is saved automatically, no manual saving needed
 - **Multi-Note Windows** — Open multiple note windows at once and edit different markdown files in parallel
 - **System Tray** — Runs quietly in the background, always one click away
 - **Dark / Light Theme** — Switch with `Ctrl+Shift+D` or follow your system preference
 - **Typography Controls** — Tune editor font family, size, and line height from settings
 - **Page Margin Controls** — Adjust horizontal and vertical editor spacing from settings
-- **Mouse Gestures & Context Menu** — Middle-click toggles always on top, right-click opens common actions, `Ctrl+Wheel` resizes window
+- **Mouse Gestures & Context Menu** — Middle-click toggles always on top, right-click opens common actions, `Alt+Wheel` (default) resizes window
 - **Titleless Note Window** — Note windows run without a title bar for a cleaner writing surface
 - **Modern Scrollbars** — Polished slim scrollbars across editor and settings scroll areas
 - **Minimal UI** — No menus, no clutter, just your notes

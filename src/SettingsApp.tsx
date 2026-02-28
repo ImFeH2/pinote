@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { TitleBar } from "@/components/TitleBar";
 import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
+import { type WheelResizeModifier } from "@/stores/settings";
 import {
   checkForUpdates,
   downloadUpdate,
@@ -39,6 +40,13 @@ const fontFamilyOptions = [
   { value: "mono", label: "Monospace" },
 ] as const;
 
+const wheelResizeModifierOptions: Array<{ value: WheelResizeModifier; label: string }> = [
+  { value: "alt", label: "Alt" },
+  { value: "ctrl", label: "Ctrl" },
+  { value: "shift", label: "Shift" },
+  { value: "meta", label: "Meta" },
+];
+
 const sections = [
   {
     id: "appearance",
@@ -53,7 +61,7 @@ const sections = [
   {
     id: "shortcuts",
     label: "Shortcuts",
-    description: "Keyboard shortcut customization.",
+    description: "Keyboard shortcuts and interaction key customization.",
   },
   {
     id: "about",
@@ -128,6 +136,9 @@ export function SettingsApp() {
   const updateError = updateActionError ?? updateSnapshot.error;
   const isCheckingUpdate = updateSnapshot.state === "checking";
   const isDownloadingUpdate = updateSnapshot.state === "downloading";
+  const activeWheelResizeModifier =
+    wheelResizeModifierOptions.find((item) => item.value === settings.wheelResizeModifier) ??
+    wheelResizeModifierOptions[0];
 
   const updateShortcut = useCallback(
     (key: (typeof shortcutItems)[number]["key"], value: string) => {
@@ -475,18 +486,56 @@ export function SettingsApp() {
           )}
 
           {activeSection === "shortcuts" && (
-            <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-              <div className="text-xs font-medium text-muted-foreground">Shortcuts</div>
-              {shortcutItems.map((item) => (
-                <ShortcutInput
-                  key={item.key}
-                  label={item.label}
-                  value={settings.shortcuts[item.key]}
-                  onChange={(value) => updateShortcut(item.key, value)}
-                />
-              ))}
-              <div className="text-xs text-muted-foreground">Toggle Window is global.</div>
-              {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">Keyboard Shortcuts</div>
+                {shortcutItems.map((item) => (
+                  <ShortcutInput
+                    key={item.key}
+                    label={item.label}
+                    value={settings.shortcuts[item.key]}
+                    onChange={(value) => updateShortcut(item.key, value)}
+                  />
+                ))}
+                <div className="text-xs text-muted-foreground">Toggle Window is global.</div>
+                {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
+              </div>
+
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">
+                  Wheel Resize Modifier
+                </div>
+                <div className="flex items-center gap-2">
+                  {wheelResizeModifierOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => updateSettings({ wheelResizeModifier: option.value })}
+                      className={cn(
+                        "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                        settings.wheelResizeModifier === option.value
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-muted-foreground hover:bg-accent",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-xs text-muted-foreground">{`${activeWheelResizeModifier.label} + Wheel resizes the window around cursor.`}</div>
+              </div>
+
+              <div className="flex flex-col gap-1 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">
+                  Current Interactions
+                </div>
+                <div className="text-xs text-muted-foreground">{`${activeWheelResizeModifier.label} + Wheel: Resize window around cursor`}</div>
+                <div className="text-xs text-muted-foreground">
+                  Middle Click: Toggle Always On Top
+                </div>
+                <div className="text-xs text-muted-foreground">Middle Drag: Move window</div>
+                <div className="text-xs text-muted-foreground">Right Click: Open context menu</div>
+              </div>
             </div>
           )}
 

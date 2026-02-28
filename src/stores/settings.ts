@@ -2,6 +2,7 @@ import { readTextFile, writeTextFile, exists, BaseDirectory } from "@tauri-apps/
 
 type Theme = "light" | "dark" | "system";
 export type EditorFontFamily = "system" | "serif" | "mono";
+export type WheelResizeModifier = "alt" | "ctrl" | "shift" | "meta";
 
 export interface Settings {
   theme: Theme;
@@ -13,6 +14,7 @@ export interface Settings {
   editorPaddingX: number;
   editorPaddingY: number;
   launchAtStartup: boolean;
+  wheelResizeModifier: WheelResizeModifier;
   lastUpdateCheckAt?: string;
   shortcuts: {
     toggleWindow: string;
@@ -32,6 +34,7 @@ export const DEFAULT_SETTINGS: Settings = {
   editorPaddingX: 6,
   editorPaddingY: 6,
   launchAtStartup: false,
+  wheelResizeModifier: "alt",
   shortcuts: {
     toggleWindow: "Alt+N",
     toggleAlwaysOnTop: "Ctrl+Shift+T",
