@@ -11,7 +11,9 @@ import {
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
+import { Pin } from "lucide-react";
 import { Editor } from "@/components/Editor";
+import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useWindowControl } from "@/hooks/useWindowControl";
@@ -65,7 +67,7 @@ function clamp(value: number, min: number, max: number) {
 function App({ noteId }: { noteId: string }) {
   const { toggleTheme } = useTheme();
   const { save, load } = useAutoSave(noteId);
-  const { toggleAlwaysOnTop, hideWindow } = useWindowControl();
+  const { alwaysOnTop, toggleAlwaysOnTop, hideWindow } = useWindowControl();
   const { settings } = useSettings();
   const [initialContent, setInitialContent] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -477,7 +479,8 @@ function App({ noteId }: { noteId: string }) {
 
   return (
     <div
-      className="relative flex h-screen flex-col overflow-hidden rounded-lg shadow-lg"
+      data-pinned={alwaysOnTop ? "true" : "false"}
+      className="pinote-window relative flex h-screen flex-col overflow-hidden rounded-lg shadow-lg"
       onContextMenu={openContextMenu}
       onWheelCapture={handleWindowWheel}
     >
@@ -486,6 +489,15 @@ function App({ noteId }: { noteId: string }) {
         onMouseDown={startWindowDrag}
         className="absolute left-0 right-0 top-0 z-20 h-1.5 cursor-grab"
       />
+      <div
+        className={cn(
+          "pinote-pinned-badge pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-all duration-200",
+          alwaysOnTop ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0",
+        )}
+      >
+        <Pin size={10} />
+        <span>Pinned</span>
+      </div>
       <div className="relative flex flex-1 flex-col overflow-hidden">
         <Editor defaultValue={initialContent} onChange={handleChange} style={editorStyle} />
       </div>
@@ -530,7 +542,7 @@ function App({ noteId }: { noteId: string }) {
             }}
             className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
-            {settings.alwaysOnTop ? "Disable Always On Top" : "Enable Always On Top"}
+            {alwaysOnTop ? "Disable Always On Top" : "Enable Always On Top"}
           </button>
           <button
             type="button"

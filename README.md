@@ -6,6 +6,7 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 
 - **WYSIWYG Markdown** — Powered by Milkdown, type markdown and see it rendered instantly
 - **Always on Top** — Pin the window above other apps when you need it visible
+- **Pinned State Indicator** — Border glow and a `Pinned` badge make always-on-top status obvious
 - **Global Shortcut** — Press `Alt+N` to show/hide from anywhere
 - **Shortcut Customization** — Configure global and local shortcuts in settings
 - **Auto Save** — Content is saved automatically, no manual saving needed

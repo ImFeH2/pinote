@@ -12,6 +12,12 @@
   --color-accent: hsl(210 40% 96.1%);
   --color-accent-foreground: hsl(222.2 47.4% 11.2%);
   --color-destructive: hsl(0 84.2% 60.2%);
+  --color-pinned-border: hsl(217 91% 60%);
+  --color-pinned-glow: hsl(217 91% 60% / 0.32);
+  --color-pinned-shadow: hsl(217 91% 60% / 0.3);
+  --color-pinned-badge-border: hsl(217 91% 60% / 0.4);
+  --color-pinned-badge-bg: hsl(217 91% 60% / 0.16);
+  --color-pinned-badge-text: hsl(217 91% 43%);
   --color-scrollbar-track: hsl(210 40% 96.1% / 0.28);
   --color-scrollbar-thumb: hsl(215.4 16.3% 46.9% / 0.5);
   --color-scrollbar-thumb-hover: hsl(215.4 16.3% 46.9% / 0.72);
@@ -34,6 +40,12 @@
     --color-accent: hsl(217.2 32.6% 17.5%);
     --color-accent-foreground: hsl(210 40% 98%);
     --color-destructive: hsl(0 62.8% 30.6%);
+    --color-pinned-border: hsl(213 94% 68%);
+    --color-pinned-glow: hsl(213 94% 68% / 0.38);
+    --color-pinned-shadow: hsl(213 94% 68% / 0.34);
+    --color-pinned-badge-border: hsl(213 94% 68% / 0.44);
+    --color-pinned-badge-bg: hsl(213 94% 68% / 0.2);
+    --color-pinned-badge-text: hsl(213 100% 86%);
     --color-scrollbar-track: hsl(217.2 32.6% 17.5% / 0.24);
     --color-scrollbar-thumb: hsl(215 20.2% 65.1% / 0.5);
     --color-scrollbar-thumb-hover: hsl(215 20.2% 65.1% / 0.74);
@@ -66,6 +78,41 @@
 }
 
 @layer components {
+  .pinote-window {
+    border: 1px solid transparent;
+    transition:
+      border-color 180ms ease,
+      box-shadow 220ms ease;
+  }
+
+  .pinote-window::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    box-shadow:
+      0 0 0 1px var(--color-pinned-border),
+      0 0 28px 3px var(--color-pinned-glow);
+    transition: opacity 220ms ease;
+  }
+
+  .pinote-window[data-pinned="true"] {
+    border-color: var(--color-pinned-border);
+    box-shadow: 0 16px 36px -18px var(--color-pinned-shadow);
+  }
+
+  .pinote-window[data-pinned="true"]::before {
+    opacity: 1;
+  }
+
+  .pinote-pinned-badge {
+    border: 1px solid var(--color-pinned-badge-border);
+    background: var(--color-pinned-badge-bg);
+    color: var(--color-pinned-badge-text);
+  }
+
   .pinote-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
