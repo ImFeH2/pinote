@@ -118,6 +118,8 @@ export function SettingsApp() {
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const opacityPercent = Math.round(settings.opacity * 100);
   const lineHeightText = settings.editorLineHeight.toFixed(1);
+  const paddingXText = `${settings.editorPaddingX}px`;
+  const paddingYText = `${settings.editorPaddingY}px`;
   const canDownloadUpdate =
     updateSnapshot.state === "available" ||
     (updateSnapshot.available && updateSnapshot.state === "error");
@@ -382,6 +384,46 @@ export function SettingsApp() {
                     value={settings.editorLineHeight}
                     onChange={(event) =>
                       updateSettings({ editorLineHeight: Number(event.target.value) })
+                    }
+                    className="h-1 w-full cursor-pointer accent-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">Page Spacing</div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">Horizontal Margin</div>
+                    <div className="text-xs text-muted-foreground">{paddingXText}</div>
+                  </div>
+                  <input
+                    type="range"
+                    min={8}
+                    max={40}
+                    step={1}
+                    value={settings.editorPaddingX}
+                    onChange={(event) =>
+                      updateSettings({ editorPaddingX: Number(event.target.value) })
+                    }
+                    className="h-1 w-full cursor-pointer accent-primary"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">Vertical Margin</div>
+                    <div className="text-xs text-muted-foreground">{paddingYText}</div>
+                  </div>
+                  <input
+                    type="range"
+                    min={8}
+                    max={32}
+                    step={1}
+                    value={settings.editorPaddingY}
+                    onChange={(event) =>
+                      updateSettings({ editorPaddingY: Number(event.target.value) })
                     }
                     className="h-1 w-full cursor-pointer accent-primary"
                   />

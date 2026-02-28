@@ -10,6 +10,8 @@ export interface Settings {
   editorFontFamily: EditorFontFamily;
   editorFontSize: number;
   editorLineHeight: number;
+  editorPaddingX: number;
+  editorPaddingY: number;
   launchAtStartup: boolean;
   lastUpdateCheckAt?: string;
   shortcuts: {
@@ -27,6 +29,8 @@ export const DEFAULT_SETTINGS: Settings = {
   editorFontFamily: "system",
   editorFontSize: 15,
   editorLineHeight: 1.2,
+  editorPaddingX: 16,
+  editorPaddingY: 12,
   launchAtStartup: false,
   shortcuts: {
     toggleWindow: "Alt+N",

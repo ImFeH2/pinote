@@ -147,8 +147,16 @@ function App({ noteId }: { noteId: string }) {
         "--editor-font-family": resolveEditorFontFamily(settings.editorFontFamily),
         "--editor-font-size": `${settings.editorFontSize}px`,
         "--editor-line-height": settings.editorLineHeight.toString(),
+        "--editor-padding-x": `${settings.editorPaddingX}px`,
+        "--editor-padding-y": `${settings.editorPaddingY}px`,
       }) as CSSProperties,
-    [settings.editorFontFamily, settings.editorFontSize, settings.editorLineHeight],
+    [
+      settings.editorFontFamily,
+      settings.editorFontSize,
+      settings.editorLineHeight,
+      settings.editorPaddingX,
+      settings.editorPaddingY,
+    ],
   );
 
   if (initialContent === null) {

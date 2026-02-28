@@ -75,7 +75,7 @@
 
   .milkdown-editor .editor {
     flex: 1;
-    padding: 0.75rem 1rem;
+    padding: var(--editor-padding-y, 0.75rem) var(--editor-padding-x, 1rem);
     outline: none;
     font-family: var(--editor-font-family, inherit);
     font-size: var(--editor-font-size, 0.875rem);
