@@ -1,4 +1,4 @@
-import { useCallback, type MouseEvent } from "react";
+import { useCallback, type MouseEvent, type WheelEvent } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { FilePlus2, Settings2, Minus, Square, X } from "lucide-react";
 
@@ -8,6 +8,7 @@ interface TitleBarProps {
   showNewNote?: boolean;
   onOpenNewNote?: () => void;
   onOpenSettings?: () => void;
+  onWheel?: (event: WheelEvent<HTMLDivElement>) => void;
 }
 
 export function TitleBar({
@@ -16,6 +17,7 @@ export function TitleBar({
   showNewNote = false,
   onOpenNewNote,
   onOpenSettings,
+  onWheel,
 }: TitleBarProps) {
   const appWindow = getCurrentWindow();
 
@@ -61,7 +63,10 @@ export function TitleBar({
   }, [appWindow]);
 
   return (
-    <div className="flex h-9 shrink-0 items-center justify-between border-b border-border bg-background/80 px-2 backdrop-blur-sm">
+    <div
+      onWheel={onWheel}
+      className="flex h-9 shrink-0 items-center justify-between border-b border-border bg-background/80 px-2 backdrop-blur-sm"
+    >
       <div onMouseDown={handleStartDrag} className="flex flex-1 select-none items-center pl-1">
         <span className="text-xs font-medium text-muted-foreground">{title}</span>
       </div>
