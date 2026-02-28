@@ -84,7 +84,7 @@ function wheelModifierMatchesEvent(
 function App({ noteId }: { noteId: string }) {
   const { toggleTheme } = useTheme();
   const { save, load } = useAutoSave(noteId);
-  const { alwaysOnTop, toggleAlwaysOnTop, hideWindow } = useWindowControl();
+  const { alwaysOnTop, toggleAlwaysOnTop, hideWindow } = useWindowControl(noteId);
   const { settings } = useSettings();
   const [initialContent, setInitialContent] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);

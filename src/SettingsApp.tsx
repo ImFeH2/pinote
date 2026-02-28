@@ -7,6 +7,7 @@ import { TitleBar } from "@/components/TitleBar";
 import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
 import { type WheelResizeModifier } from "@/stores/settings";
+import { DEFAULT_NOTE_ID } from "@/lib/notes";
 import {
   checkForUpdates,
   downloadUpdate,
@@ -136,6 +137,7 @@ export function SettingsApp() {
   const updateError = updateActionError ?? updateSnapshot.error;
   const isCheckingUpdate = updateSnapshot.state === "checking";
   const isDownloadingUpdate = updateSnapshot.state === "downloading";
+  const mainNoteAlwaysOnTop = settings.noteAlwaysOnTop[DEFAULT_NOTE_ID] ?? false;
   const activeWheelResizeModifier =
     wheelResizeModifierOptions.find((item) => item.value === settings.wheelResizeModifier) ??
     wheelResizeModifierOptions[0];
@@ -446,19 +448,32 @@ export function SettingsApp() {
           {activeSection === "window" && (
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">Always On Top</div>
+                <div className="text-xs font-medium text-muted-foreground">
+                  Main Note Always On Top
+                </div>
                 <button
                   type="button"
-                  onClick={() => updateSettings({ alwaysOnTop: !settings.alwaysOnTop })}
+                  onClick={() =>
+                    updateSettings({
+                      noteAlwaysOnTop: {
+                        [DEFAULT_NOTE_ID]: !mainNoteAlwaysOnTop,
+                      },
+                    })
+                  }
                   className={cn(
                     "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                    settings.alwaysOnTop
+                    mainNoteAlwaysOnTop
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-background text-muted-foreground hover:bg-accent",
                   )}
                 >
-                  {settings.alwaysOnTop ? "Enabled" : "Disabled"}
+                  {mainNoteAlwaysOnTop ? "Enabled" : "Disabled"}
                 </button>
+              </div>
+
+              <div className="rounded-md border border-border bg-background/60 p-3 text-xs text-muted-foreground">
+                Always-on-top state is independent per note window. Use middle click or context menu
+                in each note to toggle.
               </div>
 
               <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
