@@ -102,7 +102,7 @@ interface EditorProps {
 
 export function Editor({ defaultValue, onChange, style }: EditorProps) {
   return (
-    <div className="milkdown-editor min-h-0 flex-1" style={style}>
+    <div className="milkdown-editor pinote-scrollbar min-h-0 flex-1" style={style}>
       <MilkdownProvider>
         <EditorInner defaultValue={defaultValue} onChange={onChange} />
       </MilkdownProvider>

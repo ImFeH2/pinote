@@ -283,7 +283,7 @@ export function SettingsApp() {
           ))}
         </aside>
 
-        <main className="min-w-0 flex-1 overflow-y-auto px-5 py-4">
+        <main className="pinote-scrollbar min-w-0 flex-1 overflow-y-auto px-5 py-4">
           <div className="mb-4">
             <div className="text-sm font-semibold text-foreground">{activeSectionInfo.label}</div>
             <div className="text-xs text-muted-foreground">{activeSectionInfo.description}</div>
