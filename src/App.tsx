@@ -422,6 +422,23 @@ function App({ noteId }: { noteId: string }) {
   }, [isMainWindow, settings.shortcuts.toggleWindow, toggleWindowVisibilityByShortcut]);
 
   useEffect(() => {
+    if (settings.wheelResizeModifier !== "alt") return;
+
+    const suppressBareAlt = (event: KeyboardEvent) => {
+      if (event.key !== "Alt") return;
+      if (event.ctrlKey || event.shiftKey || event.metaKey) return;
+      event.preventDefault();
+    };
+
+    window.addEventListener("keydown", suppressBareAlt, true);
+    window.addEventListener("keyup", suppressBareAlt, true);
+    return () => {
+      window.removeEventListener("keydown", suppressBareAlt, true);
+      window.removeEventListener("keyup", suppressBareAlt, true);
+    };
+  }, [settings.wheelResizeModifier]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (shortcutMatchesEvent(settings.shortcuts.hideWindow, e)) {
         e.preventDefault();
