@@ -33,6 +33,9 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
 window-vibrancy = "0.7.1"
 
+[target.'cfg(target_os = "windows")'.dependencies]
+winreg = "0.55"
+
 [package.metadata.release]
 tag-prefix = ""
 tag-name = "v{{version}}"

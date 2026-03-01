@@ -7,12 +7,20 @@ use serde::Serialize;
 use std::{collections::HashSet, path::Path, path::PathBuf, sync::Mutex};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_log::{Target, TargetKind};
+#[cfg(target_os = "windows")]
+use winreg::{RegKey, enums::HKEY_CURRENT_USER};
 
 const NOTE_WINDOW_PREFIX: &str = "note-";
 const NOTE_WINDOW_WIDTH: f64 = 400.0;
 const NOTE_WINDOW_HEIGHT: f64 = 500.0;
 const NOTE_WINDOW_MIN_WIDTH: f64 = 1.0;
 const NOTE_WINDOW_MIN_HEIGHT: f64 = 1.0;
+#[cfg(target_os = "windows")]
+const OPEN_WITH_PINOTE_MENU_KEY: &str = "OpenWithPinote";
+#[cfg(target_os = "windows")]
+const OPEN_WITH_PINOTE_MENU_TITLE: &str = "Use Pinote to Open";
+#[cfg(target_os = "windows")]
+const OPEN_WITH_PINOTE_EXTENSIONS: [&str; 2] = [".md", ".markdown"];
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -174,6 +182,98 @@ fn open_cli_note_windows(app: &tauri::AppHandle, requests: Vec<CliOpenNoteReques
     }
 }
 
+#[cfg(target_os = "windows")]
+fn open_with_pinote_shell_key_path(extension: &str) -> String {
+    format!(
+        r"Software\Classes\SystemFileAssociations\{extension}\shell\{OPEN_WITH_PINOTE_MENU_KEY}"
+    )
+}
+
+#[cfg(target_os = "windows")]
+fn open_with_pinote_command(executable_path: &Path) -> String {
+    let executable = executable_path.to_string_lossy().replace('"', "\\\"");
+    format!("\"{executable}\" \"%1\"")
+}
+
+#[cfg(target_os = "windows")]
+fn open_with_pinote_icon(executable_path: &Path) -> String {
+    let executable = executable_path.to_string_lossy().replace('"', "\\\"");
+    format!("\"{executable}\",0")
+}
+
+#[cfg(target_os = "windows")]
+fn is_open_with_pinote_enabled() -> bool {
+    let classes = RegKey::predef(HKEY_CURRENT_USER);
+    OPEN_WITH_PINOTE_EXTENSIONS.iter().all(|extension| {
+        let path = open_with_pinote_shell_key_path(extension);
+        classes.open_subkey(path).is_ok()
+    })
+}
+
+#[cfg(target_os = "windows")]
+fn set_open_with_pinote_enabled_windows(enabled: bool) -> Result<(), String> {
+    let classes = RegKey::predef(HKEY_CURRENT_USER);
+    if !enabled {
+        for extension in OPEN_WITH_PINOTE_EXTENSIONS {
+            let path = open_with_pinote_shell_key_path(extension);
+            let _ = classes.delete_subkey_all(path);
+        }
+        info!("open_with_pinote_disabled");
+        return Ok(());
+    }
+
+    let executable_path = std::env::current_exe()
+        .map_err(|error| format!("Failed to resolve executable path: {error}"))?;
+    let command = open_with_pinote_command(&executable_path);
+    let icon = open_with_pinote_icon(&executable_path);
+    for extension in OPEN_WITH_PINOTE_EXTENSIONS {
+        let path = open_with_pinote_shell_key_path(extension);
+        let (shell_key, _) = classes
+            .create_subkey(&path)
+            .map_err(|error| format!("Failed to create registry key `{path}`: {error}"))?;
+        shell_key
+            .set_value("", &OPEN_WITH_PINOTE_MENU_TITLE)
+            .map_err(|error| format!("Failed to write registry value for `{path}`: {error}"))?;
+        shell_key
+            .set_value("Icon", &icon)
+            .map_err(|error| format!("Failed to write icon value for `{path}`: {error}"))?;
+        let (command_key, _) = shell_key
+            .create_subkey("command")
+            .map_err(|error| format!("Failed to create command key for `{path}`: {error}"))?;
+        command_key
+            .set_value("", &command)
+            .map_err(|error| format!("Failed to write command value for `{path}`: {error}"))?;
+    }
+    info!("open_with_pinote_enabled");
+    Ok(())
+}
+
+#[tauri::command]
+fn get_open_with_pinote_enabled() -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        return Ok(is_open_with_pinote_enabled());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(false)
+    }
+}
+
+#[tauri::command]
+fn set_open_with_pinote_enabled(enabled: bool) -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        set_open_with_pinote_enabled_windows(enabled)?;
+        return Ok(is_open_with_pinote_enabled());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = enabled;
+        Err(String::from("Only supported on Windows"))
+    }
+}
+
 #[tauri::command]
 fn consume_cli_open_note_requests(
     state: tauri::State<'_, PendingCliOpenNotes>,
@@ -214,7 +314,11 @@ pub fn run() {
             open_cli_note_windows(app, requests);
         }))
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .invoke_handler(tauri::generate_handler![consume_cli_open_note_requests])
+        .invoke_handler(tauri::generate_handler![
+            consume_cli_open_note_requests,
+            get_open_with_pinote_enabled,
+            set_open_with_pinote_enabled
+        ])
         .setup(|app| {
             let handle = app.handle().clone();
             tray::setup_tray(&handle)?;

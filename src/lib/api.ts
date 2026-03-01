@@ -195,6 +195,14 @@ export async function consumeCliOpenNoteRequests() {
   return invoke<CliOpenNoteRequest[]>("consume_cli_open_note_requests");
 }
 
+export async function getOpenWithPinoteEnabled() {
+  return invoke<boolean>("get_open_with_pinote_enabled");
+}
+
+export async function setOpenWithPinoteEnabled(enabled: boolean) {
+  return invoke<boolean>("set_open_with_pinote_enabled", { enabled });
+}
+
 export async function listenCliOpenNoteRequested(handler: () => void): Promise<UnlistenFn> {
   return listen(CLI_OPEN_NOTE_REQUESTED_EVENT, () => {
     handler();

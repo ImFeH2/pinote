@@ -10,6 +10,7 @@ import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
 import { resolveDefaultNotesDirectory } from "@/lib/notes";
 import { type WheelResizeModifier } from "@/stores/settings";
+import { getOpenWithPinoteEnabled, setOpenWithPinoteEnabled } from "@/lib/api";
 import {
   checkForUpdates,
   downloadUpdate,
@@ -128,6 +129,8 @@ export function SettingsApp() {
   const [notesDirectoryError, setNotesDirectoryError] = useState<string | null>(null);
   const [notesDirectoryBusy, setNotesDirectoryBusy] = useState(false);
   const [defaultNotesDirectory, setDefaultNotesDirectory] = useState("");
+  const [contextMenuBusy, setContextMenuBusy] = useState(false);
+  const [contextMenuError, setContextMenuError] = useState<string | null>(null);
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const lineHeightText = settings.editorLineHeight.toFixed(1);
@@ -185,6 +188,20 @@ export function SettingsApp() {
       setStartupBusy(false);
     }
   }, [settings.launchAtStartup, updateSettings]);
+
+  const handleContextMenuIntegration = useCallback(async () => {
+    const next = !settings.openWithPinoteContextMenu;
+    setContextMenuBusy(true);
+    try {
+      const enabled = await setOpenWithPinoteEnabled(next);
+      updateSettings({ openWithPinoteContextMenu: enabled });
+      setContextMenuError(null);
+    } catch (error) {
+      setContextMenuError(getErrorMessage(error));
+    } finally {
+      setContextMenuBusy(false);
+    }
+  }, [settings.openWithPinoteContextMenu, updateSettings]);
 
   const handleManualUpdateCheck = useCallback(async () => {
     setUpdateBusy(true);
@@ -285,6 +302,23 @@ export function SettingsApp() {
       active = false;
     };
   }, [updateSettings]);
+
+  useEffect(() => {
+    let active = true;
+    getOpenWithPinoteEnabled()
+      .then((enabled) => {
+        if (!active) return;
+        if (settings.openWithPinoteContextMenu === enabled) return;
+        updateSettings({ openWithPinoteContextMenu: enabled });
+      })
+      .catch((error) => {
+        if (!active) return;
+        setContextMenuError(getErrorMessage(error));
+      });
+    return () => {
+      active = false;
+    };
+  }, [settings.openWithPinoteContextMenu, updateSettings]);
 
   useEffect(() => {
     let active = true;
@@ -575,6 +609,37 @@ export function SettingsApp() {
               </div>
 
               {startupError && <div className="text-xs text-destructive">{startupError}</div>}
+
+              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
+                <div className="flex flex-col gap-1">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    Explorer Context Menu
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Adds "Use Pinote to Open" for .md and .markdown files.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={contextMenuBusy}
+                  onClick={() => {
+                    void handleContextMenuIntegration();
+                  }}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                    settings.openWithPinoteContextMenu
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-accent",
+                    contextMenuBusy && "cursor-not-allowed opacity-60",
+                  )}
+                >
+                  {settings.openWithPinoteContextMenu ? "Enabled" : "Disabled"}
+                </button>
+              </div>
+
+              {contextMenuError && (
+                <div className="text-xs text-destructive">{contextMenuError}</div>
+              )}
             </div>
           )}
 

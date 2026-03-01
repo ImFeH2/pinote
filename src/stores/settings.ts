@@ -16,6 +16,7 @@ export interface Settings {
   launchAtStartup: boolean;
   wheelResizeModifier: WheelResizeModifier;
   wheelOpacityModifier: WheelResizeModifier;
+  openWithPinoteContextMenu: boolean;
   lastUpdateCheckAt?: string;
   shortcuts: {
     restoreWindow: string;
@@ -36,6 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
   launchAtStartup: false,
   wheelResizeModifier: "alt",
   wheelOpacityModifier: "ctrl",
+  openWithPinoteContextMenu: false,
   shortcuts: {
     restoreWindow: "Alt+N",
     toggleAlwaysOnTop: "Ctrl+Shift+T",

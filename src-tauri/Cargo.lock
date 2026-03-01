@@ -2865,6 +2865,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
  "window-vibrancy 0.7.1",
+ "winreg 0.55.0",
 ]
 
 [[package]]
