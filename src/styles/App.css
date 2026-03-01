@@ -79,6 +79,8 @@
 
 @layer components {
   .pinote-window {
+    --pinote-visual-opacity: 1;
+    --pinote-visual-opacity-percent: 100%;
     border: 1px solid transparent;
     transition:
       border-color 180ms ease,
@@ -99,12 +101,21 @@
   }
 
   .pinote-window[data-pinned="true"] {
-    border-color: var(--color-pinned-border);
-    box-shadow: 0 16px 36px -18px var(--color-pinned-shadow);
+    border-color: color-mix(
+      in srgb,
+      var(--color-pinned-border) var(--pinote-visual-opacity-percent),
+      transparent
+    );
+    box-shadow: 0 16px 36px -18px
+      color-mix(
+        in srgb,
+        var(--color-pinned-shadow) var(--pinote-visual-opacity-percent),
+        transparent
+      );
   }
 
   .pinote-window[data-pinned="true"]::before {
-    opacity: 1;
+    opacity: var(--pinote-visual-opacity);
   }
 
   .pinote-pinned-badge {
@@ -114,8 +125,23 @@
   }
 
   .pinote-scrollbar {
+    --pinote-scrollbar-thumb: var(--color-scrollbar-thumb);
+    --pinote-scrollbar-track: var(--color-scrollbar-track);
     scrollbar-width: thin;
-    scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+    scrollbar-color: var(--pinote-scrollbar-thumb) var(--pinote-scrollbar-track);
+  }
+
+  .pinote-window .pinote-scrollbar {
+    --pinote-scrollbar-thumb: color-mix(
+      in srgb,
+      var(--color-scrollbar-thumb) var(--pinote-visual-opacity-percent),
+      transparent
+    );
+    --pinote-scrollbar-track: color-mix(
+      in srgb,
+      var(--color-scrollbar-track) var(--pinote-visual-opacity-percent),
+      transparent
+    );
   }
 
   .pinote-scrollbar::-webkit-scrollbar {
@@ -124,19 +150,23 @@
   }
 
   .pinote-scrollbar::-webkit-scrollbar-track {
-    background: var(--color-scrollbar-track);
+    background: var(--pinote-scrollbar-track);
     border-radius: 9999px;
   }
 
   .pinote-scrollbar::-webkit-scrollbar-thumb {
-    background-color: var(--color-scrollbar-thumb);
+    background-color: var(--pinote-scrollbar-thumb);
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
 
   .pinote-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-scrollbar-thumb-hover);
+    background-color: color-mix(
+      in srgb,
+      var(--color-scrollbar-thumb-hover) var(--pinote-visual-opacity-percent),
+      transparent
+    );
   }
 
   .milkdown-editor {

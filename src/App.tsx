@@ -717,6 +717,15 @@ function App({
     ],
   );
 
+  const pinnedVisualStyle = useMemo(
+    () =>
+      ({
+        "--pinote-visual-opacity": noteOpacity.toString(),
+        "--pinote-visual-opacity-percent": `${Math.round(noteOpacity * 100)}%`,
+      }) as CSSProperties,
+    [noteOpacity],
+  );
+
   if (initialContent === null) {
     return (
       <div className="flex h-screen items-center justify-center rounded-lg bg-background">
@@ -729,6 +738,7 @@ function App({
     <div
       data-pinned={alwaysOnTop ? "true" : "false"}
       className="pinote-window relative flex h-screen flex-col overflow-hidden rounded-lg"
+      style={pinnedVisualStyle}
       onContextMenu={openContextMenu}
       onWheelCapture={handleWindowWheel}
     >
@@ -740,8 +750,9 @@ function App({
       <div
         className={cn(
           "pinote-pinned-badge pointer-events-none absolute right-3 top-3 z-30 flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200",
-          alwaysOnTop ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0",
+          alwaysOnTop ? "translate-y-0" : "-translate-y-1",
         )}
+        style={{ opacity: alwaysOnTop ? noteOpacity : 0 }}
       >
         <Pin size={11} />
       </div>
