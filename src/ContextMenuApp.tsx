@@ -107,7 +107,7 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
     };
   }, []);
 
-  const title = `Pinote - ${context.noteId}`;
+  const title = context.noteId;
 
   const fitWindowToContent = useCallback(() => {
     const shell = shellRef.current;
