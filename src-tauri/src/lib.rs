@@ -8,7 +8,10 @@ use std::{collections::HashSet, path::Path, path::PathBuf, sync::Mutex};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_log::{Target, TargetKind};
 #[cfg(target_os = "windows")]
-use winreg::{RegKey, enums::HKEY_CURRENT_USER};
+use winreg::{
+    RegKey,
+    enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE},
+};
 
 const NOTE_WINDOW_PREFIX: &str = "note-";
 const NOTE_WINDOW_WIDTH: f64 = 400.0;
@@ -21,6 +24,10 @@ const OPEN_WITH_PINOTE_MENU_KEY: &str = "OpenWithPinote";
 const OPEN_WITH_PINOTE_MENU_TITLE: &str = "Use Pinote to Open";
 #[cfg(target_os = "windows")]
 const OPEN_WITH_PINOTE_EXTENSIONS: [&str; 2] = [".md", ".markdown"];
+#[cfg(target_os = "windows")]
+const PINOTE_MARKDOWN_PROG_ID: &str = "Pinote.Markdown";
+#[cfg(target_os = "windows")]
+const PINOTE_MARKDOWN_FILE_TYPE: &str = "Pinote Markdown File";
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -248,6 +255,109 @@ fn set_open_with_pinote_enabled_windows(enabled: bool) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(target_os = "windows")]
+fn markdown_default_extension_key_path(extension: &str) -> String {
+    format!(r"Software\Classes\{extension}")
+}
+
+#[cfg(target_os = "windows")]
+fn markdown_default_prog_id_key_path() -> String {
+    format!(r"Software\Classes\{PINOTE_MARKDOWN_PROG_ID}")
+}
+
+#[cfg(target_os = "windows")]
+fn is_default_markdown_open_enabled_windows() -> bool {
+    let classes = RegKey::predef(HKEY_CURRENT_USER);
+    let prog_id_path = markdown_default_prog_id_key_path();
+    if classes.open_subkey(prog_id_path).is_err() {
+        return false;
+    }
+    OPEN_WITH_PINOTE_EXTENSIONS.iter().all(|extension| {
+        let key_path = markdown_default_extension_key_path(extension);
+        let Ok(extension_key) = classes.open_subkey(key_path) else {
+            return false;
+        };
+        let prog_id = extension_key.get_value::<String, _>("").unwrap_or_default();
+        prog_id.eq_ignore_ascii_case(PINOTE_MARKDOWN_PROG_ID)
+    })
+}
+
+#[cfg(target_os = "windows")]
+fn set_default_markdown_open_enabled_windows(enabled: bool) -> Result<(), String> {
+    let classes = RegKey::predef(HKEY_CURRENT_USER);
+    let prog_id_path = markdown_default_prog_id_key_path();
+    if !enabled {
+        for extension in OPEN_WITH_PINOTE_EXTENSIONS {
+            let extension_path = markdown_default_extension_key_path(extension);
+            if let Ok(extension_key) =
+                classes.open_subkey_with_flags(&extension_path, KEY_READ | KEY_WRITE)
+            {
+                let current_prog_id = extension_key.get_value::<String, _>("").unwrap_or_default();
+                if current_prog_id.eq_ignore_ascii_case(PINOTE_MARKDOWN_PROG_ID) {
+                    let _ = extension_key.delete_value("");
+                }
+                if let Ok(open_with_key) =
+                    extension_key.open_subkey_with_flags("OpenWithProgids", KEY_READ | KEY_WRITE)
+                {
+                    let _ = open_with_key.delete_value(PINOTE_MARKDOWN_PROG_ID);
+                }
+            }
+        }
+        let _ = classes.delete_subkey_all(&prog_id_path);
+        info!("default_markdown_open_disabled");
+        return Ok(());
+    }
+
+    let executable_path = std::env::current_exe()
+        .map_err(|error| format!("Failed to resolve executable path: {error}"))?;
+    let command = open_with_pinote_command(&executable_path);
+    let icon = open_with_pinote_icon(&executable_path);
+
+    let (prog_id_key, _) = classes
+        .create_subkey(&prog_id_path)
+        .map_err(|error| format!("Failed to create registry key `{prog_id_path}`: {error}"))?;
+    prog_id_key
+        .set_value("", &PINOTE_MARKDOWN_FILE_TYPE)
+        .map_err(|error| format!("Failed to write registry value for `{prog_id_path}`: {error}"))?;
+    let (icon_key, _) = prog_id_key
+        .create_subkey("DefaultIcon")
+        .map_err(|error| format!("Failed to create icon key for `{prog_id_path}`: {error}"))?;
+    icon_key
+        .set_value("", &icon)
+        .map_err(|error| format!("Failed to write icon value for `{prog_id_path}`: {error}"))?;
+    let (command_key, _) = prog_id_key
+        .create_subkey(r"shell\open\command")
+        .map_err(|error| format!("Failed to create command key for `{prog_id_path}`: {error}"))?;
+    command_key
+        .set_value("", &command)
+        .map_err(|error| format!("Failed to write command value for `{prog_id_path}`: {error}"))?;
+
+    for extension in OPEN_WITH_PINOTE_EXTENSIONS {
+        let extension_path = markdown_default_extension_key_path(extension);
+        let (extension_key, _) = classes.create_subkey(&extension_path).map_err(|error| {
+            format!("Failed to create registry key `{extension_path}`: {error}")
+        })?;
+        extension_key
+            .set_value("", &PINOTE_MARKDOWN_PROG_ID)
+            .map_err(|error| {
+                format!("Failed to write registry value for `{extension_path}`: {error}")
+            })?;
+        let (open_with_key, _) =
+            extension_key
+                .create_subkey("OpenWithProgids")
+                .map_err(|error| {
+                    format!("Failed to create OpenWithProgids for `{extension_path}`: {error}")
+                })?;
+        open_with_key
+            .set_value(PINOTE_MARKDOWN_PROG_ID, &"")
+            .map_err(|error| {
+                format!("Failed to write OpenWithProgids for `{extension_path}`: {error}")
+            })?;
+    }
+    info!("default_markdown_open_enabled");
+    Ok(())
+}
+
 #[tauri::command]
 fn get_open_with_pinote_enabled() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
@@ -266,6 +376,32 @@ fn set_open_with_pinote_enabled(enabled: bool) -> Result<bool, String> {
     {
         set_open_with_pinote_enabled_windows(enabled)?;
         return Ok(is_open_with_pinote_enabled());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = enabled;
+        Err(String::from("Only supported on Windows"))
+    }
+}
+
+#[tauri::command]
+fn get_default_markdown_open_enabled() -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        return Ok(is_default_markdown_open_enabled_windows());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(false)
+    }
+}
+
+#[tauri::command]
+fn set_default_markdown_open_enabled(enabled: bool) -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        set_default_markdown_open_enabled_windows(enabled)?;
+        return Ok(is_default_markdown_open_enabled_windows());
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -317,7 +453,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             consume_cli_open_note_requests,
             get_open_with_pinote_enabled,
-            set_open_with_pinote_enabled
+            set_open_with_pinote_enabled,
+            get_default_markdown_open_enabled,
+            set_default_markdown_open_enabled
         ])
         .setup(|app| {
             let handle = app.handle().clone();

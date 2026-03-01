@@ -203,6 +203,14 @@ export async function setOpenWithPinoteEnabled(enabled: boolean) {
   return invoke<boolean>("set_open_with_pinote_enabled", { enabled });
 }
 
+export async function getDefaultMarkdownOpenEnabled() {
+  return invoke<boolean>("get_default_markdown_open_enabled");
+}
+
+export async function setDefaultMarkdownOpenEnabled(enabled: boolean) {
+  return invoke<boolean>("set_default_markdown_open_enabled", { enabled });
+}
+
 export async function listenCliOpenNoteRequested(handler: () => void): Promise<UnlistenFn> {
   return listen(CLI_OPEN_NOTE_REQUESTED_EVENT, () => {
     handler();

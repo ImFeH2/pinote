@@ -10,7 +10,12 @@ import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
 import { resolveDefaultNotesDirectory } from "@/lib/notes";
 import { type WheelResizeModifier } from "@/stores/settings";
-import { getOpenWithPinoteEnabled, setOpenWithPinoteEnabled } from "@/lib/api";
+import {
+  getDefaultMarkdownOpenEnabled,
+  getOpenWithPinoteEnabled,
+  setDefaultMarkdownOpenEnabled,
+  setOpenWithPinoteEnabled,
+} from "@/lib/api";
 import {
   checkForUpdates,
   downloadUpdate,
@@ -131,6 +136,8 @@ export function SettingsApp() {
   const [defaultNotesDirectory, setDefaultNotesDirectory] = useState("");
   const [contextMenuBusy, setContextMenuBusy] = useState(false);
   const [contextMenuError, setContextMenuError] = useState<string | null>(null);
+  const [defaultOpenBusy, setDefaultOpenBusy] = useState(false);
+  const [defaultOpenError, setDefaultOpenError] = useState<string | null>(null);
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const lineHeightText = settings.editorLineHeight.toFixed(1);
@@ -202,6 +209,20 @@ export function SettingsApp() {
       setContextMenuBusy(false);
     }
   }, [settings.openWithPinoteContextMenu, updateSettings]);
+
+  const handleDefaultOpenIntegration = useCallback(async () => {
+    const next = !settings.defaultMarkdownOpenWithPinote;
+    setDefaultOpenBusy(true);
+    try {
+      const enabled = await setDefaultMarkdownOpenEnabled(next);
+      updateSettings({ defaultMarkdownOpenWithPinote: enabled });
+      setDefaultOpenError(null);
+    } catch (error) {
+      setDefaultOpenError(getErrorMessage(error));
+    } finally {
+      setDefaultOpenBusy(false);
+    }
+  }, [settings.defaultMarkdownOpenWithPinote, updateSettings]);
 
   const handleManualUpdateCheck = useCallback(async () => {
     setUpdateBusy(true);
@@ -319,6 +340,23 @@ export function SettingsApp() {
       active = false;
     };
   }, [settings.openWithPinoteContextMenu, updateSettings]);
+
+  useEffect(() => {
+    let active = true;
+    getDefaultMarkdownOpenEnabled()
+      .then((enabled) => {
+        if (!active) return;
+        if (settings.defaultMarkdownOpenWithPinote === enabled) return;
+        updateSettings({ defaultMarkdownOpenWithPinote: enabled });
+      })
+      .catch((error) => {
+        if (!active) return;
+        setDefaultOpenError(getErrorMessage(error));
+      });
+    return () => {
+      active = false;
+    };
+  }, [settings.defaultMarkdownOpenWithPinote, updateSettings]);
 
   useEffect(() => {
     let active = true;
@@ -639,6 +677,37 @@ export function SettingsApp() {
 
               {contextMenuError && (
                 <div className="text-xs text-destructive">{contextMenuError}</div>
+              )}
+
+              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
+                <div className="flex flex-col gap-1">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    Default Markdown Opener
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Set Pinote as default opener for .md and .markdown files.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={defaultOpenBusy}
+                  onClick={() => {
+                    void handleDefaultOpenIntegration();
+                  }}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                    settings.defaultMarkdownOpenWithPinote
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-accent",
+                    defaultOpenBusy && "cursor-not-allowed opacity-60",
+                  )}
+                >
+                  {settings.defaultMarkdownOpenWithPinote ? "Enabled" : "Disabled"}
+                </button>
+              </div>
+
+              {defaultOpenError && (
+                <div className="text-xs text-destructive">{defaultOpenError}</div>
               )}
             </div>
           )}
