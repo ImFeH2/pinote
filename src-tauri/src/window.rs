@@ -3,7 +3,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
-const CACHE_VERSION: u32 = 2;
+const CACHE_VERSION: u32 = 1;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]

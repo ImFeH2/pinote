@@ -5,10 +5,14 @@ mod window;
 use log::{LevelFilter, error, info};
 use serde::Serialize;
 use std::{collections::HashSet, path::Path, path::PathBuf, sync::Mutex};
-use tauri::{Emitter, Manager};
+use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_log::{Target, TargetKind};
 
-const CLI_OPEN_NOTE_REQUESTED_EVENT: &str = "cli-open-note-requested";
+const NOTE_WINDOW_PREFIX: &str = "note-";
+const NOTE_WINDOW_WIDTH: f64 = 400.0;
+const NOTE_WINDOW_HEIGHT: f64 = 500.0;
+const NOTE_WINDOW_MIN_WIDTH: f64 = 320.0;
+const NOTE_WINDOW_MIN_HEIGHT: f64 = 420.0;
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,7 +33,10 @@ fn is_markdown_file_path(path: &Path) -> bool {
 
 fn resolve_cli_note_path(raw_path: &str, cwd: Option<&Path>) -> Option<String> {
     let trimmed = raw_path.trim();
-    if trimmed.is_empty() || trimmed.starts_with('-') {
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.starts_with('-') {
         return None;
     }
     let path = PathBuf::from(trimmed);
@@ -74,21 +81,96 @@ fn parse_cli_open_note_requests(argv: &[String], cwd: Option<&str>) -> Vec<CliOp
     requests
 }
 
-fn enqueue_cli_open_note_requests(app: &tauri::AppHandle, requests: Vec<CliOpenNoteRequest>) {
+fn hash_fnv1a_utf16(value: &str) -> String {
+    let mut hash: u32 = 0x811c9dc5;
+    for code_unit in value.encode_utf16() {
+        hash ^= code_unit as u32;
+        hash = hash.wrapping_mul(0x01000193);
+    }
+    format!("{hash:08x}")
+}
+
+fn build_note_window_id(note_path: &str) -> String {
+    let normalized = note_path.trim().to_lowercase();
+    format!("{NOTE_WINDOW_PREFIX}{}", hash_fnv1a_utf16(&normalized))
+}
+
+fn encode_query_component(value: &str) -> String {
+    let mut encoded = String::new();
+    for byte in value.bytes() {
+        let is_unreserved =
+            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.' | b'~');
+        if is_unreserved {
+            encoded.push(char::from(byte));
+            continue;
+        }
+        encoded.push('%');
+        encoded.push_str(&format!("{byte:02X}"));
+    }
+    encoded
+}
+
+fn build_note_window_url(window_id: &str, note_path: &str) -> String {
+    let encoded_window_id = encode_query_component(window_id);
+    let encoded_note_path = encode_query_component(note_path);
+    format!("index.html?view=note&windowId={encoded_window_id}&notePath={encoded_note_path}")
+}
+
+fn open_cli_note_windows_on_main_thread(app: &tauri::AppHandle, requests: &[CliOpenNoteRequest]) {
     if requests.is_empty() {
         return;
     }
-    match app.state::<PendingCliOpenNotes>().0.lock() {
-        Ok(mut pending) => {
-            pending.extend(requests);
+    let last_index = requests.len() - 1;
+    for (index, request) in requests.iter().enumerate() {
+        let note_path = request.note_path.trim();
+        if note_path.is_empty() {
+            continue;
         }
-        Err(_) => {
-            error!("failed_to_acquire_cli_request_queue");
-            return;
+        let should_focus = index == last_index;
+        let window_id = build_note_window_id(note_path);
+        if let Some(existing) = app.get_webview_window(&window_id) {
+            if let Err(err) = existing.show() {
+                error!("cli_open_existing_window_show_failed window_id={window_id:?} error={err}");
+                continue;
+            }
+            if should_focus && let Err(err) = existing.set_focus() {
+                error!("cli_open_existing_window_focus_failed window_id={window_id:?} error={err}");
+            }
+            continue;
+        }
+        let url = build_note_window_url(&window_id, note_path);
+        let window = match WebviewWindowBuilder::new(app, &window_id, WebviewUrl::App(url.into()))
+            .title("Pinote")
+            .inner_size(NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT)
+            .min_inner_size(NOTE_WINDOW_MIN_WIDTH, NOTE_WINDOW_MIN_HEIGHT)
+            .decorations(false)
+            .transparent(true)
+            .resizable(true)
+            .always_on_top(false)
+            .visible(true)
+            .build()
+        {
+            Ok(window) => window,
+            Err(err) => {
+                error!("cli_open_new_window_failed window_id={window_id:?} error={err}");
+                continue;
+            }
+        };
+        if should_focus && let Err(err) = window.set_focus() {
+            error!("cli_open_new_window_focus_failed window_id={window_id:?} error={err}");
         }
     }
-    if let Err(err) = app.emit(CLI_OPEN_NOTE_REQUESTED_EVENT, ()) {
-        error!("failed_to_emit_cli_request_event: {err}");
+}
+
+fn open_cli_note_windows(app: &tauri::AppHandle, requests: Vec<CliOpenNoteRequest>) {
+    if requests.is_empty() {
+        return;
+    }
+    let handle = app.clone();
+    if let Err(err) = app.run_on_main_thread(move || {
+        open_cli_note_windows_on_main_thread(&handle, &requests);
+    }) {
+        error!("cli_dispatch_main_thread_failed error={err}");
     }
 }
 
@@ -129,7 +211,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
             let requests = parse_cli_open_note_requests(&argv, Some(cwd.as_str()));
-            enqueue_cli_open_note_requests(app, requests);
+            open_cli_note_windows(app, requests);
         }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![consume_cli_open_note_requests])
@@ -143,7 +225,7 @@ pub fn run() {
                 .map(|path| path.to_string_lossy().into_owned());
             let startup_requests =
                 parse_cli_open_note_requests(&startup_args, startup_cwd.as_deref());
-            enqueue_cli_open_note_requests(&handle, startup_requests);
+            open_cli_note_windows(&handle, startup_requests);
 
             info!("app_ready");
 

@@ -36,7 +36,7 @@ export interface WindowStateCache {
   hiddenStack: string[];
 }
 
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 1;
 const CACHE_FILE = "windows.json";
 const CACHE_LOCK_DIR = "windows.lock";
 const RESERVED_WINDOW_IDS = new Set(["main", "settings"]);
