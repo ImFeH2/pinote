@@ -25,7 +25,7 @@ function getNoteContext() {
   const rawNoteId = params.get("noteId");
   const rawOpacity = Number.parseFloat(params.get("noteOpacity") ?? "");
   const initialOpacity = Number.isFinite(rawOpacity)
-    ? Math.min(Math.max(rawOpacity, 0.3), 1)
+    ? Math.min(Math.max(rawOpacity, 0), 1)
     : undefined;
   return {
     noteId: rawNoteId ? normalizeNoteId(rawNoteId) : getNoteIdFromPath(notePath),

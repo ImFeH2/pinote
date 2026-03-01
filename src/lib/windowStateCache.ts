@@ -42,7 +42,7 @@ const CACHE_LOCK_DIR = "windows.lock";
 const RESERVED_WINDOW_IDS = new Set(["main", "settings"]);
 const LOCK_RETRY_MS = 20;
 const LOCK_TIMEOUT_MS = 1000;
-const NOTE_OPACITY_MIN = 0.3;
+const NOTE_OPACITY_MIN = 0;
 const NOTE_OPACITY_MAX = 1;
 
 interface UpdateWindowStateOptions {
