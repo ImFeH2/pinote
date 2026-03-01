@@ -1,10 +1,11 @@
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import App from "@/App";
+import { BootstrapApp } from "@/BootstrapApp";
 import { SettingsProvider } from "@/hooks/useSettings";
 import { SettingsApp } from "@/SettingsApp";
 import { setupLogging } from "@/lib/logging";
-import { DEFAULT_NOTE_ID, normalizeNoteId } from "@/lib/notes";
+import { getNoteIdFromPath, normalizeNoteId } from "@/lib/notes";
 import { checkForUpdates } from "@/lib/updater";
 
 setupLogging(window.location.href);
@@ -13,12 +14,18 @@ let hasScheduledSilentUpdateCheck = false;
 
 function getView() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("view") ?? "note";
+  return params.get("view") ?? "bootstrap";
 }
 
-function getNoteId() {
+function getNoteContext() {
   const params = new URLSearchParams(window.location.search);
-  return normalizeNoteId(params.get("note") ?? DEFAULT_NOTE_ID);
+  const notePath = params.get("notePath")?.trim() ?? "";
+  if (!notePath) return null;
+  const rawNoteId = params.get("noteId");
+  return {
+    noteId: rawNoteId ? normalizeNoteId(rawNoteId) : getNoteIdFromPath(notePath),
+    notePath,
+  };
 }
 
 function Root() {
@@ -38,7 +45,11 @@ function Root() {
   if (view === "settings") {
     return <SettingsApp />;
   }
-  return <App noteId={getNoteId()} />;
+  const noteContext = getNoteContext();
+  if (view === "note" && noteContext) {
+    return <App noteId={noteContext.noteId} notePath={noteContext.notePath} />;
+  }
+  return <BootstrapApp />;
 }
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

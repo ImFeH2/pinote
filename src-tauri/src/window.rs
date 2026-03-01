@@ -1,14 +1,46 @@
 use log::info;
+use serde::Deserialize;
+use std::collections::HashMap;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
-pub fn toggle_window_visibility(app: &tauri::AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        if window.is_visible().unwrap_or(false) {
-            let _ = window.hide();
-        } else {
-            let _ = window.show();
-            let _ = window.set_focus();
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CachedWindowState {
+    visibility: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WindowStateCache {
+    windows: HashMap<String, CachedWindowState>,
+    hidden_stack: Vec<String>,
+}
+
+fn load_window_state_cache(app: &tauri::AppHandle) -> Option<WindowStateCache> {
+    let app_data_dir = app.path().app_data_dir().ok()?;
+    let cache_file = app_data_dir.join("cache").join("window_state.json");
+    let content = std::fs::read_to_string(cache_file).ok()?;
+    serde_json::from_str::<WindowStateCache>(&content).ok()
+}
+
+pub fn restore_hidden_window(app: &tauri::AppHandle) {
+    let Some(cache) = load_window_state_cache(app) else {
+        return;
+    };
+
+    for window_id in cache.hidden_stack.iter().rev() {
+        let Some(state) = cache.windows.get(window_id) else {
+            continue;
+        };
+        if state.visibility != "hidden" {
+            continue;
         }
+        let Some(window) = app.get_webview_window(window_id) else {
+            continue;
+        };
+        let _ = window.show();
+        let _ = window.set_focus();
+        break;
     }
 }
 

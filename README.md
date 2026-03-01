@@ -9,16 +9,17 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Mouse-first Window Control** — Middle-click toggles pin, middle-drag moves the window, right-click opens quick actions
 - **Cursor-centered Resize** — `Alt+Wheel` by default, with support for `Ctrl` / `Shift` / `Meta`
 - **Shortcut & Interaction Customization** — Configure keyboard shortcuts and wheel resize modifier in Settings
-- **Quick Access** — Global shortcut (`Alt+N`) and system tray show/hide workflow
+- **Quick Access** — Global shortcut (`Alt+N`) and system tray action restore the most recently hidden note window
+- **Session Restore** — Window state cache restores note windows (position, size, pin state, visibility) on next launch
 - **Personalized Appearance** — Theme, per-note opacity, typography, page spacing, and modern scrollbar styling
-- **Desktop Integration** — Main and Settings windows open centered on startup/first creation, with launch-at-startup support
+- **Desktop Integration** — Note windows are created from UUID-based files under `notes/`, with launch-at-startup support
 - **In-app Maintenance** — Built-in updater, version info, and repository link in About
 
 ## Keyboard Shortcuts
 
 | Default Shortcut | Action               |
 | ---------------- | -------------------- |
-| `Alt+N`          | Show / Hide window   |
+| `Alt+N`          | Restore hidden window |
 | `Ctrl+Shift+T`   | Toggle always on top |
 | `Ctrl+Shift+D`   | Toggle dark mode     |
 | `Esc`            | Hide window          |

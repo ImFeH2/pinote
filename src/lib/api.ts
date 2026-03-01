@@ -1,7 +1,14 @@
 import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { getNoteWindowLabel, getNoteWindowUrl, normalizeNoteId } from "@/lib/notes";
+import {
+  buildNoteWindowId,
+  buildNoteWindowUrl,
+  normalizeNoteId,
+  resolveManagedNotePath,
+} from "@/lib/notes";
+import type { WindowBounds, WindowVisibility } from "@/lib/windowStateCache";
 import type { Settings } from "@/stores/settings";
 
 type SettingsEventPayload = {
@@ -14,6 +21,25 @@ const NOTE_WINDOW_WIDTH = 400;
 const NOTE_WINDOW_HEIGHT = 500;
 const NOTE_WINDOW_MIN_WIDTH = 320;
 const NOTE_WINDOW_MIN_HEIGHT = 420;
+
+interface OpenNoteWindowOptions {
+  windowId?: string;
+  notePath?: string;
+  visibility?: WindowVisibility;
+  focus?: boolean;
+  alwaysOnTop?: boolean;
+  bounds?: WindowBounds;
+}
+
+export interface OpenedNoteWindow {
+  windowId: string;
+  noteId: string;
+  notePath: string;
+  visibility: WindowVisibility;
+  alwaysOnTop: boolean;
+  bounds: WindowBounds;
+  updatedAt: string;
+}
 
 async function waitForWindowCreated(window: WebviewWindow) {
   await new Promise<void>((resolve, reject) => {
@@ -53,10 +79,41 @@ async function createSettingsWindow() {
   return settingsWindow;
 }
 
-async function createNoteWindow(noteId: string) {
-  const label = getNoteWindowLabel(noteId);
-  const noteWindow = new WebviewWindow(label, {
-    url: getNoteWindowUrl(noteId),
+async function getWindowSnapshot(
+  window: WebviewWindow,
+  noteId: string,
+  notePath: string,
+): Promise<OpenedNoteWindow> {
+  const [position, size, alwaysOnTop, visible] = await Promise.all([
+    window.outerPosition(),
+    window.innerSize(),
+    window.isAlwaysOnTop(),
+    window.isVisible(),
+  ]);
+  return {
+    windowId: window.label,
+    noteId,
+    notePath,
+    visibility: visible ? "visible" : "hidden",
+    alwaysOnTop,
+    bounds: {
+      x: position.x,
+      y: position.y,
+      width: size.width,
+      height: size.height,
+    },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+async function createNoteWindow(
+  windowId: string,
+  noteId: string,
+  notePath: string,
+  options: OpenNoteWindowOptions,
+) {
+  const noteWindow = new WebviewWindow(windowId, {
+    url: buildNoteWindowUrl({ windowId, noteId, notePath }),
     title: `Pinote - ${noteId}`,
     width: NOTE_WINDOW_WIDTH,
     height: NOTE_WINDOW_HEIGHT,
@@ -65,14 +122,15 @@ async function createNoteWindow(noteId: string) {
     decorations: false,
     transparent: true,
     resizable: true,
-  });
+    alwaysOnTop: options.alwaysOnTop ?? false,
+    visible: options.visibility !== "hidden",
+  } as ConstructorParameters<typeof WebviewWindow>[1]);
 
   await waitForWindowCreated(noteWindow);
-
-  await noteWindow.onCloseRequested((event) => {
-    event.preventDefault();
-    void noteWindow.hide();
-  });
+  if (options.bounds) {
+    await noteWindow.setSize(new PhysicalSize(options.bounds.width, options.bounds.height));
+    await noteWindow.setPosition(new PhysicalPosition(options.bounds.x, options.bounds.y));
+  }
 
   return noteWindow;
 }
@@ -84,24 +142,40 @@ export async function openSettingsWindow() {
   await settingsWindow.setFocus();
 }
 
-export async function openNoteWindow(noteId: string) {
+export async function openNoteWindow(noteId: string, options: OpenNoteWindowOptions = {}) {
   const normalizedNoteId = normalizeNoteId(noteId);
-  const label = getNoteWindowLabel(normalizedNoteId);
-  const existing = await WebviewWindow.getByLabel(label);
+  const windowId = options.windowId?.trim() || buildNoteWindowId(normalizedNoteId);
+  const notePath = options.notePath?.trim() || (await resolveManagedNotePath(normalizedNoteId));
+  const existing = await WebviewWindow.getByLabel(windowId);
   if (existing) {
+    if (options.bounds) {
+      await existing.setSize(new PhysicalSize(options.bounds.width, options.bounds.height));
+      await existing.setPosition(new PhysicalPosition(options.bounds.x, options.bounds.y));
+    }
+    if (typeof options.alwaysOnTop === "boolean") {
+      await existing.setAlwaysOnTop(options.alwaysOnTop);
+    }
+    if (options.visibility === "hidden") {
+      await existing.hide();
+      return getWindowSnapshot(existing, normalizedNoteId, notePath);
+    }
     await existing.show();
-    await existing.setFocus();
-    return normalizedNoteId;
+    if (options.focus !== false) {
+      await existing.setFocus();
+    }
+    return getWindowSnapshot(existing, normalizedNoteId, notePath);
   }
 
-  if (label === "main") {
-    throw new Error("Main window is unavailable");
+  const noteWindow = await createNoteWindow(windowId, normalizedNoteId, notePath, options);
+  if (options.visibility === "hidden") {
+    await noteWindow.hide();
+    return getWindowSnapshot(noteWindow, normalizedNoteId, notePath);
   }
-
-  const noteWindow = await createNoteWindow(normalizedNoteId);
   await noteWindow.show();
-  await noteWindow.setFocus();
-  return normalizedNoteId;
+  if (options.focus !== false) {
+    await noteWindow.setFocus();
+  }
+  return getWindowSnapshot(noteWindow, normalizedNoteId, notePath);
 }
 
 export async function emitSettingsUpdated(settings: Settings) {

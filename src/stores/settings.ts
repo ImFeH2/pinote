@@ -1,11 +1,11 @@
 import { readTextFile, writeTextFile, exists, BaseDirectory } from "@tauri-apps/plugin-fs";
-import { DEFAULT_NOTE_ID } from "@/lib/notes";
 
 type Theme = "light" | "dark" | "system";
 export type EditorFontFamily = "system" | "serif" | "mono";
 export type WheelResizeModifier = "alt" | "ctrl" | "shift" | "meta";
 const NOTE_OPACITY_MIN = 0.3;
 const NOTE_OPACITY_MAX = 1;
+const LEGACY_DEFAULT_NOTE_KEYS = new Set(["default", "main"]);
 
 export interface Settings {
   theme: Theme;
@@ -20,7 +20,7 @@ export interface Settings {
   wheelResizeModifier: WheelResizeModifier;
   lastUpdateCheckAt?: string;
   shortcuts: {
-    toggleWindow: string;
+    restoreWindow: string;
     toggleAlwaysOnTop: string;
     toggleTheme: string;
     hideWindow: string;
@@ -29,12 +29,8 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
-  noteAlwaysOnTop: {
-    [DEFAULT_NOTE_ID]: false,
-  },
-  noteOpacity: {
-    [DEFAULT_NOTE_ID]: 1,
-  },
+  noteAlwaysOnTop: {},
+  noteOpacity: {},
   editorFontFamily: "system",
   editorFontSize: 15,
   editorLineHeight: 1.2,
@@ -43,7 +39,7 @@ export const DEFAULT_SETTINGS: Settings = {
   launchAtStartup: false,
   wheelResizeModifier: "alt",
   shortcuts: {
-    toggleWindow: "Alt+N",
+    restoreWindow: "Alt+N",
     toggleAlwaysOnTop: "Ctrl+Shift+T",
     toggleTheme: "Ctrl+Shift+D",
     hideWindow: "Escape",
@@ -52,16 +48,29 @@ export const DEFAULT_SETTINGS: Settings = {
 
 const SETTINGS_FILE = "settings.json";
 
-interface StoredSettings extends Partial<Settings> {
+type StoredSettings = Partial<Omit<Settings, "shortcuts">> & {
   alwaysOnTop?: boolean;
   opacity?: number;
+  shortcuts?: Partial<Settings["shortcuts"]> & {
+    toggleWindow?: string;
+  };
+};
+
+function normalizeWindowKey(value: unknown) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (LEGACY_DEFAULT_NOTE_KEYS.has(trimmed)) {
+    return "";
+  }
+  return trimmed;
 }
 
 function sanitizeNoteAlwaysOnTop(value: unknown): Record<string, boolean> {
   if (!value || typeof value !== "object") return {};
-  const entries = Object.entries(value as Record<string, unknown>).filter(
-    ([key, item]) => key.trim().length > 0 && typeof item === "boolean",
-  );
+  const entries = Object.entries(value as Record<string, unknown>)
+    .map(([key, item]) => [normalizeWindowKey(key), item] as const)
+    .filter(([key, item]) => key.length > 0 && typeof item === "boolean");
   return Object.fromEntries(entries) as Record<string, boolean>;
 }
 
@@ -73,38 +82,35 @@ function normalizeOpacity(value: unknown): number | null {
 function sanitizeNoteOpacity(value: unknown): Record<string, number> {
   if (!value || typeof value !== "object") return {};
   const entries = Object.entries(value as Record<string, unknown>)
-    .map(([key, item]) => [key, normalizeOpacity(item)] as const)
-    .filter(([key, item]) => key.trim().length > 0 && item !== null)
+    .map(([key, item]) => [normalizeWindowKey(key), normalizeOpacity(item)] as const)
+    .filter(([key, item]) => key.length > 0 && item !== null)
     .map(([key, item]) => [key, item ?? 1]);
   return Object.fromEntries(entries) as Record<string, number>;
 }
 
 function mergeSettings(stored: StoredSettings): Settings {
-  const { shortcuts, noteAlwaysOnTop, alwaysOnTop, noteOpacity, opacity, ...rest } = stored;
+  const { shortcuts, noteAlwaysOnTop, noteOpacity, ...rest } = stored;
   const mergedNoteAlwaysOnTop = {
     ...DEFAULT_SETTINGS.noteAlwaysOnTop,
     ...sanitizeNoteAlwaysOnTop(noteAlwaysOnTop),
   };
-  if (typeof alwaysOnTop === "boolean" && noteAlwaysOnTop === undefined) {
-    mergedNoteAlwaysOnTop[DEFAULT_NOTE_ID] = alwaysOnTop;
-  }
   const mergedNoteOpacity = {
     ...DEFAULT_SETTINGS.noteOpacity,
     ...sanitizeNoteOpacity(noteOpacity),
   };
-  const legacyOpacity = normalizeOpacity(opacity);
-  if (legacyOpacity !== null && noteOpacity === undefined) {
-    mergedNoteOpacity[DEFAULT_NOTE_ID] = legacyOpacity;
+  const mergedShortcuts = {
+    ...DEFAULT_SETTINGS.shortcuts,
+    ...shortcuts,
+  };
+  if (!shortcuts?.restoreWindow && typeof shortcuts?.toggleWindow === "string") {
+    mergedShortcuts.restoreWindow = shortcuts.toggleWindow;
   }
   return {
     ...DEFAULT_SETTINGS,
     ...rest,
     noteAlwaysOnTop: mergedNoteAlwaysOnTop,
     noteOpacity: mergedNoteOpacity,
-    shortcuts: {
-      ...DEFAULT_SETTINGS.shortcuts,
-      ...shortcuts,
-    },
+    shortcuts: mergedShortcuts,
   };
 }
 

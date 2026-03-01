@@ -7,7 +7,6 @@ import { TitleBar } from "@/components/TitleBar";
 import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
 import { type WheelResizeModifier } from "@/stores/settings";
-import { DEFAULT_NOTE_ID } from "@/lib/notes";
 import {
   checkForUpdates,
   downloadUpdate,
@@ -23,7 +22,7 @@ import { Github } from "lucide-react";
 const REPOSITORY_URL = "https://github.com/ImFeH2/pinote";
 
 const shortcutItems = [
-  { key: "toggleWindow", label: "Toggle Window" },
+  { key: "restoreWindow", label: "Restore Hidden Window" },
   { key: "toggleAlwaysOnTop", label: "Toggle Always On Top" },
   { key: "toggleTheme", label: "Toggle Theme" },
   { key: "hideWindow", label: "Hide Window" },
@@ -125,8 +124,6 @@ export function SettingsApp() {
   const [aboutError, setAboutError] = useState<string | null>(null);
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
-  const mainNoteOpacity = settings.noteOpacity[DEFAULT_NOTE_ID] ?? 1;
-  const opacityPercent = Math.round(mainNoteOpacity * 100);
   const lineHeightText = settings.editorLineHeight.toFixed(1);
   const paddingXText = `${settings.editorPaddingX}px`;
   const paddingYText = `${settings.editorPaddingY}px`;
@@ -138,7 +135,6 @@ export function SettingsApp() {
   const updateError = updateActionError ?? updateSnapshot.error;
   const isCheckingUpdate = updateSnapshot.state === "checking";
   const isDownloadingUpdate = updateSnapshot.state === "downloading";
-  const mainNoteAlwaysOnTop = settings.noteAlwaysOnTop[DEFAULT_NOTE_ID] ?? false;
   const activeWheelResizeModifier =
     wheelResizeModifierOptions.find((item) => item.value === settings.wheelResizeModifier) ??
     wheelResizeModifierOptions[0];
@@ -326,30 +322,6 @@ export function SettingsApp() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-medium text-muted-foreground">Main Note Opacity</div>
-                  <div className="text-xs text-muted-foreground">{opacityPercent}%</div>
-                </div>
-                <input
-                  type="range"
-                  min={30}
-                  max={100}
-                  value={opacityPercent}
-                  onChange={(event) =>
-                    updateSettings({
-                      noteOpacity: {
-                        [DEFAULT_NOTE_ID]: Number(event.target.value) / 100,
-                      },
-                    })
-                  }
-                  className="h-1 w-full cursor-pointer accent-primary"
-                />
-                <div className="text-xs text-muted-foreground">
-                  Other notes can adjust opacity from each note context menu.
-                </div>
-              </div>
-
               <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
                 <div className="text-xs font-medium text-muted-foreground">Typography</div>
 
@@ -455,30 +427,6 @@ export function SettingsApp() {
 
           {activeSection === "window" && (
             <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">
-                  Main Note Always On Top
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateSettings({
-                      noteAlwaysOnTop: {
-                        [DEFAULT_NOTE_ID]: !mainNoteAlwaysOnTop,
-                      },
-                    })
-                  }
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                    mainNoteAlwaysOnTop
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-muted-foreground hover:bg-accent",
-                  )}
-                >
-                  {mainNoteAlwaysOnTop ? "Enabled" : "Disabled"}
-                </button>
-              </div>
-
               <div className="rounded-md border border-border bg-background/60 p-3 text-xs text-muted-foreground">
                 Always-on-top state is independent per note window. Use middle click or context menu
                 in each note to toggle.
@@ -520,7 +468,9 @@ export function SettingsApp() {
                     onChange={(value) => updateShortcut(item.key, value)}
                   />
                 ))}
-                <div className="text-xs text-muted-foreground">Toggle Window is global.</div>
+                <div className="text-xs text-muted-foreground">
+                  Restore Hidden Window is global.
+                </div>
                 {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
               </div>
 

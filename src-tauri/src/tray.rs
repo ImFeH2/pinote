@@ -3,10 +3,10 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
 
-use crate::window::{show_settings_window, toggle_window_visibility};
+use crate::window::{restore_hidden_window, show_settings_window};
 
 pub fn setup_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let show_hide = MenuItem::with_id(app, "show_hide", "Show/Hide", true, None::<&str>)?;
+    let show_hide = MenuItem::with_id(app, "show_hide", "Restore Hidden", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&show_hide, &settings, &quit])?;
@@ -16,7 +16,7 @@ pub fn setup_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Erro
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show_hide" => {
-                toggle_window_visibility(app);
+                restore_hidden_window(app);
             }
             "settings" => {
                 let handle = app.clone();
@@ -36,7 +36,7 @@ pub fn setup_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Erro
                 ..
             } = event
             {
-                toggle_window_visibility(tray.app_handle());
+                restore_hidden_window(tray.app_handle());
             }
         })
         .build(app)?;

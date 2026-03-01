@@ -3,9 +3,9 @@ use std::str::FromStr;
 use tauri::Manager;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-use crate::window::toggle_window_visibility;
+use crate::window::restore_hidden_window;
 
-const DEFAULT_TOGGLE_WINDOW_SHORTCUT: &str = "Alt+N";
+const DEFAULT_RESTORE_WINDOW_SHORTCUT: &str = "Alt+N";
 const SETTINGS_FILE_NAME: &str = "settings.json";
 
 #[derive(Debug, Deserialize)]
@@ -17,17 +17,18 @@ struct StoredSettings {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct StoredShortcuts {
+    restore_window: Option<String>,
     toggle_window: Option<String>,
 }
 
 pub fn setup_shortcuts(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let shortcut = load_toggle_window_shortcut(app)
-        .unwrap_or_else(|| DEFAULT_TOGGLE_WINDOW_SHORTCUT.to_string());
-    register_toggle_window_shortcut(app, &shortcut).map_err(std::io::Error::other)?;
+    let shortcut = load_restore_window_shortcut(app)
+        .unwrap_or_else(|| DEFAULT_RESTORE_WINDOW_SHORTCUT.to_string());
+    register_restore_window_shortcut(app, &shortcut).map_err(std::io::Error::other)?;
     Ok(())
 }
 
-fn register_toggle_window_shortcut(
+fn register_restore_window_shortcut(
     app: &tauri::AppHandle,
     shortcut_text: &str,
 ) -> Result<(), String> {
@@ -44,7 +45,7 @@ fn register_toggle_window_shortcut(
             if event.state != ShortcutState::Pressed {
                 return;
             }
-            toggle_window_visibility(app);
+            restore_hidden_window(app);
         })
         .map_err(|error| {
             format!("failed to register global shortcut `{shortcut_text}`: {error}")
@@ -53,9 +54,10 @@ fn register_toggle_window_shortcut(
     Ok(())
 }
 
-fn load_toggle_window_shortcut(app: &tauri::AppHandle) -> Option<String> {
+fn load_restore_window_shortcut(app: &tauri::AppHandle) -> Option<String> {
     let path = app.path().app_data_dir().ok()?.join(SETTINGS_FILE_NAME);
     let content = std::fs::read_to_string(path).ok()?;
     let settings: StoredSettings = serde_json::from_str(&content).ok()?;
-    settings.shortcuts?.toggle_window
+    let shortcuts = settings.shortcuts?;
+    shortcuts.restore_window.or(shortcuts.toggle_window)
 }

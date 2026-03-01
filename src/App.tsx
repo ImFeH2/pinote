@@ -10,7 +10,6 @@ import {
 } from "react";
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
 import { Pin } from "lucide-react";
 import { Editor } from "@/components/Editor";
 import { cn } from "@/lib/utils";
@@ -19,8 +18,13 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 import { useWindowControl } from "@/hooks/useWindowControl";
 import { useSettings } from "@/hooks/useSettings";
 import { openNoteWindow, openSettingsWindow } from "@/lib/api";
-import { buildGeneratedNoteId, DEFAULT_NOTE_ID } from "@/lib/notes";
+import { buildGeneratedNoteId } from "@/lib/notes";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
+import {
+  removeWindowState,
+  type WindowVisibility,
+  upsertWindowState,
+} from "@/lib/windowStateCache";
 import { type WheelResizeModifier } from "@/stores/settings";
 import "@/styles/App.css";
 
@@ -84,22 +88,21 @@ function wheelModifierMatchesEvent(
   return event.metaKey && !event.altKey && !event.ctrlKey && !event.shiftKey;
 }
 
-function App({ noteId }: { noteId: string }) {
+function App({ noteId, notePath }: { noteId: string; notePath: string }) {
   const { toggleTheme } = useTheme();
-  const { save, load } = useAutoSave(noteId);
-  const { alwaysOnTop, toggleAlwaysOnTop, hideWindow } = useWindowControl(noteId);
+  const { save, load } = useAutoSave(notePath);
+  const { alwaysOnTop, toggleAlwaysOnTop } = useWindowControl(noteId);
   const { settings, updateSettings } = useSettings();
+  const appWindow = useMemo(() => getCurrentWindow(), []);
+  const windowLabel = appWindow.label;
   const [initialContent, setInitialContent] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const hasAppliedShortcutUpdate = useRef(false);
-  const activeToggleShortcut = useRef(settings.shortcuts.toggleWindow);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const wheelResizeLock = useRef(false);
   const middleDragState = useRef<MiddleDragState | null>(null);
   const middleDragPendingPosition = useRef<{ x: number; y: number } | null>(null);
   const middleDragLastPosition = useRef<{ x: number; y: number } | null>(null);
   const middleDragFrame = useRef<number | null>(null);
-  const isMainWindow = getCurrentWindow().label === "main";
 
   useEffect(() => {
     load().then((content) => {
@@ -107,12 +110,118 @@ function App({ noteId }: { noteId: string }) {
     });
   }, [load]);
 
+  const persistWindowState = useCallback(
+    async (visibility?: WindowVisibility, pushHiddenToTop = false) => {
+      try {
+        const [position, size, currentAlwaysOnTop, visible] = await Promise.all([
+          appWindow.outerPosition(),
+          appWindow.innerSize(),
+          appWindow.isAlwaysOnTop(),
+          appWindow.isVisible(),
+        ]);
+        const nextVisibility = visibility ?? (visible ? "visible" : "hidden");
+        await upsertWindowState(
+          {
+            windowId: windowLabel,
+            noteId,
+            notePath,
+            visibility: nextVisibility,
+            alwaysOnTop: currentAlwaysOnTop,
+            bounds: {
+              x: position.x,
+              y: position.y,
+              width: size.width,
+              height: size.height,
+            },
+            updatedAt: new Date().toISOString(),
+          },
+          { pushHiddenToTop },
+        );
+      } catch (error) {
+        console.error("Failed to persist window state:", error);
+      }
+    },
+    [appWindow, noteId, notePath, windowLabel],
+  );
+
   const handleChange = useCallback(
     (markdown: string) => {
       save(markdown);
     },
     [save],
   );
+
+  const hideWindow = useCallback(async () => {
+    try {
+      const [position, size, currentAlwaysOnTop] = await Promise.all([
+        appWindow.outerPosition(),
+        appWindow.innerSize(),
+        appWindow.isAlwaysOnTop(),
+      ]);
+      await upsertWindowState(
+        {
+          windowId: windowLabel,
+          noteId,
+          notePath,
+          visibility: "hidden",
+          alwaysOnTop: currentAlwaysOnTop,
+          bounds: {
+            x: position.x,
+            y: position.y,
+            width: size.width,
+            height: size.height,
+          },
+          updatedAt: new Date().toISOString(),
+        },
+        { pushHiddenToTop: true },
+      );
+      await appWindow.hide();
+    } catch (error) {
+      console.error("Failed to hide window:", error);
+    }
+  }, [appWindow, noteId, notePath, windowLabel]);
+
+  useEffect(() => {
+    void persistWindowState();
+  }, [alwaysOnTop, persistWindowState]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlistenHandlers: Array<() => void> = [];
+    const setupWindowListeners = async () => {
+      const handlers = await Promise.all([
+        appWindow.onMoved(() => {
+          void persistWindowState();
+        }),
+        appWindow.onResized(() => {
+          void persistWindowState();
+        }),
+        appWindow.onFocusChanged(({ payload }) => {
+          if (!payload) return;
+          void persistWindowState("visible");
+        }),
+        appWindow.onCloseRequested(() => {
+          void removeWindowState(windowLabel);
+        }),
+      ]);
+      if (disposed) {
+        for (const handler of handlers) {
+          handler();
+        }
+        return;
+      }
+      unlistenHandlers = handlers;
+    };
+
+    void setupWindowListeners();
+    return () => {
+      disposed = true;
+      for (const handler of unlistenHandlers) {
+        handler();
+      }
+      unlistenHandlers = [];
+    };
+  }, [appWindow, persistWindowState, windowLabel]);
 
   const openSettings = useCallback(() => {
     openSettingsWindow().catch((error) => {
@@ -122,21 +231,22 @@ function App({ noteId }: { noteId: string }) {
 
   const openNote = useCallback(() => {
     const targetNoteId = buildGeneratedNoteId();
-    openNoteWindow(targetNoteId).catch((error) => {
-      console.error("Failed to open note window:", error);
-    });
-  }, []);
-
-  const minimizeWindow = useCallback(() => {
-    getCurrentWindow()
-      .minimize()
+    openNoteWindow(targetNoteId)
+      .then((opened) => {
+        return upsertWindowState(opened);
+      })
       .catch((error) => {
-        console.error("Failed to minimize window:", error);
+        console.error("Failed to open note window:", error);
       });
   }, []);
 
+  const minimizeWindow = useCallback(() => {
+    appWindow.minimize().catch((error) => {
+      console.error("Failed to minimize window:", error);
+    });
+  }, [appWindow]);
+
   const toggleMaximizeWindow = useCallback(() => {
-    const appWindow = getCurrentWindow();
     appWindow
       .isMaximized()
       .then((maximized) => {
@@ -148,25 +258,24 @@ function App({ noteId }: { noteId: string }) {
       .catch((error) => {
         console.error("Failed to toggle maximize window:", error);
       });
-  }, []);
+  }, [appWindow]);
 
   const closeWindow = useCallback(() => {
-    getCurrentWindow()
-      .close()
-      .catch((error) => {
-        console.error("Failed to close window:", error);
-      });
-  }, []);
+    appWindow.close().catch((error) => {
+      console.error("Failed to close window:", error);
+    });
+  }, [appWindow]);
 
-  const startWindowDrag = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
-    event.preventDefault();
-    getCurrentWindow()
-      .startDragging()
-      .catch((error) => {
+  const startWindowDrag = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      appWindow.startDragging().catch((error) => {
         console.error("Failed to start dragging window:", error);
       });
-  }, []);
+    },
+    [appWindow],
+  );
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
@@ -179,12 +288,10 @@ function App({ noteId }: { noteId: string }) {
     const last = middleDragLastPosition.current;
     if (last && last.x === target.x && last.y === target.y) return;
     middleDragLastPosition.current = target;
-    getCurrentWindow()
-      .setPosition(new PhysicalPosition(target.x, target.y))
-      .catch((error) => {
-        console.error("Failed to move window by middle drag:", error);
-      });
-  }, []);
+    appWindow.setPosition(new PhysicalPosition(target.x, target.y)).catch((error) => {
+      console.error("Failed to move window by middle drag:", error);
+    });
+  }, [appWindow]);
 
   const scheduleMiddleDragPosition = useCallback(() => {
     if (middleDragFrame.current !== null) return;
@@ -232,7 +339,6 @@ function App({ noteId }: { noteId: string }) {
       middleDragState.current = nextState;
       middleDragPendingPosition.current = null;
       middleDragLastPosition.current = null;
-      const appWindow = getCurrentWindow();
       Promise.all([appWindow.outerPosition(), appWindow.scaleFactor()])
         .then(([position, scaleFactor]) => {
           const state = middleDragState.current;
@@ -262,7 +368,7 @@ function App({ noteId }: { noteId: string }) {
       window.removeEventListener("auxclick", handleMiddleAuxClick, true);
       window.removeEventListener("mousedown", handleMiddleMouseDown, true);
     };
-  }, [closeContextMenu, scheduleMiddleDragPosition]);
+  }, [appWindow, closeContextMenu, scheduleMiddleDragPosition]);
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -325,7 +431,6 @@ function App({ noteId }: { noteId: string }) {
       wheelResizeLock.current = true;
       try {
         const direction = deltaY < 0 ? 1 : -1;
-        const appWindow = getCurrentWindow();
         const [size, position] = await Promise.all([
           appWindow.innerSize(),
           appWindow.outerPosition(),
@@ -357,7 +462,7 @@ function App({ noteId }: { noteId: string }) {
         }, 16);
       }
     },
-    [],
+    [appWindow],
   );
 
   const handleWindowWheel = useCallback(
@@ -369,58 +474,6 @@ function App({ noteId }: { noteId: string }) {
     },
     [closeContextMenu, resizeWindowByWheel, settings.wheelResizeModifier],
   );
-
-  const toggleWindowVisibilityByShortcut = useCallback(async () => {
-    const appWindow = getCurrentWindow();
-    try {
-      const visible = await appWindow.isVisible();
-      if (visible) {
-        await appWindow.hide();
-        return;
-      }
-      await appWindow.show();
-      await appWindow.setFocus();
-    } catch (error) {
-      console.error("Failed to toggle window visibility:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isMainWindow) return;
-
-    if (!hasAppliedShortcutUpdate.current) {
-      hasAppliedShortcutUpdate.current = true;
-      activeToggleShortcut.current = settings.shortcuts.toggleWindow;
-      return;
-    }
-
-    const previousShortcut = activeToggleShortcut.current;
-    const nextShortcut = settings.shortcuts.toggleWindow;
-    if (previousShortcut === nextShortcut) return;
-
-    let disposed = false;
-    const updateShortcutRegistration = async () => {
-      try {
-        await register(nextShortcut, (event) => {
-          if (event.state !== "Pressed") return;
-          void toggleWindowVisibilityByShortcut();
-        });
-        if (disposed) {
-          await unregister(nextShortcut).catch(() => {});
-          return;
-        }
-        await unregister(previousShortcut).catch(() => {});
-        activeToggleShortcut.current = nextShortcut;
-      } catch (error) {
-        console.error(`Failed to update global shortcut ${nextShortcut}:`, error);
-      }
-    };
-
-    void updateShortcutRegistration();
-    return () => {
-      disposed = true;
-    };
-  }, [isMainWindow, settings.shortcuts.toggleWindow, toggleWindowVisibilityByShortcut]);
 
   useEffect(() => {
     if (settings.wheelResizeModifier !== "alt") return;
@@ -498,7 +551,7 @@ function App({ noteId }: { noteId: string }) {
     };
   }, [contextMenu]);
 
-  const title = noteId === DEFAULT_NOTE_ID ? "Pinote" : `Pinote - ${noteId}`;
+  const title = `Pinote - ${noteId}`;
   const noteOpacity = settings.noteOpacity[noteId] ?? 1;
   const noteOpacityPercent = Math.round(noteOpacity * 100);
 

@@ -1,25 +1,19 @@
 import { useCallback, useEffect, useRef } from "react";
-import { readTextFile, writeTextFile, mkdir, exists, BaseDirectory } from "@tauri-apps/plugin-fs";
-import { getNoteFilename } from "@/lib/notes";
+import { readTextFile, writeTextFile, mkdir, exists } from "@tauri-apps/plugin-fs";
+import { dirname } from "@tauri-apps/api/path";
 
 const DEBOUNCE_MS = 500;
-const NOTES_DIR = "notes";
 
-async function ensureNotesDir() {
-  const dirExists = await exists(NOTES_DIR, {
-    baseDir: BaseDirectory.AppData,
-  });
+async function ensureParentDir(notePath: string) {
+  const parent = await dirname(notePath);
+  const dirExists = await exists(parent);
   if (!dirExists) {
-    await mkdir(NOTES_DIR, {
-      baseDir: BaseDirectory.AppData,
-      recursive: true,
-    });
+    await mkdir(parent, { recursive: true });
   }
 }
 
-export function useAutoSave(noteId = "default") {
+export function useAutoSave(notePath: string) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const filename = getNoteFilename(noteId);
 
   const save = useCallback(
     (content: string) => {
@@ -28,33 +22,27 @@ export function useAutoSave(noteId = "default") {
       }
       timerRef.current = setTimeout(async () => {
         try {
-          await ensureNotesDir();
-          await writeTextFile(filename, content, {
-            baseDir: BaseDirectory.AppData,
-          });
+          await ensureParentDir(notePath);
+          await writeTextFile(notePath, content);
         } catch (e) {
           console.error("Failed to save note:", e);
         }
       }, DEBOUNCE_MS);
     },
-    [filename],
+    [notePath],
   );
 
   const load = useCallback(async (): Promise<string> => {
     try {
-      await ensureNotesDir();
-      const fileExists = await exists(filename, {
-        baseDir: BaseDirectory.AppData,
-      });
+      await ensureParentDir(notePath);
+      const fileExists = await exists(notePath);
       if (!fileExists) return "";
-      return await readTextFile(filename, {
-        baseDir: BaseDirectory.AppData,
-      });
+      return await readTextFile(notePath);
     } catch (e) {
       console.error("Failed to load note:", e);
       return "";
     }
-  }, [filename]);
+  }, [notePath]);
 
   useEffect(() => {
     return () => {
