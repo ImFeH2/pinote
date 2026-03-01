@@ -23,6 +23,7 @@ export interface CachedWindowState {
   notePath: string;
   visibility: WindowVisibility;
   alwaysOnTop: boolean;
+  opacity: number;
   bounds: WindowBounds;
   updatedAt: string;
 }
@@ -41,6 +42,8 @@ const CACHE_LOCK_DIR = "windows.lock";
 const RESERVED_WINDOW_IDS = new Set(["main", "settings"]);
 const LOCK_RETRY_MS = 20;
 const LOCK_TIMEOUT_MS = 1000;
+const NOTE_OPACITY_MIN = 0.3;
+const NOTE_OPACITY_MAX = 1;
 
 interface UpdateWindowStateOptions {
   pushHiddenToTop?: boolean;
@@ -75,6 +78,11 @@ function asBounds(value: unknown): WindowBounds {
   };
 }
 
+function asOpacity(value: unknown) {
+  if (typeof value !== "number" || Number.isNaN(value)) return 1;
+  return Math.min(Math.max(value, NOTE_OPACITY_MIN), NOTE_OPACITY_MAX);
+}
+
 function buildEmptyCache(): WindowStateCache {
   return {
     version: CACHE_VERSION,
@@ -100,6 +108,7 @@ function sanitizeWindowState(value: unknown): CachedWindowState | null {
     notePath,
     visibility: asVisibility(source.visibility),
     alwaysOnTop: source.alwaysOnTop === true,
+    opacity: asOpacity(source.opacity),
     bounds: asBounds(source.bounds),
     updatedAt,
   };
@@ -288,6 +297,7 @@ export async function upsertWindowState(
     const now = new Date().toISOString();
     const nextState: CachedWindowState = {
       ...state,
+      opacity: asOpacity(state.opacity),
       updatedAt: state.updatedAt || now,
     };
     const cacheKey = buildNoteCacheKey(nextState.notePath);
@@ -360,4 +370,9 @@ export async function listWindowStatesInOrder() {
   return cache.windowOrder
     .map((windowId) => cache.windows[windowId])
     .filter((item): item is CachedWindowState => Boolean(item));
+}
+
+export async function getWindowStateByNotePath(notePath: string) {
+  const cache = await loadWindowStateCache();
+  return cache.windows[buildNoteCacheKey(notePath)] ?? null;
 }

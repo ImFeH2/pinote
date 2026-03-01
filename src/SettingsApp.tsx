@@ -144,6 +144,9 @@ export function SettingsApp() {
   const activeWheelResizeModifier =
     wheelResizeModifierOptions.find((item) => item.value === settings.wheelResizeModifier) ??
     wheelResizeModifierOptions[0];
+  const activeWheelOpacityModifier =
+    wheelResizeModifierOptions.find((item) => item.value === settings.wheelOpacityModifier) ??
+    wheelResizeModifierOptions[1];
   const customNotesDirectory = settings.newNoteDirectory.trim();
   const effectiveNotesDirectory = customNotesDirectory || defaultNotesDirectory;
 
@@ -617,11 +620,36 @@ export function SettingsApp() {
                 <div className="text-xs text-muted-foreground">{`${activeWheelResizeModifier.label} + Wheel resizes the window around cursor.`}</div>
               </div>
 
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">
+                  Wheel Opacity Modifier
+                </div>
+                <div className="flex items-center gap-2">
+                  {wheelResizeModifierOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => updateSettings({ wheelOpacityModifier: option.value })}
+                      className={cn(
+                        "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                        settings.wheelOpacityModifier === option.value
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-muted-foreground hover:bg-accent",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-xs text-muted-foreground">{`${activeWheelOpacityModifier.label} + Wheel adjusts window opacity.`}</div>
+              </div>
+
               <div className="flex flex-col gap-1 rounded-md border border-border bg-background/60 p-3">
                 <div className="text-xs font-medium text-muted-foreground">
                   Current Interactions
                 </div>
                 <div className="text-xs text-muted-foreground">{`${activeWheelResizeModifier.label} + Wheel: Resize window around cursor`}</div>
+                <div className="text-xs text-muted-foreground">{`${activeWheelOpacityModifier.label} + Wheel: Adjust window opacity`}</div>
                 <div className="text-xs text-muted-foreground">
                   Middle Click: Toggle Always On Top
                 </div>

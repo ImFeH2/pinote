@@ -61,7 +61,7 @@ fn parse_cli_open_note_requests(argv: &[String], cwd: Option<&str>) -> Vec<CliOp
     });
     let mut seen = HashSet::new();
     let mut requests = Vec::new();
-    for arg in argv.iter().skip(1) {
+    for arg in argv {
         let Some(note_path) = resolve_cli_note_path(arg, cwd_path.as_deref()) else {
             continue;
         };

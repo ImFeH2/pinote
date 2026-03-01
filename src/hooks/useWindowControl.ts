@@ -1,24 +1,28 @@
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useSettings } from "@/hooks/useSettings";
 
-export function useWindowControl(windowId: string, defaultAlwaysOnTop = false) {
-  const { settings, updateSettings } = useSettings();
+export function useWindowControl(defaultAlwaysOnTop = false) {
   const appWindow = useMemo(() => getCurrentWindow(), []);
-  const alwaysOnTop = settings.noteAlwaysOnTop[windowId] ?? defaultAlwaysOnTop;
+  const [alwaysOnTop, setAlwaysOnTop] = useState(defaultAlwaysOnTop);
 
   useEffect(() => {
-    appWindow.setAlwaysOnTop(alwaysOnTop).catch(() => {});
-  }, [alwaysOnTop, appWindow]);
+    appWindow
+      .isAlwaysOnTop()
+      .then((value) => {
+        setAlwaysOnTop(value);
+      })
+      .catch(() => undefined);
+  }, [appWindow]);
 
   const toggleAlwaysOnTop = useCallback(async () => {
     const next = !alwaysOnTop;
-    updateSettings({
-      noteAlwaysOnTop: {
-        [windowId]: next,
-      },
-    });
-  }, [alwaysOnTop, updateSettings, windowId]);
+    try {
+      await appWindow.setAlwaysOnTop(next);
+      setAlwaysOnTop(next);
+    } catch (error) {
+      console.error("Failed to toggle always on top:", error);
+    }
+  }, [alwaysOnTop, appWindow]);
 
   return { alwaysOnTop, toggleAlwaysOnTop };
 }

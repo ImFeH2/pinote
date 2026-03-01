@@ -1,6 +1,10 @@
 import { type CliOpenNoteRequest, openNoteWindow } from "@/lib/api";
 import { buildGeneratedNoteId, getNoteIdFromPath } from "@/lib/notes";
-import { listWindowStatesInOrder, upsertWindowState } from "@/lib/windowStateCache";
+import {
+  getWindowStateByNotePath,
+  listWindowStatesInOrder,
+  upsertWindowState,
+} from "@/lib/windowStateCache";
 
 interface RestoreWindowsOptions {
   skipCreateWhenEmpty?: boolean;
@@ -28,6 +32,7 @@ export async function restoreWindowsFromCacheOrCreateNew(options: RestoreWindows
       visibility: "visible",
       focus: state.windowId === focusWindowId,
       alwaysOnTop: state.alwaysOnTop,
+      opacity: state.opacity,
       bounds: state.bounds,
     });
     await upsertWindowState(opened);
@@ -47,10 +52,12 @@ export async function openCliMarkdownNotes(requests: CliOpenNoteRequest[]) {
   }
   for (let index = 0; index < notePaths.length; index += 1) {
     const notePath = notePaths[index];
+    const previous = await getWindowStateByNotePath(notePath);
     const opened = await openNoteWindow(getNoteIdFromPath(notePath), {
       notePath,
       visibility: "visible",
       focus: index === notePaths.length - 1,
+      opacity: previous?.opacity ?? 1,
     });
     await upsertWindowState(opened);
   }

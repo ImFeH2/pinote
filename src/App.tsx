@@ -21,6 +21,7 @@ import { openNoteWindow, openSettingsWindow } from "@/lib/api";
 import { buildGeneratedNoteId } from "@/lib/notes";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import {
+  getWindowState,
   removeWindowState,
   type WindowVisibility,
   upsertWindowState,
@@ -91,11 +92,12 @@ function wheelModifierMatchesEvent(
 function App({ noteId, notePath }: { noteId: string; notePath: string }) {
   const { toggleTheme } = useTheme();
   const { save, load } = useAutoSave(notePath);
-  const { alwaysOnTop, toggleAlwaysOnTop } = useWindowControl(noteId);
-  const { settings, updateSettings } = useSettings();
+  const { alwaysOnTop, toggleAlwaysOnTop } = useWindowControl();
+  const { settings } = useSettings();
   const appWindow = useMemo(() => getCurrentWindow(), []);
   const windowLabel = appWindow.label;
   const [initialContent, setInitialContent] = useState<string | null>(null);
+  const [noteOpacity, setNoteOpacityState] = useState(1);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const wheelResizeLock = useRef(false);
@@ -103,6 +105,11 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
   const middleDragPendingPosition = useRef<{ x: number; y: number } | null>(null);
   const middleDragLastPosition = useRef<{ x: number; y: number } | null>(null);
   const middleDragFrame = useRef<number | null>(null);
+  const noteOpacityRef = useRef(1);
+
+  useEffect(() => {
+    noteOpacityRef.current = noteOpacity;
+  }, [noteOpacity]);
 
   useEffect(() => {
     load().then((content) => {
@@ -110,8 +117,18 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
     });
   }, [load]);
 
+  useEffect(() => {
+    getWindowState(windowLabel)
+      .then((state) => {
+        if (!state) return;
+        if (state.noteId !== noteId) return;
+        setNoteOpacityState(clamp(state.opacity, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX));
+      })
+      .catch(() => {});
+  }, [noteId, windowLabel]);
+
   const persistWindowState = useCallback(
-    async (visibility?: WindowVisibility, pushHiddenToTop = false) => {
+    async (visibility?: WindowVisibility, pushHiddenToTop = false, opacity?: number) => {
       try {
         const [position, size, currentAlwaysOnTop, visible] = await Promise.all([
           appWindow.outerPosition(),
@@ -120,6 +137,11 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
           appWindow.isVisible(),
         ]);
         const nextVisibility = visibility ?? (visible ? "visible" : "hidden");
+        const nextOpacity = clamp(
+          opacity ?? noteOpacityRef.current,
+          NOTE_OPACITY_MIN,
+          NOTE_OPACITY_MAX,
+        );
         await upsertWindowState(
           {
             windowId: windowLabel,
@@ -127,6 +149,7 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
             notePath,
             visibility: nextVisibility,
             alwaysOnTop: currentAlwaysOnTop,
+            opacity: nextOpacity,
             bounds: {
               x: position.x,
               y: position.y,
@@ -165,6 +188,7 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
           notePath,
           visibility: "hidden",
           alwaysOnTop: currentAlwaysOnTop,
+          opacity: noteOpacityRef.current,
           bounds: {
             x: position.x,
             y: position.y,
@@ -465,18 +489,49 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
     [appWindow],
   );
 
+  const adjustOpacityByWheel = useCallback(
+    (deltaY: number) => {
+      if (deltaY === 0) return;
+      const direction = deltaY < 0 ? 1 : -1;
+      const nextOpacity = clamp(
+        noteOpacityRef.current + NOTE_OPACITY_STEP * direction,
+        NOTE_OPACITY_MIN,
+        NOTE_OPACITY_MAX,
+      );
+      if (nextOpacity === noteOpacityRef.current) return;
+      noteOpacityRef.current = nextOpacity;
+      setNoteOpacityState(nextOpacity);
+      void persistWindowState(undefined, false, nextOpacity);
+    },
+    [persistWindowState],
+  );
+
   const handleWindowWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
+      if (wheelModifierMatchesEvent(event, settings.wheelOpacityModifier)) {
+        event.preventDefault();
+        closeContextMenu();
+        adjustOpacityByWheel(event.deltaY);
+        return;
+      }
       if (!wheelModifierMatchesEvent(event, settings.wheelResizeModifier)) return;
       event.preventDefault();
       closeContextMenu();
       void resizeWindowByWheel(event.deltaY, event.clientX, event.clientY);
     },
-    [closeContextMenu, resizeWindowByWheel, settings.wheelResizeModifier],
+    [
+      adjustOpacityByWheel,
+      closeContextMenu,
+      resizeWindowByWheel,
+      settings.wheelOpacityModifier,
+      settings.wheelResizeModifier,
+    ],
   );
 
   useEffect(() => {
-    if (settings.wheelResizeModifier !== "alt") return;
+    if (settings.wheelResizeModifier !== "alt" && settings.wheelOpacityModifier !== "alt") {
+      return;
+    }
 
     const suppressBareAlt = (event: KeyboardEvent) => {
       if (event.key !== "Alt") return;
@@ -490,7 +545,7 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
       window.removeEventListener("keydown", suppressBareAlt, true);
       window.removeEventListener("keyup", suppressBareAlt, true);
     };
-  }, [settings.wheelResizeModifier]);
+  }, [settings.wheelOpacityModifier, settings.wheelResizeModifier]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -552,18 +607,15 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
   }, [contextMenu]);
 
   const title = `Pinote - ${noteId}`;
-  const noteOpacity = settings.noteOpacity[noteId] ?? 1;
   const noteOpacityPercent = Math.round(noteOpacity * 100);
 
   const setNoteOpacity = useCallback(
     (value: number) => {
-      updateSettings({
-        noteOpacity: {
-          [noteId]: clamp(value, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX),
-        },
-      });
+      const nextOpacity = clamp(value, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX);
+      setNoteOpacityState(nextOpacity);
+      void persistWindowState(undefined, false, nextOpacity);
     },
-    [noteId, updateSettings],
+    [persistWindowState],
   );
 
   const increaseNoteOpacity = useCallback(() => {

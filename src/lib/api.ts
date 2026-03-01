@@ -30,6 +30,7 @@ interface OpenNoteWindowOptions {
   visibility?: WindowVisibility;
   focus?: boolean;
   alwaysOnTop?: boolean;
+  opacity?: number;
   bounds?: WindowBounds;
 }
 
@@ -39,6 +40,7 @@ export interface OpenedNoteWindow {
   notePath: string;
   visibility: WindowVisibility;
   alwaysOnTop: boolean;
+  opacity: number;
   bounds: WindowBounds;
   updatedAt: string;
 }
@@ -89,6 +91,7 @@ async function getWindowSnapshot(
   window: WebviewWindow,
   noteId: string,
   notePath: string,
+  opacity = 1,
 ): Promise<OpenedNoteWindow> {
   const [position, size, alwaysOnTop, visible] = await Promise.all([
     window.outerPosition(),
@@ -102,6 +105,7 @@ async function getWindowSnapshot(
     notePath,
     visibility: visible ? "visible" : "hidden",
     alwaysOnTop,
+    opacity,
     bounds: {
       x: position.x,
       y: position.y,
@@ -173,25 +177,25 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
     }
     if (options.visibility === "hidden") {
       await existing.hide();
-      return getWindowSnapshot(existing, normalizedNoteId, notePath);
+      return getWindowSnapshot(existing, normalizedNoteId, notePath, options.opacity ?? 1);
     }
     await existing.show();
     if (options.focus !== false) {
       await existing.setFocus();
     }
-    return getWindowSnapshot(existing, normalizedNoteId, notePath);
+    return getWindowSnapshot(existing, normalizedNoteId, notePath, options.opacity ?? 1);
   }
 
   const noteWindow = await createNoteWindow(windowId, normalizedNoteId, notePath, options);
   if (options.visibility === "hidden") {
     await noteWindow.hide();
-    return getWindowSnapshot(noteWindow, normalizedNoteId, notePath);
+    return getWindowSnapshot(noteWindow, normalizedNoteId, notePath, options.opacity ?? 1);
   }
   await noteWindow.show();
   if (options.focus !== false) {
     await noteWindow.setFocus();
   }
-  return getWindowSnapshot(noteWindow, normalizedNoteId, notePath);
+  return getWindowSnapshot(noteWindow, normalizedNoteId, notePath, options.opacity ?? 1);
 }
 
 export async function emitSettingsUpdated(settings: Settings) {
