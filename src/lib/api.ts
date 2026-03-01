@@ -1,5 +1,6 @@
 import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import {
@@ -17,6 +18,7 @@ type SettingsEventPayload = {
 };
 
 const SETTINGS_WINDOW_LABEL = "settings";
+const CLI_OPEN_NOTE_REQUESTED_EVENT = "cli-open-note-requested";
 const NOTE_WINDOW_WIDTH = 400;
 const NOTE_WINDOW_HEIGHT = 500;
 const NOTE_WINDOW_MIN_WIDTH = 320;
@@ -39,6 +41,10 @@ export interface OpenedNoteWindow {
   alwaysOnTop: boolean;
   bounds: WindowBounds;
   updatedAt: string;
+}
+
+export interface CliOpenNoteRequest {
+  notePath: string;
 }
 
 async function waitForWindowCreated(window: WebviewWindow) {
@@ -142,10 +148,20 @@ export async function openSettingsWindow() {
   await settingsWindow.setFocus();
 }
 
+export async function consumeCliOpenNoteRequests() {
+  return invoke<CliOpenNoteRequest[]>("consume_cli_open_note_requests");
+}
+
+export async function listenCliOpenNoteRequested(handler: () => void): Promise<UnlistenFn> {
+  return listen(CLI_OPEN_NOTE_REQUESTED_EVENT, () => {
+    handler();
+  });
+}
+
 export async function openNoteWindow(noteId: string, options: OpenNoteWindowOptions = {}) {
   const normalizedNoteId = normalizeNoteId(noteId);
-  const windowId = options.windowId?.trim() || buildNoteWindowId(normalizedNoteId);
   const notePath = options.notePath?.trim() || (await resolveManagedNotePath(normalizedNoteId));
+  const windowId = options.windowId?.trim() || buildNoteWindowId(notePath);
   const existing = await WebviewWindow.getByLabel(windowId);
   if (existing) {
     if (options.bounds) {

@@ -11,6 +11,7 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Shortcut & Interaction Customization** — Configure keyboard shortcuts and wheel resize modifier in Settings
 - **Quick Access** — Global shortcut (`Alt+N`) and system tray action restore the most recently hidden note window
 - **Session Restore** — Window state cache restores note windows (position, size, pin state, visibility) on next launch
+- **CLI Markdown Open** — Launch Pinote with `.md`/`.markdown` file paths to open or focus dedicated note windows
 - **Personalized Appearance** — Theme, per-note opacity, typography, page spacing, and modern scrollbar styling
 - **Desktop Integration** — Note windows are created from UUID-based files under `notes/`, with launch-at-startup support
 - **In-app Maintenance** — Built-in updater, version info, and repository link in About
@@ -44,3 +45,12 @@ pnpm install          # Install dependencies
 pnpm tauri dev        # Run in development mode
 pnpm tauri build      # Build for production
 ```
+
+## CLI
+
+```bash
+pinote /path/to/note.md
+pinote ./daily.markdown
+```
+
+Each path opens a dedicated note window. Running the command again with the same path focuses the existing window.

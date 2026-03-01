@@ -6,6 +6,7 @@ import {
   remove,
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
+import { buildNoteCacheKey } from "@/lib/notes";
 
 export type WindowVisibility = "visible" | "hidden";
 
@@ -34,7 +35,7 @@ export interface WindowStateCache {
   hiddenStack: string[];
 }
 
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const CACHE_DIR = "cache";
 const CACHE_FILE = `${CACHE_DIR}/window_state.json`;
 const CACHE_LOCK_DIR = `${CACHE_DIR}/window_state.lock`;
@@ -108,18 +109,19 @@ function sanitizeWindowState(value: unknown): CachedWindowState | null {
 function sanitizeCache(value: unknown): WindowStateCache {
   if (!value || typeof value !== "object") return buildEmptyCache();
   const source = value as Record<string, unknown>;
+  const version = asNumber(source.version, 0);
+  if (version !== CACHE_VERSION) return buildEmptyCache();
   const windowsValue = source.windows;
   const windows: Record<string, CachedWindowState> = {};
   if (windowsValue && typeof windowsValue === "object") {
-    for (const [key, item] of Object.entries(windowsValue as Record<string, unknown>)) {
+    for (const [, item] of Object.entries(windowsValue as Record<string, unknown>)) {
       const parsed = sanitizeWindowState(item);
       if (!parsed) continue;
-      const finalKey = asString(key) || parsed.windowId;
-      if (!finalKey) continue;
-      windows[finalKey] = {
-        ...parsed,
-        windowId: finalKey,
-      };
+      const cacheKey = buildNoteCacheKey(parsed.notePath);
+      const previous = windows[cacheKey];
+      if (!previous || parsed.updatedAt >= previous.updatedAt) {
+        windows[cacheKey] = parsed;
+      }
     }
   }
 
@@ -272,6 +274,16 @@ function clearHiddenStack(cache: WindowStateCache, windowId: string) {
   cache.hiddenStack = cache.hiddenStack.filter((id) => id !== windowId);
 }
 
+function resolveCacheKeyByWindowId(cache: WindowStateCache, windowId: string) {
+  const target = asString(windowId);
+  if (!target) return "";
+  if (cache.windows[target]) return target;
+  for (const [cacheKey, state] of Object.entries(cache.windows)) {
+    if (state.windowId === target) return cacheKey;
+  }
+  return "";
+}
+
 export async function loadWindowStateCache() {
   try {
     return await readCache();
@@ -290,12 +302,13 @@ export async function upsertWindowState(
       ...state,
       updatedAt: state.updatedAt || now,
     };
-    cache.windows[nextState.windowId] = nextState;
-    setWindowOrder(cache, nextState.windowId);
+    const cacheKey = buildNoteCacheKey(nextState.notePath);
+    cache.windows[cacheKey] = nextState;
+    setWindowOrder(cache, cacheKey);
     if (nextState.visibility === "hidden") {
-      setHiddenStack(cache, nextState.windowId, options.pushHiddenToTop === true);
+      setHiddenStack(cache, cacheKey, options.pushHiddenToTop === true);
     } else {
-      clearHiddenStack(cache, nextState.windowId);
+      clearHiddenStack(cache, cacheKey);
     }
     cache.updatedAt = now;
   });
@@ -307,15 +320,17 @@ export async function setWindowVisibility(
   options: UpdateWindowStateOptions = {},
 ) {
   await mutateCache(async (cache) => {
-    const state = cache.windows[windowId];
+    const cacheKey = resolveCacheKeyByWindowId(cache, windowId);
+    if (!cacheKey) return;
+    const state = cache.windows[cacheKey];
     if (!state) return;
     const now = new Date().toISOString();
     state.visibility = visibility;
     state.updatedAt = now;
     if (visibility === "hidden") {
-      setHiddenStack(cache, windowId, options.pushHiddenToTop === true);
+      setHiddenStack(cache, cacheKey, options.pushHiddenToTop === true);
     } else {
-      clearHiddenStack(cache, windowId);
+      clearHiddenStack(cache, cacheKey);
     }
     cache.updatedAt = now;
   });
@@ -323,18 +338,21 @@ export async function setWindowVisibility(
 
 export async function removeWindowState(windowId: string) {
   await mutateCache(async (cache) => {
-    if (!cache.windows[windowId]) return;
+    const cacheKey = resolveCacheKeyByWindowId(cache, windowId);
+    if (!cacheKey || !cache.windows[cacheKey]) return;
     const now = new Date().toISOString();
-    delete cache.windows[windowId];
-    cache.windowOrder = cache.windowOrder.filter((id) => id !== windowId);
-    cache.hiddenStack = cache.hiddenStack.filter((id) => id !== windowId);
+    delete cache.windows[cacheKey];
+    cache.windowOrder = cache.windowOrder.filter((id) => id !== cacheKey);
+    cache.hiddenStack = cache.hiddenStack.filter((id) => id !== cacheKey);
     cache.updatedAt = now;
   });
 }
 
 export async function getWindowState(windowId: string) {
   const cache = await loadWindowStateCache();
-  return cache.windows[windowId] ?? null;
+  const cacheKey = resolveCacheKeyByWindowId(cache, windowId);
+  if (!cacheKey) return null;
+  return cache.windows[cacheKey] ?? null;
 }
 
 export async function getMostRecentHiddenWindowState() {

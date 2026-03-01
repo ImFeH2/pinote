@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { restoreWindowsFromCacheOrCreateNew } from "@/lib/windowManager";
+import {
+  consumeCliOpenNoteRequests,
+  listenCliOpenNoteRequested,
+  type CliOpenNoteRequest,
+} from "@/lib/api";
+import { openCliMarkdownNotes, restoreWindowsFromCacheOrCreateNew } from "@/lib/windowManager";
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -17,9 +22,35 @@ export function BootstrapApp() {
     didBootstrap.current = true;
 
     let disposed = false;
+    let unlistenCli: (() => void) | null = null;
+    let cliQueue = Promise.resolve();
+    const scheduleCliOpen = () => {
+      cliQueue = cliQueue
+        .then(async () => {
+          const requests = await consumeCliOpenNoteRequests();
+          if (requests.length === 0) return;
+          await openCliMarkdownNotes(requests);
+        })
+        .catch((error) => {
+          console.error("Failed to process CLI markdown requests:", error);
+        });
+      return cliQueue;
+    };
+
     const bootstrap = async () => {
       try {
-        await restoreWindowsFromCacheOrCreateNew();
+        const initialRequests: CliOpenNoteRequest[] = await consumeCliOpenNoteRequests();
+        await restoreWindowsFromCacheOrCreateNew({
+          skipCreateWhenEmpty: initialRequests.length > 0,
+        });
+        if (initialRequests.length > 0) {
+          await openCliMarkdownNotes(initialRequests);
+        }
+        if (disposed) return;
+        unlistenCli = await listenCliOpenNoteRequested(() => {
+          void scheduleCliOpen();
+        });
+        await scheduleCliOpen();
         if (disposed) return;
         await getCurrentWindow().hide();
       } catch (error) {
@@ -31,6 +62,9 @@ export function BootstrapApp() {
     void bootstrap();
     return () => {
       disposed = true;
+      if (unlistenCli) {
+        unlistenCli();
+      }
     };
   }, []);
 

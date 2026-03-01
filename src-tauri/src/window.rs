@@ -3,15 +3,19 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
+const CACHE_VERSION: u32 = 2;
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CachedWindowState {
+    window_id: String,
     visibility: String,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WindowStateCache {
+    version: u32,
     windows: HashMap<String, CachedWindowState>,
     hidden_stack: Vec<String>,
 }
@@ -20,7 +24,11 @@ fn load_window_state_cache(app: &tauri::AppHandle) -> Option<WindowStateCache> {
     let app_data_dir = app.path().app_data_dir().ok()?;
     let cache_file = app_data_dir.join("cache").join("window_state.json");
     let content = std::fs::read_to_string(cache_file).ok()?;
-    serde_json::from_str::<WindowStateCache>(&content).ok()
+    let cache = serde_json::from_str::<WindowStateCache>(&content).ok()?;
+    if cache.version != CACHE_VERSION {
+        return None;
+    }
+    Some(cache)
 }
 
 pub fn restore_hidden_window(app: &tauri::AppHandle) {
@@ -28,14 +36,14 @@ pub fn restore_hidden_window(app: &tauri::AppHandle) {
         return;
     };
 
-    for window_id in cache.hidden_stack.iter().rev() {
-        let Some(state) = cache.windows.get(window_id) else {
+    for cache_key in cache.hidden_stack.iter().rev() {
+        let Some(state) = cache.windows.get(cache_key) else {
             continue;
         };
         if state.visibility != "hidden" {
             continue;
         }
-        let Some(window) = app.get_webview_window(window_id) else {
+        let Some(window) = app.get_webview_window(&state.window_id) else {
             continue;
         };
         let _ = window.show();

@@ -1,6 +1,5 @@
 import { appDataDir, resolve } from "@tauri-apps/api/path";
-
-export const NOTE_WINDOW_PREFIX = "note-";
+const NOTE_WINDOW_PREFIX = "note-";
 const NOTE_FILE_EXTENSION = ".md";
 const NOTE_DIRECTORY = "notes";
 
@@ -42,8 +41,26 @@ export function getNoteIdFromPath(notePath: string) {
   return normalizeNoteId(withoutExt);
 }
 
-export function buildNoteWindowId(noteId: string) {
-  return `${NOTE_WINDOW_PREFIX}${normalizeNoteId(noteId)}`;
+function hashFnv1a(value: string) {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+export function buildNotePathHash(notePath: string) {
+  const normalizedPath = notePath.trim().toLowerCase();
+  return hashFnv1a(normalizedPath);
+}
+
+export function buildNoteCacheKey(notePath: string) {
+  return buildNotePathHash(notePath);
+}
+
+export function buildNoteWindowId(notePath: string) {
+  return `${NOTE_WINDOW_PREFIX}${buildNotePathHash(notePath)}`;
 }
 
 export function buildNoteWindowUrl(params: { windowId: string; noteId: string; notePath: string }) {
