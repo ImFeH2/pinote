@@ -106,6 +106,7 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
   const middleDragLastPosition = useRef<{ x: number; y: number } | null>(null);
   const middleDragFrame = useRef<number | null>(null);
   const noteOpacityRef = useRef(1);
+  const closeRequestState = useRef<"idle" | "persisting" | "ready">("idle");
 
   useEffect(() => {
     noteOpacityRef.current = noteOpacity;
@@ -224,8 +225,25 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
           if (!payload) return;
           void persistWindowState("visible");
         }),
-        appWindow.onCloseRequested(() => {
-          void removeWindowState(windowLabel);
+        appWindow.onCloseRequested((event) => {
+          if (closeRequestState.current === "ready") {
+            closeRequestState.current = "idle";
+            return;
+          }
+          event.preventDefault();
+          if (closeRequestState.current === "persisting") return;
+          closeRequestState.current = "persisting";
+          void removeWindowState(windowLabel)
+            .catch((error) => {
+              console.error("Failed to remove window state:", error);
+            })
+            .finally(() => {
+              closeRequestState.current = "ready";
+              appWindow.close().catch((error) => {
+                closeRequestState.current = "idle";
+                console.error("Failed to close window:", error);
+              });
+            });
         }),
       ]);
       if (disposed) {
