@@ -494,8 +494,8 @@ export function SettingsApp() {
           {activeSection === "window" && (
             <div className="flex flex-col gap-4">
               <div className="rounded-md border border-border bg-background/60 p-3 text-xs text-muted-foreground">
-                Always-on-top state is independent per note window. Use middle click or context menu
-                in each note to toggle.
+                Always-on-top state is independent per note window. Use middle click or shortcut in
+                each note to toggle.
               </div>
 
               <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">

@@ -39,16 +39,9 @@ function getContextMenuContext() {
   const targetWindowLabel = params.get("targetWindowLabel")?.trim() ?? "";
   const noteId = params.get("noteId")?.trim() ?? "";
   if (!targetWindowLabel || !noteId) return null;
-  const rawOpacity = Number.parseInt(params.get("noteOpacityPercent") ?? "100", 10);
-  const noteOpacityPercent = Number.isFinite(rawOpacity)
-    ? Math.min(Math.max(rawOpacity, 30), 100)
-    : 100;
-  const alwaysOnTop = params.get("alwaysOnTop") === "1";
   return {
     targetWindowLabel,
     noteId,
-    noteOpacityPercent,
-    alwaysOnTop,
   };
 }
 

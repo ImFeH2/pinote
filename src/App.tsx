@@ -617,30 +617,6 @@ function App({
     toggleTheme,
   ]);
 
-  const noteOpacityPercent = Math.round(noteOpacity * 100);
-
-  const applyNoteOpacity = useCallback(
-    (value: number) => {
-      const nextOpacity = clamp(value, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX);
-      noteOpacityRef.current = nextOpacity;
-      setNoteOpacityState(nextOpacity);
-      void persistWindowState(undefined, false, nextOpacity);
-    },
-    [persistWindowState],
-  );
-
-  const increaseNoteOpacity = useCallback(() => {
-    applyNoteOpacity(noteOpacityRef.current + NOTE_OPACITY_STEP);
-  }, [applyNoteOpacity]);
-
-  const decreaseNoteOpacity = useCallback(() => {
-    applyNoteOpacity(noteOpacityRef.current - NOTE_OPACITY_STEP);
-  }, [applyNoteOpacity]);
-
-  const resetNoteOpacity = useCallback(() => {
-    applyNoteOpacity(1);
-  }, [applyNoteOpacity]);
-
   useEffect(() => {
     let disposed = false;
     let unlisten: (() => void) | null = null;
@@ -651,22 +627,6 @@ function App({
       }
       if (action === "open-settings") {
         openSettings();
-        return;
-      }
-      if (action === "increase-opacity") {
-        increaseNoteOpacity();
-        return;
-      }
-      if (action === "decrease-opacity") {
-        decreaseNoteOpacity();
-        return;
-      }
-      if (action === "reset-opacity") {
-        resetNoteOpacity();
-        return;
-      }
-      if (action === "toggle-always-on-top") {
-        toggleAlwaysOnTop();
         return;
       }
       if (action === "minimize-window") {
@@ -707,14 +667,10 @@ function App({
     };
   }, [
     closeWindow,
-    decreaseNoteOpacity,
     hideWindow,
-    increaseNoteOpacity,
     minimizeWindow,
     openNote,
     openSettings,
-    resetNoteOpacity,
-    toggleAlwaysOnTop,
     toggleMaximizeWindow,
     windowLabel,
   ]);
@@ -731,8 +687,6 @@ function App({
             parentWindowLabel: windowLabel,
             targetWindowLabel: windowLabel,
             noteId,
-            noteOpacityPercent,
-            alwaysOnTop,
             screenX,
             screenY,
             scaleFactor,
@@ -742,7 +696,7 @@ function App({
           console.error("Failed to open context menu window:", error);
         });
     },
-    [alwaysOnTop, appWindow, noteId, noteOpacityPercent, windowLabel],
+    [appWindow, noteId, windowLabel],
   );
 
   const editorStyle = useMemo(

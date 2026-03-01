@@ -27,7 +27,7 @@ const NOTE_WINDOW_MIN_WIDTH = 320;
 const NOTE_WINDOW_MIN_HEIGHT = 420;
 const NOTE_CONTEXT_MENU_WINDOW_SUFFIX = "-context-menu";
 const NOTE_CONTEXT_MENU_WIDTH = 224;
-const NOTE_CONTEXT_MENU_HEIGHT = 336;
+const NOTE_CONTEXT_MENU_HEIGHT = 180;
 const NOTE_CONTEXT_MENU_GAP = 8;
 
 interface OpenNoteWindowOptions {
@@ -58,10 +58,6 @@ export interface CliOpenNoteRequest {
 export type NoteContextMenuAction =
   | "new-note"
   | "open-settings"
-  | "increase-opacity"
-  | "decrease-opacity"
-  | "reset-opacity"
-  | "toggle-always-on-top"
   | "minimize-window"
   | "toggle-maximize"
   | "hide-window"
@@ -70,8 +66,6 @@ export type NoteContextMenuAction =
 export interface NoteContextMenuContext {
   targetWindowLabel: string;
   noteId: string;
-  noteOpacityPercent: number;
-  alwaysOnTop: boolean;
 }
 
 interface OpenNoteContextMenuOptions extends NoteContextMenuContext {
@@ -242,8 +236,6 @@ function buildNoteContextMenuUrl(options: OpenNoteContextMenuOptions) {
     view: "context-menu",
     targetWindowLabel: options.targetWindowLabel,
     noteId: options.noteId,
-    noteOpacityPercent: String(options.noteOpacityPercent),
-    alwaysOnTop: options.alwaysOnTop ? "1" : "0",
   });
   return `index.html?${query.toString()}`;
 }
@@ -252,8 +244,6 @@ function buildNoteContextMenuContext(options: OpenNoteContextMenuOptions): NoteC
   return {
     targetWindowLabel: options.targetWindowLabel,
     noteId: options.noteId,
-    noteOpacityPercent: options.noteOpacityPercent,
-    alwaysOnTop: options.alwaysOnTop,
   };
 }
 
@@ -278,14 +268,12 @@ export async function openNoteContextMenu(options: OpenNoteContextMenuOptions) {
       title: "Pinote Menu",
       width: NOTE_CONTEXT_MENU_WIDTH,
       height: NOTE_CONTEXT_MENU_HEIGHT,
-      minWidth: NOTE_CONTEXT_MENU_WIDTH,
-      minHeight: NOTE_CONTEXT_MENU_HEIGHT,
-      maxWidth: NOTE_CONTEXT_MENU_WIDTH,
-      maxHeight: NOTE_CONTEXT_MENU_HEIGHT,
       decorations: false,
       transparent: true,
+      backgroundColor: [0, 0, 0, 0],
       resizable: false,
       alwaysOnTop: true,
+      shadow: false,
       skipTaskbar: true,
       visible: false,
       focus: true,
@@ -334,8 +322,6 @@ export async function listenNoteContextMenuSync(
     if (!payload) return;
     if (typeof payload.targetWindowLabel !== "string") return;
     if (typeof payload.noteId !== "string") return;
-    if (typeof payload.noteOpacityPercent !== "number") return;
-    if (typeof payload.alwaysOnTop !== "boolean") return;
     handler(payload);
   });
 }
