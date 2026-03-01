@@ -17,7 +17,14 @@ import { useTheme } from "@/hooks/useTheme";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useWindowControl } from "@/hooks/useWindowControl";
 import { useSettings } from "@/hooks/useSettings";
-import { openNoteWindow, openSettingsWindow } from "@/lib/api";
+import {
+  closeNoteContextMenu,
+  listenNoteContextMenuAction,
+  openNoteContextMenu,
+  openNoteWindow,
+  openSettingsWindow,
+  type NoteContextMenuAction,
+} from "@/lib/api";
 import { buildGeneratedNoteId } from "@/lib/notes";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import {
@@ -35,17 +42,9 @@ const WINDOW_MAX_WIDTH = 1920;
 const WINDOW_MAX_HEIGHT = 2160;
 const WINDOW_RESIZE_WIDTH_STEP = 24;
 const WINDOW_RESIZE_HEIGHT_STEP = 30;
-const CONTEXT_MENU_WIDTH = 224;
-const CONTEXT_MENU_HEIGHT = 420;
-const CONTEXT_MENU_GAP = 8;
 const NOTE_OPACITY_MIN = 0.3;
 const NOTE_OPACITY_MAX = 1;
 const NOTE_OPACITY_STEP = 0.05;
-
-interface ContextMenuState {
-  x: number;
-  y: number;
-}
 
 interface MiddleDragState {
   pointerStartX: number;
@@ -98,8 +97,6 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
   const windowLabel = appWindow.label;
   const [initialContent, setInitialContent] = useState<string | null>(null);
   const [noteOpacity, setNoteOpacityState] = useState(1);
-  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const wheelResizeLock = useRef(false);
   const middleDragState = useRef<MiddleDragState | null>(null);
   const middleDragPendingPosition = useRef<{ x: number; y: number } | null>(null);
@@ -320,8 +317,8 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
   );
 
   const closeContextMenu = useCallback(() => {
-    setContextMenu(null);
-  }, []);
+    void closeNoteContextMenu(windowLabel);
+  }, [windowLabel]);
 
   const applyMiddleDragPosition = useCallback(() => {
     middleDragFrame.current = null;
@@ -341,21 +338,6 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
       applyMiddleDragPosition();
     });
   }, [applyMiddleDragPosition]);
-
-  const openContextMenu = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const x = clamp(
-      event.clientX,
-      CONTEXT_MENU_GAP,
-      window.innerWidth - CONTEXT_MENU_WIDTH - CONTEXT_MENU_GAP,
-    );
-    const y = clamp(
-      event.clientY,
-      CONTEXT_MENU_GAP,
-      window.innerHeight - CONTEXT_MENU_HEIGHT - CONTEXT_MENU_GAP,
-    );
-    setContextMenu({ x, y });
-  }, []);
 
   useEffect(() => {
     const handleMiddleAuxClick = (event: MouseEvent) => {
@@ -593,38 +575,6 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
     toggleTheme,
   ]);
 
-  useEffect(() => {
-    if (!contextMenu) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!contextMenuRef.current) return;
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (contextMenuRef.current.contains(target)) return;
-      setContextMenu(null);
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setContextMenu(null);
-      }
-    };
-
-    const handleBlur = () => {
-      setContextMenu(null);
-    };
-
-    window.addEventListener("mousedown", handlePointerDown, true);
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("blur", handleBlur);
-    return () => {
-      window.removeEventListener("mousedown", handlePointerDown, true);
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("blur", handleBlur);
-    };
-  }, [contextMenu]);
-
-  const title = `Pinote - ${noteId}`;
   const noteOpacityPercent = Math.round(noteOpacity * 100);
 
   const setNoteOpacity = useCallback(
@@ -647,6 +597,104 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
   const resetNoteOpacity = useCallback(() => {
     setNoteOpacity(1);
   }, [setNoteOpacity]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    const handleAction = (action: NoteContextMenuAction) => {
+      if (action === "new-note") {
+        openNote();
+        return;
+      }
+      if (action === "open-settings") {
+        openSettings();
+        return;
+      }
+      if (action === "increase-opacity") {
+        increaseNoteOpacity();
+        return;
+      }
+      if (action === "decrease-opacity") {
+        decreaseNoteOpacity();
+        return;
+      }
+      if (action === "reset-opacity") {
+        resetNoteOpacity();
+        return;
+      }
+      if (action === "toggle-always-on-top") {
+        toggleAlwaysOnTop();
+        return;
+      }
+      if (action === "minimize-window") {
+        minimizeWindow();
+        return;
+      }
+      if (action === "toggle-maximize") {
+        toggleMaximizeWindow();
+        return;
+      }
+      if (action === "hide-window") {
+        hideWindow();
+        return;
+      }
+      if (action === "close-window") {
+        closeWindow();
+      }
+    };
+
+    listenNoteContextMenuAction(handleAction)
+      .then((handler) => {
+        unlisten = handler;
+      })
+      .catch((error) => {
+        console.error("Failed to listen for context menu actions:", error);
+      });
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+      void closeNoteContextMenu(windowLabel);
+    };
+  }, [
+    closeWindow,
+    decreaseNoteOpacity,
+    hideWindow,
+    increaseNoteOpacity,
+    minimizeWindow,
+    openNote,
+    openSettings,
+    resetNoteOpacity,
+    toggleAlwaysOnTop,
+    toggleMaximizeWindow,
+    windowLabel,
+  ]);
+
+  const openContextMenu = useCallback(
+    (event: ReactMouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const screenX = event.screenX;
+      const screenY = event.screenY;
+      void appWindow
+        .scaleFactor()
+        .then((scaleFactor) => {
+          return openNoteContextMenu({
+            parentWindowLabel: windowLabel,
+            targetWindowLabel: windowLabel,
+            noteId,
+            noteOpacityPercent,
+            alwaysOnTop,
+            screenX,
+            screenY,
+            scaleFactor,
+          });
+        })
+        .catch((error) => {
+          console.error("Failed to open context menu window:", error);
+        });
+    },
+    [alwaysOnTop, appWindow, noteId, noteOpacityPercent, windowLabel],
+  );
 
   const editorStyle = useMemo(
     () =>
@@ -697,121 +745,6 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
       <div className="relative flex flex-1 flex-col overflow-hidden">
         <Editor defaultValue={initialContent} onChange={handleChange} style={editorStyle} />
       </div>
-      {contextMenu && (
-        <div
-          ref={contextMenuRef}
-          className="absolute z-50 w-56 rounded-md border border-border bg-background/95 p-1 shadow-xl backdrop-blur-sm"
-          style={{
-            left: `${contextMenu.x}px`,
-            top: `${contextMenu.y}px`,
-          }}
-        >
-          <div className="truncate px-2 py-1 text-[11px] font-medium text-muted-foreground">
-            {`${title} (${noteOpacityPercent}%)`}
-          </div>
-          <div className="my-1 h-px bg-border" />
-          <button
-            type="button"
-            onClick={() => {
-              closeContextMenu();
-              openNote();
-            }}
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            New Note
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              closeContextMenu();
-              openSettings();
-            }}
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Open Settings
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              closeContextMenu();
-              increaseNoteOpacity();
-            }}
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Increase Opacity
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              closeContextMenu();
-              decreaseNoteOpacity();
-            }}
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Decrease Opacity
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              closeContextMenu();
-              resetNoteOpacity();
-            }}
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Reset Opacity
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              closeContextMenu();
-              toggleAlwaysOnTop();
-            }}
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            {alwaysOnTop ? "Disable Always On Top" : "Enable Always On Top"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              closeContextMenu();
-              minimizeWindow();
-            }}
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Minimize Window
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              closeContextMenu();
-              toggleMaximizeWindow();
-            }}
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Toggle Maximize
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              closeContextMenu();
-              hideWindow();
-            }}
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Hide Window
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              closeContextMenu();
-              closeWindow();
-            }}
-            className="flex w-full items-center rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Close Window
-          </button>
-        </div>
-      )}
     </div>
   );
 }

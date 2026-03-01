@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import App from "@/App";
 import { BootstrapApp } from "@/BootstrapApp";
+import ContextMenuApp from "@/ContextMenuApp";
 import { SettingsProvider } from "@/hooks/useSettings";
 import { SettingsApp } from "@/SettingsApp";
 import { setupLogging } from "@/lib/logging";
@@ -28,6 +29,24 @@ function getNoteContext() {
   };
 }
 
+function getContextMenuContext() {
+  const params = new URLSearchParams(window.location.search);
+  const targetWindowLabel = params.get("targetWindowLabel")?.trim() ?? "";
+  const noteId = params.get("noteId")?.trim() ?? "";
+  if (!targetWindowLabel || !noteId) return null;
+  const rawOpacity = Number.parseInt(params.get("noteOpacityPercent") ?? "100", 10);
+  const noteOpacityPercent = Number.isFinite(rawOpacity)
+    ? Math.min(Math.max(rawOpacity, 30), 100)
+    : 100;
+  const alwaysOnTop = params.get("alwaysOnTop") === "1";
+  return {
+    targetWindowLabel,
+    noteId,
+    noteOpacityPercent,
+    alwaysOnTop,
+  };
+}
+
 function Root() {
   const view = getView();
 
@@ -44,6 +63,10 @@ function Root() {
 
   if (view === "settings") {
     return <SettingsApp />;
+  }
+  const contextMenuContext = getContextMenuContext();
+  if (view === "context-menu" && contextMenuContext) {
+    return <ContextMenuApp {...contextMenuContext} />;
   }
   const noteContext = getNoteContext();
   if (view === "note" && noteContext) {
