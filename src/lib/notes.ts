@@ -1,4 +1,5 @@
 import { appDataDir, resolve } from "@tauri-apps/api/path";
+import { loadSettings } from "@/stores/settings";
 const NOTE_WINDOW_PREFIX = "note-";
 const NOTE_FILE_EXTENSION = ".md";
 const NOTE_DIRECTORY = "notes";
@@ -73,7 +74,19 @@ export function buildNoteWindowUrl(params: { windowId: string; noteId: string; n
   return `index.html?${query.toString()}`;
 }
 
-export async function resolveManagedNotePath(noteId: string) {
+export async function resolveDefaultNotesDirectory() {
   const root = await appDataDir();
-  return resolve(root, NOTE_DIRECTORY, `${normalizeNoteId(noteId)}${NOTE_FILE_EXTENSION}`);
+  return resolve(root, NOTE_DIRECTORY);
+}
+
+export async function resolveManagedNotesDirectory() {
+  const settings = await loadSettings();
+  const customDirectory = settings.newNoteDirectory.trim();
+  if (customDirectory) return customDirectory;
+  return resolveDefaultNotesDirectory();
+}
+
+export async function resolveManagedNotePath(noteId: string) {
+  const notesDirectory = await resolveManagedNotesDirectory();
+  return resolve(notesDirectory, `${normalizeNoteId(noteId)}${NOTE_FILE_EXTENSION}`);
 }

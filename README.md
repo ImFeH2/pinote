@@ -13,7 +13,7 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Session Restore** — Window state cache restores note windows (position, size, pin state, visibility) on next launch
 - **CLI Markdown Open** — Launch Pinote with `.md`/`.markdown` file paths to open or focus dedicated note windows
 - **Personalized Appearance** — Theme, per-note opacity, typography, page spacing, and modern scrollbar styling
-- **Desktop Integration** — Note windows are created from UUID-based files under `notes/`, with launch-at-startup support
+- **Desktop Integration** — Note windows are created from UUID-based files in a configurable notes directory, with launch-at-startup support
 - **In-app Maintenance** — Built-in updater, version info, and repository link in About
 
 ## Keyboard Shortcuts

@@ -11,6 +11,7 @@ export interface Settings {
   theme: Theme;
   noteAlwaysOnTop: Record<string, boolean>;
   noteOpacity: Record<string, number>;
+  newNoteDirectory: string;
   editorFontFamily: EditorFontFamily;
   editorFontSize: number;
   editorLineHeight: number;
@@ -31,6 +32,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   noteAlwaysOnTop: {},
   noteOpacity: {},
+  newNoteDirectory: "",
   editorFontFamily: "system",
   editorFontSize: 15,
   editorLineHeight: 1.2,
@@ -88,6 +90,11 @@ function sanitizeNoteOpacity(value: unknown): Record<string, number> {
   return Object.fromEntries(entries) as Record<string, number>;
 }
 
+function sanitizeNewNoteDirectory(value: unknown) {
+  if (typeof value !== "string") return DEFAULT_SETTINGS.newNoteDirectory;
+  return value.trim();
+}
+
 function mergeSettings(stored: StoredSettings): Settings {
   const { shortcuts, noteAlwaysOnTop, noteOpacity, ...rest } = stored;
   const mergedNoteAlwaysOnTop = {
@@ -108,6 +115,7 @@ function mergeSettings(stored: StoredSettings): Settings {
   return {
     ...DEFAULT_SETTINGS,
     ...rest,
+    newNoteDirectory: sanitizeNewNoteDirectory(rest.newNoteDirectory),
     noteAlwaysOnTop: mergedNoteAlwaysOnTop,
     noteOpacity: mergedNoteOpacity,
     shortcuts: mergedShortcuts,

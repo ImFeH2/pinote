@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
+import { exists, mkdir } from "@tauri-apps/plugin-fs";
 import { getVersion } from "@tauri-apps/api/app";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { TitleBar } from "@/components/TitleBar";
 import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
+import { resolveDefaultNotesDirectory } from "@/lib/notes";
 import { type WheelResizeModifier } from "@/stores/settings";
 import {
   checkForUpdates,
@@ -16,8 +19,8 @@ import {
   type UpdateSnapshot,
 } from "@/lib/updater";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { openUrl } from "@tauri-apps/plugin-opener";
-import { Github } from "lucide-react";
+import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import { FolderOpen, FolderSearch, Github } from "lucide-react";
 
 const REPOSITORY_URL = "https://github.com/ImFeH2/pinote";
 
@@ -122,6 +125,9 @@ export function SettingsApp() {
   const [updateSnapshot, setUpdateSnapshot] = useState<UpdateSnapshot>(() => getUpdateState());
   const [appVersion, setAppVersion] = useState("loading...");
   const [aboutError, setAboutError] = useState<string | null>(null);
+  const [notesDirectoryError, setNotesDirectoryError] = useState<string | null>(null);
+  const [notesDirectoryBusy, setNotesDirectoryBusy] = useState(false);
+  const [defaultNotesDirectory, setDefaultNotesDirectory] = useState("");
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const lineHeightText = settings.editorLineHeight.toFixed(1);
@@ -138,6 +144,8 @@ export function SettingsApp() {
   const activeWheelResizeModifier =
     wheelResizeModifierOptions.find((item) => item.value === settings.wheelResizeModifier) ??
     wheelResizeModifierOptions[0];
+  const customNotesDirectory = settings.newNoteDirectory.trim();
+  const effectiveNotesDirectory = customNotesDirectory || defaultNotesDirectory;
 
   const updateShortcut = useCallback(
     (key: (typeof shortcutItems)[number]["key"], value: string) => {
@@ -220,6 +228,45 @@ export function SettingsApp() {
     }
   }, []);
 
+  const handleChooseNotesDirectory = useCallback(async () => {
+    setNotesDirectoryBusy(true);
+    try {
+      const selected = await openDialog({
+        directory: true,
+        multiple: false,
+        defaultPath: effectiveNotesDirectory || undefined,
+      });
+      const selectedPath = Array.isArray(selected) ? selected[0] : selected;
+      if (typeof selectedPath !== "string" || !selectedPath.trim()) return;
+      updateSettings({ newNoteDirectory: selectedPath.trim() });
+      setNotesDirectoryError(null);
+    } catch (error) {
+      setNotesDirectoryError(getErrorMessage(error));
+    } finally {
+      setNotesDirectoryBusy(false);
+    }
+  }, [effectiveNotesDirectory, updateSettings]);
+
+  const handleOpenNotesDirectory = useCallback(async () => {
+    const targetDirectory = effectiveNotesDirectory.trim();
+    if (!targetDirectory) return;
+    setNotesDirectoryBusy(true);
+    try {
+      if (!customNotesDirectory) {
+        const directoryExists = await exists(targetDirectory);
+        if (!directoryExists) {
+          await mkdir(targetDirectory, { recursive: true });
+        }
+      }
+      await openPath(targetDirectory);
+      setNotesDirectoryError(null);
+    } catch (error) {
+      setNotesDirectoryError(getErrorMessage(error));
+    } finally {
+      setNotesDirectoryBusy(false);
+    }
+  }, [customNotesDirectory, effectiveNotesDirectory]);
+
   useEffect(() => {
     let active = true;
     isEnabled()
@@ -235,6 +282,22 @@ export function SettingsApp() {
       active = false;
     };
   }, [updateSettings]);
+
+  useEffect(() => {
+    let active = true;
+    resolveDefaultNotesDirectory()
+      .then((directory) => {
+        if (!active) return;
+        setDefaultNotesDirectory(directory);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setNotesDirectoryError(getErrorMessage(error));
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     return subscribeUpdateState((next) => {
@@ -430,6 +493,62 @@ export function SettingsApp() {
               <div className="rounded-md border border-border bg-background/60 p-3 text-xs text-muted-foreground">
                 Always-on-top state is independent per note window. Use middle click or context menu
                 in each note to toggle.
+              </div>
+
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">New Note Directory</div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={settings.newNoteDirectory}
+                    onChange={(event) => {
+                      updateSettings({ newNoteDirectory: event.target.value });
+                      setNotesDirectoryError(null);
+                    }}
+                    placeholder={defaultNotesDirectory || "Loading default directory..."}
+                    disabled={notesDirectoryBusy}
+                    className={cn(
+                      "h-8 flex-1 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none transition-colors focus:border-primary",
+                      notesDirectoryBusy && "cursor-not-allowed opacity-60",
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleChooseNotesDirectory();
+                    }}
+                    disabled={notesDirectoryBusy}
+                    className={cn(
+                      "inline-flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground transition-colors",
+                      "border-border bg-background text-muted-foreground hover:bg-accent",
+                      notesDirectoryBusy && "cursor-not-allowed opacity-60",
+                    )}
+                    aria-label="Choose directory"
+                    title="Choose directory"
+                  >
+                    <FolderSearch className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={notesDirectoryBusy || !effectiveNotesDirectory}
+                    onClick={() => {
+                      void handleOpenNotesDirectory();
+                    }}
+                    className={cn(
+                      "inline-flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground transition-colors",
+                      "border-border bg-background text-muted-foreground hover:bg-accent",
+                      (notesDirectoryBusy || !effectiveNotesDirectory) &&
+                        "cursor-not-allowed opacity-60",
+                    )}
+                    aria-label="Open directory"
+                    title="Open directory"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </button>
+                </div>
+                {notesDirectoryError && (
+                  <div className="text-xs text-destructive">{notesDirectoryError}</div>
+                )}
               </div>
 
               <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">

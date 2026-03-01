@@ -22,7 +22,12 @@
     "core:window:allow-close",
     "core:window:allow-destroy",
     "core:webview:allow-create-webview-window",
+    "dialog:default",
     "opener:default",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [{ "path": "**" }]
+    },
     "fs:default",
     "fs:allow-appdata-read-recursive",
     "fs:allow-appdata-write-recursive",
