@@ -23,7 +23,7 @@ function parsePx(value: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function ContextMenuApp({ targetWindowLabel, noteId }: NoteContextMenuContext) {
+function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteContextMenuContext) {
   useTheme();
   const menuWindow = useMemo(() => getCurrentWindow(), []);
   const shellRef = useRef<HTMLDivElement | null>(null);
@@ -32,6 +32,8 @@ function ContextMenuApp({ targetWindowLabel, noteId }: NoteContextMenuContext) {
   const [context, setContext] = useState<NoteContextMenuContext>({
     targetWindowLabel,
     noteId,
+    anchorX,
+    anchorY,
   });
 
   const closeMenu = useCallback(() => {
@@ -128,14 +130,16 @@ function ContextMenuApp({ targetWindowLabel, noteId }: NoteContextMenuContext) {
       MENU_MAX_WIDTH,
     );
     const heightCss = clamp(Math.ceil(shellRect.height), MENU_MIN_HEIGHT, MENU_MAX_HEIGHT);
-    void Promise.all([menuWindow.scaleFactor(), menuWindow.outerPosition(), menuWindow.innerSize()])
-      .then(async ([scaleFactor, position, size]) => {
+    void Promise.all([menuWindow.scaleFactor(), menuWindow.innerSize()])
+      .then(async ([scaleFactor, size]) => {
         const factor = Number.isFinite(scaleFactor) && scaleFactor > 0 ? scaleFactor : 1;
         const width = Math.max(1, Math.round(widthCss * factor));
         const height = Math.max(1, Math.round(heightCss * factor));
-        let nextX = position.x;
-        let nextY = position.y;
-        const monitor = await monitorFromPoint(position.x, position.y).catch(() => null);
+        const pointerX = context.anchorX;
+        const pointerY = context.anchorY;
+        let nextX = pointerX;
+        let nextY = pointerY;
+        const monitor = await monitorFromPoint(pointerX, pointerY).catch(() => null);
         if (monitor) {
           const minX = monitor.workArea.position.x + MENU_EDGE_GAP;
           const minY = monitor.workArea.position.y + MENU_EDGE_GAP;
@@ -147,8 +151,26 @@ function ContextMenuApp({ targetWindowLabel, noteId }: NoteContextMenuContext) {
             minY,
             monitor.workArea.position.y + monitor.workArea.size.height - height - MENU_EDGE_GAP,
           );
+          const rightSpace =
+            monitor.workArea.position.x + monitor.workArea.size.width - pointerX - MENU_EDGE_GAP;
+          const leftSpace = pointerX - monitor.workArea.position.x - MENU_EDGE_GAP;
+          const bottomSpace =
+            monitor.workArea.position.y + monitor.workArea.size.height - pointerY - MENU_EDGE_GAP;
+          const topSpace = pointerY - monitor.workArea.position.y - MENU_EDGE_GAP;
+          if (rightSpace < width && leftSpace >= width) {
+            nextX = pointerX - width;
+          }
+          if (bottomSpace < height && topSpace >= height) {
+            nextY = pointerY - height;
+          }
           nextX = clamp(nextX, minX, maxX);
           nextY = clamp(nextY, minY, maxY);
+        }
+        const position = await menuWindow.outerPosition().catch(() => null);
+        if (!position) {
+          await menuWindow.setSize(new PhysicalSize(width, height));
+          await menuWindow.setPosition(new PhysicalPosition(nextX, nextY));
+          return;
         }
         if (
           size.width === width &&
@@ -164,7 +186,7 @@ function ContextMenuApp({ targetWindowLabel, noteId }: NoteContextMenuContext) {
       .catch((error) => {
         console.error("Failed to fit context menu window:", error);
       });
-  }, [menuWindow]);
+  }, [context.anchorX, context.anchorY, menuWindow]);
 
   useLayoutEffect(() => {
     const frame = window.requestAnimationFrame(() => {

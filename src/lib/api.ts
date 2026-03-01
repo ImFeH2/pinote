@@ -66,10 +66,14 @@ export type NoteContextMenuAction =
 export interface NoteContextMenuContext {
   targetWindowLabel: string;
   noteId: string;
+  anchorX: number;
+  anchorY: number;
 }
 
-interface OpenNoteContextMenuOptions extends NoteContextMenuContext {
+interface OpenNoteContextMenuOptions {
   parentWindowLabel: string;
+  targetWindowLabel: string;
+  noteId: string;
   screenX: number;
   screenY: number;
   scaleFactor: number;
@@ -208,42 +212,77 @@ function clamp(value: number, min: number, max: number) {
 async function resolveContextMenuPosition(options: OpenNoteContextMenuOptions) {
   const scaleFactor =
     Number.isFinite(options.scaleFactor) && options.scaleFactor > 0 ? options.scaleFactor : 1;
-  const rawX = Math.round(options.screenX * scaleFactor);
-  const rawY = Math.round(options.screenY * scaleFactor);
-  const monitor = await monitorFromPoint(rawX, rawY).catch(() => null);
+  return {
+    x: Math.round(options.screenX * scaleFactor),
+    y: Math.round(options.screenY * scaleFactor),
+  };
+}
+
+async function resolveContextMenuWindowPosition(
+  pointerX: number,
+  pointerY: number,
+  width: number,
+  height: number,
+) {
+  const monitor = await monitorFromPoint(pointerX, pointerY).catch(() => null);
   if (!monitor) {
-    return { x: rawX, y: rawY };
+    return {
+      x: pointerX,
+      y: pointerY,
+    };
   }
   const workArea = monitor.workArea;
   const minX = workArea.position.x + NOTE_CONTEXT_MENU_GAP;
   const minY = workArea.position.y + NOTE_CONTEXT_MENU_GAP;
   const maxX = Math.max(
     minX,
-    workArea.position.x + workArea.size.width - NOTE_CONTEXT_MENU_WIDTH - NOTE_CONTEXT_MENU_GAP,
+    workArea.position.x + workArea.size.width - width - NOTE_CONTEXT_MENU_GAP,
   );
   const maxY = Math.max(
     minY,
-    workArea.position.y + workArea.size.height - NOTE_CONTEXT_MENU_HEIGHT - NOTE_CONTEXT_MENU_GAP,
+    workArea.position.y + workArea.size.height - height - NOTE_CONTEXT_MENU_GAP,
   );
+  const rightSpace = workArea.position.x + workArea.size.width - pointerX - NOTE_CONTEXT_MENU_GAP;
+  const leftSpace = pointerX - workArea.position.x - NOTE_CONTEXT_MENU_GAP;
+  const bottomSpace = workArea.position.y + workArea.size.height - pointerY - NOTE_CONTEXT_MENU_GAP;
+  const topSpace = pointerY - workArea.position.y - NOTE_CONTEXT_MENU_GAP;
+  let x = pointerX;
+  let y = pointerY;
+  if (rightSpace < width && leftSpace >= width) {
+    x = pointerX - width;
+  }
+  if (bottomSpace < height && topSpace >= height) {
+    y = pointerY - height;
+  }
   return {
-    x: clamp(rawX, minX, maxX),
-    y: clamp(rawY, minY, maxY),
+    x: clamp(x, minX, maxX),
+    y: clamp(y, minY, maxY),
   };
 }
 
-function buildNoteContextMenuUrl(options: OpenNoteContextMenuOptions) {
+function buildNoteContextMenuUrl(
+  options: OpenNoteContextMenuOptions,
+  pointer: { x: number; y: number },
+) {
   const query = new URLSearchParams({
     view: "context-menu",
     targetWindowLabel: options.targetWindowLabel,
     noteId: options.noteId,
+    anchorX: String(pointer.x),
+    anchorY: String(pointer.y),
   });
   return `index.html?${query.toString()}`;
 }
 
-function buildNoteContextMenuContext(options: OpenNoteContextMenuOptions): NoteContextMenuContext {
+function buildNoteContextMenuContext(
+  options: OpenNoteContextMenuOptions,
+  pointer: { x: number; y: number },
+): NoteContextMenuContext {
   return {
     targetWindowLabel: options.targetWindowLabel,
     noteId: options.noteId,
+    anchorX: pointer.x,
+    anchorY: pointer.y,
   };
 }
 
@@ -260,11 +299,12 @@ async function emitNoteContextMenuSync(targetLabel: string, context: NoteContext
 
 export async function openNoteContextMenu(options: OpenNoteContextMenuOptions) {
   const label = buildNoteContextMenuWindowLabel(options.parentWindowLabel);
-  const context = buildNoteContextMenuContext(options);
+  const pointer = await resolveContextMenuPosition(options);
+  const context = buildNoteContextMenuContext(options, pointer);
   let menuWindow = await WebviewWindow.getByLabel(label);
   if (!menuWindow) {
     menuWindow = new WebviewWindow(label, {
-      url: buildNoteContextMenuUrl(options),
+      url: buildNoteContextMenuUrl(options, pointer),
       title: "Pinote Menu",
       width: NOTE_CONTEXT_MENU_WIDTH,
       height: NOTE_CONTEXT_MENU_HEIGHT,
@@ -285,7 +325,16 @@ export async function openNoteContextMenu(options: OpenNoteContextMenuOptions) {
       void persistentMenuWindow.hide();
     });
   }
-  const position = await resolveContextMenuPosition(options);
+  const size = await menuWindow.innerSize().catch(() => ({
+    width: NOTE_CONTEXT_MENU_WIDTH,
+    height: NOTE_CONTEXT_MENU_HEIGHT,
+  }));
+  const position = await resolveContextMenuWindowPosition(
+    pointer.x,
+    pointer.y,
+    Math.max(1, Math.round(size.width)),
+    Math.max(1, Math.round(size.height)),
+  );
   await emitNoteContextMenuSync(label, context).catch(() => {});
   await menuWindow.setPosition(new PhysicalPosition(position.x, position.y));
   await menuWindow.show();
@@ -322,6 +371,8 @@ export async function listenNoteContextMenuSync(
     if (!payload) return;
     if (typeof payload.targetWindowLabel !== "string") return;
     if (typeof payload.noteId !== "string") return;
+    if (typeof payload.anchorX !== "number") return;
+    if (typeof payload.anchorY !== "number") return;
     handler(payload);
   });
 }

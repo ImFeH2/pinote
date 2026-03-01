@@ -39,9 +39,13 @@ function getContextMenuContext() {
   const targetWindowLabel = params.get("targetWindowLabel")?.trim() ?? "";
   const noteId = params.get("noteId")?.trim() ?? "";
   if (!targetWindowLabel || !noteId) return null;
+  const rawAnchorX = Number.parseInt(params.get("anchorX") ?? "", 10);
+  const rawAnchorY = Number.parseInt(params.get("anchorY") ?? "", 10);
   return {
     targetWindowLabel,
     noteId,
+    anchorX: Number.isFinite(rawAnchorX) ? rawAnchorX : 0,
+    anchorY: Number.isFinite(rawAnchorY) ? rawAnchorY : 0,
   };
 }
 
