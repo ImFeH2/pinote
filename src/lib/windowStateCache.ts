@@ -36,9 +36,8 @@ export interface WindowStateCache {
 }
 
 const CACHE_VERSION = 2;
-const CACHE_DIR = "cache";
-const CACHE_FILE = `${CACHE_DIR}/window_state.json`;
-const CACHE_LOCK_DIR = `${CACHE_DIR}/window_state.lock`;
+const CACHE_FILE = "windows.json";
+const CACHE_LOCK_DIR = "windows.lock";
 const RESERVED_WINDOW_IDS = new Set(["main", "settings"]);
 const LOCK_RETRY_MS = 20;
 const LOCK_TIMEOUT_MS = 1000;
@@ -159,15 +158,6 @@ function sanitizeCache(value: unknown): WindowStateCache {
   };
 }
 
-async function ensureCacheDir() {
-  const dirExists = await exists(CACHE_DIR, { baseDir: BaseDirectory.AppData });
-  if (dirExists) return;
-  await mkdir(CACHE_DIR, {
-    baseDir: BaseDirectory.AppData,
-    recursive: true,
-  });
-}
-
 async function readCache() {
   const fileExists = await exists(CACHE_FILE, { baseDir: BaseDirectory.AppData });
   if (!fileExists) return buildEmptyCache();
@@ -180,7 +170,6 @@ async function readCache() {
 }
 
 async function writeCache(cache: WindowStateCache) {
-  await ensureCacheDir();
   await writeTextFile(CACHE_FILE, JSON.stringify(cache, null, 2), {
     baseDir: BaseDirectory.AppData,
   });
@@ -193,7 +182,6 @@ function delay(ms: number) {
 }
 
 async function acquireCacheLock() {
-  await ensureCacheDir();
   const startedAt = Date.now();
   let hasForcedUnlock = false;
   while (true) {

@@ -22,7 +22,7 @@ struct WindowStateCache {
 
 fn load_window_state_cache(app: &tauri::AppHandle) -> Option<WindowStateCache> {
     let app_data_dir = app.path().app_data_dir().ok()?;
-    let cache_file = app_data_dir.join("cache").join("window_state.json");
+    let cache_file = app_data_dir.join("windows.json");
     let content = std::fs::read_to_string(cache_file).ok()?;
     let cache = serde_json::from_str::<WindowStateCache>(&content).ok()?;
     if cache.version != CACHE_VERSION {
