@@ -9,7 +9,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
 import { Pin } from "lucide-react";
 import { Editor } from "@/components/Editor";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,8 @@ const WINDOW_MAX_WIDTH = 1920;
 const WINDOW_MAX_HEIGHT = 2160;
 const WINDOW_RESIZE_WIDTH_STEP = 24;
 const WINDOW_RESIZE_HEIGHT_STEP = 30;
+const NEW_NOTE_POSITION_OFFSET_X = 28;
+const NEW_NOTE_POSITION_OFFSET_Y = 28;
 const NOTE_OPACITY_MIN = 0.3;
 const NOTE_OPACITY_MAX = 1;
 const NOTE_OPACITY_STEP = 0.05;
@@ -88,21 +90,30 @@ function wheelModifierMatchesEvent(
   return event.metaKey && !event.altKey && !event.ctrlKey && !event.shiftKey;
 }
 
-function App({ noteId, notePath }: { noteId: string; notePath: string }) {
+function App({
+  noteId,
+  notePath,
+  initialOpacity,
+}: {
+  noteId: string;
+  notePath: string;
+  initialOpacity?: number;
+}) {
   const { toggleTheme } = useTheme();
   const { save, load } = useAutoSave(notePath);
   const { alwaysOnTop, toggleAlwaysOnTop } = useWindowControl();
   const { settings } = useSettings();
   const appWindow = useMemo(() => getCurrentWindow(), []);
   const windowLabel = appWindow.label;
+  const initialWindowOpacity = clamp(initialOpacity ?? 1, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX);
   const [initialContent, setInitialContent] = useState<string | null>(null);
-  const [noteOpacity, setNoteOpacityState] = useState(1);
+  const [noteOpacity, setNoteOpacityState] = useState(initialWindowOpacity);
   const wheelResizeLock = useRef(false);
   const middleDragState = useRef<MiddleDragState | null>(null);
   const middleDragPendingPosition = useRef<{ x: number; y: number } | null>(null);
   const middleDragLastPosition = useRef<{ x: number; y: number } | null>(null);
   const middleDragFrame = useRef<number | null>(null);
-  const noteOpacityRef = useRef(1);
+  const noteOpacityRef = useRef(initialWindowOpacity);
   const closeRequestState = useRef<"idle" | "persisting" | "ready">("idle");
 
   useEffect(() => {
@@ -270,14 +281,45 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
 
   const openNote = useCallback(() => {
     const targetNoteId = buildGeneratedNoteId();
-    openNoteWindow(targetNoteId)
+    Promise.all([appWindow.outerPosition(), appWindow.innerSize(), appWindow.isAlwaysOnTop()])
+      .then(async ([position, size, currentAlwaysOnTop]) => {
+        let nextX = position.x + NEW_NOTE_POSITION_OFFSET_X;
+        let nextY = position.y + NEW_NOTE_POSITION_OFFSET_Y;
+        const monitorX = position.x + Math.round(size.width / 2);
+        const monitorY = position.y + Math.round(size.height / 2);
+        const monitor = await monitorFromPoint(monitorX, monitorY).catch(() => null);
+        if (monitor) {
+          const minX = monitor.workArea.position.x;
+          const minY = monitor.workArea.position.y;
+          const maxX = Math.max(
+            minX,
+            monitor.workArea.position.x + monitor.workArea.size.width - size.width,
+          );
+          const maxY = Math.max(
+            minY,
+            monitor.workArea.position.y + monitor.workArea.size.height - size.height,
+          );
+          nextX = clamp(nextX, minX, maxX);
+          nextY = clamp(nextY, minY, maxY);
+        }
+        return openNoteWindow(targetNoteId, {
+          alwaysOnTop: currentAlwaysOnTop,
+          opacity: noteOpacityRef.current,
+          bounds: {
+            x: nextX,
+            y: nextY,
+            width: size.width,
+            height: size.height,
+          },
+        });
+      })
       .then((opened) => {
         return upsertWindowState(opened);
       })
       .catch((error) => {
         console.error("Failed to open note window:", error);
       });
-  }, []);
+  }, [appWindow]);
 
   const minimizeWindow = useCallback(() => {
     appWindow.minimize().catch((error) => {

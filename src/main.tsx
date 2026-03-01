@@ -23,9 +23,14 @@ function getNoteContext() {
   const notePath = params.get("notePath")?.trim() ?? "";
   if (!notePath) return null;
   const rawNoteId = params.get("noteId");
+  const rawOpacity = Number.parseFloat(params.get("noteOpacity") ?? "");
+  const initialOpacity = Number.isFinite(rawOpacity)
+    ? Math.min(Math.max(rawOpacity, 0.3), 1)
+    : undefined;
   return {
     noteId: rawNoteId ? normalizeNoteId(rawNoteId) : getNoteIdFromPath(notePath),
     notePath,
+    initialOpacity,
   };
 }
 
@@ -70,7 +75,13 @@ function Root() {
   }
   const noteContext = getNoteContext();
   if (view === "note" && noteContext) {
-    return <App noteId={noteContext.noteId} notePath={noteContext.notePath} />;
+    return (
+      <App
+        noteId={noteContext.noteId}
+        notePath={noteContext.notePath}
+        initialOpacity={noteContext.initialOpacity}
+      />
+    );
   }
   return <BootstrapApp />;
 }

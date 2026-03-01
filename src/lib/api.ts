@@ -159,7 +159,12 @@ async function createNoteWindow(
   options: OpenNoteWindowOptions,
 ) {
   const noteWindow = new WebviewWindow(windowId, {
-    url: buildNoteWindowUrl({ windowId, noteId, notePath }),
+    url: buildNoteWindowUrl({
+      windowId,
+      noteId,
+      notePath,
+      noteOpacity: options.opacity,
+    }),
     title: `Pinote - ${noteId}`,
     width: NOTE_WINDOW_WIDTH,
     height: NOTE_WINDOW_HEIGHT,

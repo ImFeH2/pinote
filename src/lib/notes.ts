@@ -64,13 +64,21 @@ export function buildNoteWindowId(notePath: string) {
   return `${NOTE_WINDOW_PREFIX}${buildNotePathHash(notePath)}`;
 }
 
-export function buildNoteWindowUrl(params: { windowId: string; noteId: string; notePath: string }) {
+export function buildNoteWindowUrl(params: {
+  windowId: string;
+  noteId: string;
+  notePath: string;
+  noteOpacity?: number;
+}) {
   const query = new URLSearchParams({
     view: "note",
     windowId: params.windowId,
     noteId: normalizeNoteId(params.noteId),
     notePath: params.notePath,
   });
+  if (typeof params.noteOpacity === "number" && Number.isFinite(params.noteOpacity)) {
+    query.set("noteOpacity", params.noteOpacity.toString());
+  }
   return `index.html?${query.toString()}`;
 }
 
