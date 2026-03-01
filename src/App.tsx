@@ -577,9 +577,10 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
 
   const noteOpacityPercent = Math.round(noteOpacity * 100);
 
-  const setNoteOpacity = useCallback(
+  const applyNoteOpacity = useCallback(
     (value: number) => {
       const nextOpacity = clamp(value, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX);
+      noteOpacityRef.current = nextOpacity;
       setNoteOpacityState(nextOpacity);
       void persistWindowState(undefined, false, nextOpacity);
     },
@@ -587,18 +588,19 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
   );
 
   const increaseNoteOpacity = useCallback(() => {
-    setNoteOpacity(noteOpacity + NOTE_OPACITY_STEP);
-  }, [noteOpacity, setNoteOpacity]);
+    applyNoteOpacity(noteOpacityRef.current + NOTE_OPACITY_STEP);
+  }, [applyNoteOpacity]);
 
   const decreaseNoteOpacity = useCallback(() => {
-    setNoteOpacity(noteOpacity - NOTE_OPACITY_STEP);
-  }, [noteOpacity, setNoteOpacity]);
+    applyNoteOpacity(noteOpacityRef.current - NOTE_OPACITY_STEP);
+  }, [applyNoteOpacity]);
 
   const resetNoteOpacity = useCallback(() => {
-    setNoteOpacity(1);
-  }, [setNoteOpacity]);
+    applyNoteOpacity(1);
+  }, [applyNoteOpacity]);
 
   useEffect(() => {
+    let disposed = false;
     let unlisten: (() => void) | null = null;
     const handleAction = (action: NoteContextMenuAction) => {
       if (action === "new-note") {
@@ -642,8 +644,12 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
       }
     };
 
-    listenNoteContextMenuAction(handleAction)
+    void listenNoteContextMenuAction(handleAction)
       .then((handler) => {
+        if (disposed) {
+          handler();
+          return;
+        }
         unlisten = handler;
       })
       .catch((error) => {
@@ -651,6 +657,7 @@ function App({ noteId, notePath }: { noteId: string; notePath: string }) {
       });
 
     return () => {
+      disposed = true;
       if (unlisten) {
         unlisten();
       }
