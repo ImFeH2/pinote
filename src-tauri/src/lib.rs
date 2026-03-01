@@ -11,8 +11,8 @@ use tauri_plugin_log::{Target, TargetKind};
 const NOTE_WINDOW_PREFIX: &str = "note-";
 const NOTE_WINDOW_WIDTH: f64 = 400.0;
 const NOTE_WINDOW_HEIGHT: f64 = 500.0;
-const NOTE_WINDOW_MIN_WIDTH: f64 = 320.0;
-const NOTE_WINDOW_MIN_HEIGHT: f64 = 420.0;
+const NOTE_WINDOW_MIN_WIDTH: f64 = 1.0;
+const NOTE_WINDOW_MIN_HEIGHT: f64 = 1.0;
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

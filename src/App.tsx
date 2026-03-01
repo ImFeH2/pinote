@@ -36,8 +36,8 @@ import {
 import { type WheelResizeModifier } from "@/stores/settings";
 import "@/styles/App.css";
 
-const WINDOW_MIN_WIDTH = 320;
-const WINDOW_MIN_HEIGHT = 420;
+const WINDOW_MIN_WIDTH = 1;
+const WINDOW_MIN_HEIGHT = 1;
 const WINDOW_MAX_WIDTH = 1920;
 const WINDOW_MAX_HEIGHT = 2160;
 const WINDOW_RESIZE_WIDTH_STEP = 24;
