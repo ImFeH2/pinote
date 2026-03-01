@@ -23,14 +23,15 @@ export async function restoreWindowsFromCacheOrCreateNew(options: RestoreWindows
     return;
   }
 
-  const focusWindowId = states[states.length - 1]?.windowId;
+  const visibleStates = states.filter((state) => state.visibility === "visible");
+  const focusWindowId = visibleStates[visibleStates.length - 1]?.windowId;
 
   for (const state of states) {
     const opened = await openNoteWindow(state.noteId, {
       windowId: state.windowId,
       notePath: state.notePath,
-      visibility: "visible",
-      focus: state.windowId === focusWindowId,
+      visibility: state.visibility,
+      focus: state.visibility === "visible" && state.windowId === focusWindowId,
       alwaysOnTop: state.alwaysOnTop,
       opacity: state.opacity,
       bounds: state.bounds,
