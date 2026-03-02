@@ -8,15 +8,18 @@ import { cn } from "@/lib/utils";
 import { TitleBar } from "@/components/TitleBar";
 import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
-import { resolveDefaultNotesDirectory } from "@/lib/notes";
+import { getNoteIdFromPath, resolveDefaultNotesDirectory } from "@/lib/notes";
+import { searchNoteHistory, type NoteHistorySearchResult } from "@/lib/noteHistory";
 import { type WheelResizeModifier } from "@/stores/settings";
 import {
   getDefaultMarkdownOpenEnabled,
   getOpenWithPinoteEnabled,
+  openNoteWindow,
   setNoteWindowsSkipTaskbar,
   setDefaultMarkdownOpenEnabled,
   setOpenWithPinoteEnabled,
 } from "@/lib/api";
+import { upsertWindowState } from "@/lib/windowStateCache";
 import {
   checkForUpdates,
   downloadUpdate,
@@ -30,6 +33,8 @@ import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 import { FolderOpen, FolderSearch, Github } from "lucide-react";
 
 const REPOSITORY_URL = "https://github.com/ImFeH2/pinote";
+const HISTORY_SEARCH_LIMIT = 80;
+const HISTORY_SEARCH_DEBOUNCE_MS = 120;
 
 const shortcutItems = [
   { key: "restoreWindow", label: "Restore Hidden Window" },
@@ -72,6 +77,11 @@ const sections = [
     id: "shortcuts",
     label: "Shortcuts",
     description: "Keyboard shortcuts and interaction key customization.",
+  },
+  {
+    id: "history",
+    label: "History",
+    description: "Search and reopen previously opened notes.",
   },
   {
     id: "about",
@@ -141,6 +151,12 @@ export function SettingsApp() {
   const [defaultOpenError, setDefaultOpenError] = useState<string | null>(null);
   const [taskbarBusy, setTaskbarBusy] = useState(false);
   const [taskbarError, setTaskbarError] = useState<string | null>(null);
+  const [historyQuery, setHistoryQuery] = useState("");
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyResults, setHistoryResults] = useState<NoteHistorySearchResult[]>([]);
+  const [historyOpeningPath, setHistoryOpeningPath] = useState<string | null>(null);
+  const [historyReloadToken, setHistoryReloadToken] = useState(0);
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const lineHeightText = settings.editorLineHeight.toFixed(1);
@@ -325,6 +341,28 @@ export function SettingsApp() {
     }
   }, [customNotesDirectory, effectiveNotesDirectory]);
 
+  const handleOpenHistoryItem = useCallback(async (item: NoteHistorySearchResult) => {
+    const notePath = item.notePath.trim();
+    if (!notePath) return;
+    setHistoryOpeningPath(notePath);
+    try {
+      const noteId = item.noteId.trim() || getNoteIdFromPath(notePath);
+      const opened = await openNoteWindow(noteId, {
+        notePath,
+        windowId: item.windowId.trim() || undefined,
+        visibility: "visible",
+        focus: true,
+      });
+      await upsertWindowState(opened);
+      setHistoryError(null);
+      setHistoryReloadToken((value) => value + 1);
+    } catch (error) {
+      setHistoryError(getErrorMessage(error));
+    } finally {
+      setHistoryOpeningPath(null);
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
     isEnabled()
@@ -390,6 +428,32 @@ export function SettingsApp() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (activeSection !== "history") return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setHistoryLoading(true);
+      searchNoteHistory(historyQuery, { limit: HISTORY_SEARCH_LIMIT })
+        .then((results) => {
+          if (!active) return;
+          setHistoryResults(results);
+          setHistoryError(null);
+        })
+        .catch((error) => {
+          if (!active) return;
+          setHistoryError(getErrorMessage(error));
+        })
+        .finally(() => {
+          if (!active) return;
+          setHistoryLoading(false);
+        });
+    }, HISTORY_SEARCH_DEBOUNCE_MS);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [activeSection, historyQuery, historyReloadToken]);
 
   useEffect(() => {
     return subscribeUpdateState((next) => {
@@ -755,6 +819,59 @@ export function SettingsApp() {
               {defaultOpenError && (
                 <div className="text-xs text-destructive">{defaultOpenError}</div>
               )}
+            </div>
+          )}
+
+          {activeSection === "history" && (
+            <div className="flex h-full min-h-0 flex-col gap-3">
+              <input
+                type="text"
+                value={historyQuery}
+                onChange={(event) => {
+                  setHistoryQuery(event.target.value);
+                }}
+                placeholder="Search by path or note content"
+                className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none transition-colors focus:border-primary"
+              />
+              <div className="pinote-scrollbar min-h-0 flex-1 overflow-y-auto rounded-md border border-border bg-background/70">
+                {historyLoading ? (
+                  <div className="px-2 py-2 text-xs text-muted-foreground">Searching...</div>
+                ) : historyResults.length === 0 ? (
+                  <div className="px-2 py-2 text-xs text-muted-foreground">No results.</div>
+                ) : (
+                  historyResults.map((item) => {
+                    const key = `${item.notePath}::${item.windowId}`;
+                    const opening = historyOpeningPath === item.notePath;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        disabled={opening}
+                        onClick={() => {
+                          void handleOpenHistoryItem(item);
+                        }}
+                        className={cn(
+                          "flex w-full flex-col gap-1 border-b border-border/70 px-2 py-2 text-left transition-colors last:border-b-0 hover:bg-accent",
+                          opening && "cursor-not-allowed opacity-60",
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="min-w-0 flex-1 truncate text-xs text-foreground">
+                            {item.notePath}
+                          </div>
+                          {item.matchedByContent && (
+                            <span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                              Content
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground">{`Last opened: ${formatDateTime(item.lastOpenedAt)}`}</div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              {historyError && <div className="text-xs text-destructive">{historyError}</div>}
             </div>
           )}
 

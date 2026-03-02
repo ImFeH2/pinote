@@ -12,6 +12,7 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Quick Access** — Global shortcut (`Alt+N`) and system tray action restore the most recently hidden note window
 - **Session Restore** — Window state cache restores note windows (position, size, pin state, visibility) on next launch
 - **Scroll Position Restore** — Each note remembers editor scroll position across hide/show and restart
+- **Searchable Open History** — Find and reopen previously opened notes by path or content
 - **Taskbar Visibility Control** — Hide or show note windows in the system taskbar from Settings (enabled by default)
 - **CLI Markdown Open** — Launch Pinote with `.md`/`.markdown` file paths to open or focus dedicated note windows
 - **Personalized Appearance** — Theme, per-note opacity, typography, page spacing, and modern scrollbar styling

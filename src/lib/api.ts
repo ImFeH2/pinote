@@ -9,6 +9,7 @@ import {
   normalizeNoteId,
   resolveManagedNotePath,
 } from "@/lib/notes";
+import { recordOpenedNote } from "@/lib/noteHistory";
 import type { WindowBounds, WindowVisibility } from "@/lib/windowStateCache";
 import { loadSettings, type Settings } from "@/stores/settings";
 
@@ -426,6 +427,13 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
   const normalizedNoteId = normalizeNoteId(noteId);
   const notePath = options.notePath?.trim() || (await resolveManagedNotePath(normalizedNoteId));
   const windowId = options.windowId?.trim() || buildNoteWindowId(notePath);
+  void recordOpenedNote({
+    notePath,
+    noteId: normalizedNoteId,
+    windowId,
+  }).catch((error) => {
+    console.error("Failed to record note history:", error);
+  });
   const skipTaskbar = await resolveNoteWindowSkipTaskbar(options.skipTaskbar);
   const existing = await WebviewWindow.getByLabel(windowId);
   if (existing) {
