@@ -57,10 +57,10 @@ export const DEFAULT_SETTINGS: Settings = {
   openWithPinoteContextMenu: false,
   defaultMarkdownOpenWithPinote: false,
   shortcuts: {
-    restoreWindow: "Alt+N",
+    restoreWindow: "Alt+S",
     showAllHiddenWindows: "Alt+Shift+H",
-    toggleVisibleWindows: "Alt+Shift+N",
-    toggleAlwaysOnTop: "Ctrl+Shift+T",
+    toggleVisibleWindows: "Alt+D",
+    toggleAlwaysOnTop: "Alt+A",
     toggleTheme: "Ctrl+Shift+D",
     hideWindow: "Escape",
     closeWindow: "Ctrl+Shift+W",

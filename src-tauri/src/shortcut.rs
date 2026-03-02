@@ -5,9 +5,9 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 use crate::window::{restore_hidden_window, show_all_hidden_windows, toggle_visible_note_windows};
 
-const DEFAULT_RESTORE_WINDOW_SHORTCUT: &str = "Alt+N";
+const DEFAULT_RESTORE_WINDOW_SHORTCUT: &str = "Alt+S";
 const DEFAULT_SHOW_ALL_HIDDEN_WINDOWS_SHORTCUT: &str = "Alt+Shift+H";
-const DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT: &str = "Alt+Shift+N";
+const DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT: &str = "Alt+D";
 const SETTINGS_FILE_NAME: &str = "settings.json";
 
 struct LoadedShortcuts {
