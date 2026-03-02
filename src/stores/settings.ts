@@ -19,6 +19,7 @@ export interface Settings {
   editorPaddingY: number;
   launchAtStartup: boolean;
   hideNoteWindowsFromTaskbar: boolean;
+  contextMenuFollowNoteOpacity: boolean;
   wheelResizeModifier: WheelResizeModifier;
   wheelOpacityModifier: WheelResizeModifier;
   dragMouseButton: DragMouseButton;
@@ -47,6 +48,7 @@ export const DEFAULT_SETTINGS: Settings = {
   editorPaddingY: 10,
   launchAtStartup: false,
   hideNoteWindowsFromTaskbar: true,
+  contextMenuFollowNoteOpacity: false,
   wheelResizeModifier: "alt",
   wheelOpacityModifier: "ctrl",
   dragMouseButton: "middle",
@@ -121,6 +123,10 @@ function mergeSettings(stored: StoredSettings): Settings {
     noteGlassEffectMacos: sanitizeBoolean(
       rest.noteGlassEffectMacos,
       DEFAULT_SETTINGS.noteGlassEffectMacos,
+    ),
+    contextMenuFollowNoteOpacity: sanitizeBoolean(
+      rest.contextMenuFollowNoteOpacity,
+      DEFAULT_SETTINGS.contextMenuFollowNoteOpacity,
     ),
     wheelResizeModifier: sanitizeWheelModifier(
       rest.wheelResizeModifier,

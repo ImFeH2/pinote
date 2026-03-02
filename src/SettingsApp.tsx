@@ -849,6 +849,33 @@ export function SettingsApp() {
               <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
                 <div className="flex flex-col gap-1">
                   <div className="text-xs font-medium text-muted-foreground">
+                    Context Menu Follows Note Opacity
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Use note opacity for the context menu background.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateSettings({
+                      contextMenuFollowNoteOpacity: !settings.contextMenuFollowNoteOpacity,
+                    });
+                  }}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                    settings.contextMenuFollowNoteOpacity
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-accent",
+                  )}
+                >
+                  {settings.contextMenuFollowNoteOpacity ? "Enabled" : "Disabled"}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
+                <div className="flex flex-col gap-1">
+                  <div className="text-xs font-medium text-muted-foreground">
                     Explorer Context Menu
                   </div>
                   <div className="text-[11px] text-muted-foreground">

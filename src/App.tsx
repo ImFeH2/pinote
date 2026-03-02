@@ -157,6 +157,8 @@ function App({
   const suppressEditorScrollUntilRef = useRef(0);
   const suppressEditorScrollTopRef = useRef(0);
   const closeRequestState = useRef<"idle" | "persisting" | "ready">("idle");
+  const forceHiddenVisibilityRef = useRef(false);
+  const hideInProgressRef = useRef(false);
   const [initialEditorScrollTop, setInitialEditorScrollTop] = useState(0);
   const [windowStateReady, setWindowStateReady] = useState(false);
   const [runtimePlatform, setRuntimePlatform] = useState<RuntimePlatform>("other");
@@ -259,7 +261,17 @@ function App({
           appWindow.isAlwaysOnTop(),
           appWindow.isVisible(),
         ]);
-        const nextVisibility = visibility ?? (visible ? "visible" : "hidden");
+        let nextVisibility: WindowVisibility;
+        if (visibility) {
+          nextVisibility = visibility;
+        } else if (forceHiddenVisibilityRef.current) {
+          nextVisibility = "hidden";
+        } else {
+          nextVisibility = visible ? "visible" : "hidden";
+        }
+        if (nextVisibility === "visible") {
+          forceHiddenVisibilityRef.current = false;
+        }
         const nextOpacity = clamp(
           opacity ?? noteOpacityRef.current,
           NOTE_OPACITY_MIN,
@@ -352,35 +364,26 @@ function App({
 
   const hideWindow = useCallback(async () => {
     try {
-      const [position, size, currentAlwaysOnTop] = await Promise.all([
-        appWindow.outerPosition(),
-        appWindow.innerSize(),
-        appWindow.isAlwaysOnTop(),
-      ]);
-      await upsertWindowState(
-        {
-          windowId: windowLabel,
-          noteId,
-          notePath,
-          visibility: "hidden",
-          alwaysOnTop: currentAlwaysOnTop,
-          opacity: noteOpacityRef.current,
-          scrollTop: Math.max(0, noteScrollTopRef.current),
-          bounds: {
-            x: position.x,
-            y: position.y,
-            width: size.width,
-            height: size.height,
-          },
-          updatedAt: new Date().toISOString(),
-        },
-        { pushHiddenToTop: true },
+      hideInProgressRef.current = true;
+      forceHiddenVisibilityRef.current = true;
+      if (scrollPersistTimer.current) {
+        clearTimeout(scrollPersistTimer.current);
+        scrollPersistTimer.current = null;
+      }
+      await persistWindowState(
+        "hidden",
+        true,
+        noteOpacityRef.current,
+        Math.max(0, noteScrollTopRef.current),
       );
       await appWindow.hide();
     } catch (error) {
       console.error("Failed to hide window:", error);
+      forceHiddenVisibilityRef.current = false;
+    } finally {
+      hideInProgressRef.current = false;
     }
-  }, [appWindow, noteId, notePath, windowLabel]);
+  }, [appWindow, persistWindowState]);
 
   useEffect(() => {
     if (!windowStateReady) return;
@@ -605,6 +608,7 @@ function App({
         appWindow.onFocusChanged(({ payload }) => {
           if (!windowStateReady) return;
           if (!payload) return;
+          if (hideInProgressRef.current) return;
           void persistWindowState("visible");
         }),
         appWindow.onCloseRequested((event) => {
@@ -879,6 +883,7 @@ function App({
                 screenX: state.pointerCurrentX,
                 screenY: state.pointerCurrentY,
                 scaleFactor,
+                noteOpacity: noteOpacityRef.current,
               });
             })
             .catch((error) => {
@@ -1147,6 +1152,7 @@ function App({
             screenX,
             screenY,
             scaleFactor,
+            noteOpacity: noteOpacityRef.current,
           });
         })
         .catch((error) => {

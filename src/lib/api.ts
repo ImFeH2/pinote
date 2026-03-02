@@ -70,6 +70,7 @@ export interface NoteContextMenuContext {
   noteId: string;
   anchorX: number;
   anchorY: number;
+  noteOpacity: number;
 }
 
 interface OpenNoteContextMenuOptions {
@@ -79,6 +80,7 @@ interface OpenNoteContextMenuOptions {
   screenX: number;
   screenY: number;
   scaleFactor: number;
+  noteOpacity?: number;
 }
 
 interface NoteContextMenuActionPayload {
@@ -314,12 +316,20 @@ function buildNoteContextMenuUrl(
   options: OpenNoteContextMenuOptions,
   pointer: { x: number; y: number },
 ) {
+  const noteOpacity = clamp(
+    typeof options.noteOpacity === "number" && Number.isFinite(options.noteOpacity)
+      ? options.noteOpacity
+      : 1,
+    0,
+    1,
+  );
   const query = new URLSearchParams({
     view: "context-menu",
     targetWindowLabel: options.targetWindowLabel,
     noteId: options.noteId,
     anchorX: String(pointer.x),
     anchorY: String(pointer.y),
+    noteOpacity: noteOpacity.toString(),
   });
   return `index.html?${query.toString()}`;
 }
@@ -328,11 +338,19 @@ function buildNoteContextMenuContext(
   options: OpenNoteContextMenuOptions,
   pointer: { x: number; y: number },
 ): NoteContextMenuContext {
+  const noteOpacity = clamp(
+    typeof options.noteOpacity === "number" && Number.isFinite(options.noteOpacity)
+      ? options.noteOpacity
+      : 1,
+    0,
+    1,
+  );
   return {
     targetWindowLabel: options.targetWindowLabel,
     noteId: options.noteId,
     anchorX: pointer.x,
     anchorY: pointer.y,
+    noteOpacity,
   };
 }
 
@@ -429,7 +447,11 @@ export async function listenNoteContextMenuSync(
     if (typeof payload.noteId !== "string") return;
     if (typeof payload.anchorX !== "number") return;
     if (typeof payload.anchorY !== "number") return;
-    handler(payload);
+    const noteOpacity = clamp(Number.isFinite(payload.noteOpacity) ? payload.noteOpacity : 1, 0, 1);
+    handler({
+      ...payload,
+      noteOpacity,
+    });
   });
 }
 

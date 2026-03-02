@@ -33,7 +33,13 @@ function parsePx(value: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteContextMenuContext) {
+function ContextMenuApp({
+  targetWindowLabel,
+  noteId,
+  anchorX,
+  anchorY,
+  noteOpacity,
+}: NoteContextMenuContext) {
   useTheme();
   const { settings } = useSettings();
   const menuWindow = useMemo(() => getCurrentWindow(), []);
@@ -49,7 +55,18 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
     noteId,
     anchorX,
     anchorY,
+    noteOpacity,
   });
+  const menuSurfaceOpacity = settings.contextMenuFollowNoteOpacity
+    ? clamp(context.noteOpacity, 0.2, 1)
+    : 1;
+  const menuVisualStyle = useMemo(
+    () =>
+      ({
+        opacity: menuSurfaceOpacity,
+      }) as CSSProperties,
+    [menuSurfaceOpacity],
+  );
 
   const closeMenu = useCallback(() => {
     menuWindow.hide().catch(() => {});
@@ -284,78 +301,84 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
     <div ref={shellRef} className="inline-block">
       <div
         ref={panelRef}
-        className="pinote-scrollbar max-w-full overflow-y-auto rounded-lg border border-border bg-background p-1 shadow-lg"
+        className="pinote-context-menu-panel pinote-scrollbar relative max-w-full overflow-y-auto rounded-lg border border-transparent bg-transparent p-1 shadow-none"
       >
-        <div ref={titleViewportRef} title={context.noteId} className="pinote-menu-title-viewport">
-          <div
-            ref={titleTextRef}
-            style={titleStyle}
-            className={cn(
-              "pinote-menu-title-text px-2 py-1 text-[11px] font-medium text-muted-foreground",
-              titleShouldScroll ? "pinote-menu-title-text-scroll" : "truncate",
-            )}
-          >
-            {title}
+        <div
+          style={menuVisualStyle}
+          className="pointer-events-none absolute inset-0 rounded-[inherit] border border-border bg-background shadow-lg"
+        />
+        <div className="relative">
+          <div ref={titleViewportRef} title={context.noteId} className="pinote-menu-title-viewport">
+            <div
+              ref={titleTextRef}
+              style={titleStyle}
+              className={cn(
+                "pinote-menu-title-text px-2 py-1 text-[11px] font-medium text-muted-foreground",
+                titleShouldScroll ? "pinote-menu-title-text-scroll" : "truncate",
+              )}
+            >
+              {title}
+            </div>
           </div>
-        </div>
-        <div className="my-1 h-px bg-border" />
-        <div ref={actionsRef} className="inline-flex w-max flex-col">
-          <button
-            type="button"
-            onClick={() => {
-              dispatchAction("new-note");
-            }}
-            className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            New Note
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              dispatchAction("open-settings");
-            }}
-            className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Open Settings
-          </button>
-          {!settings.hideNoteWindowsFromTaskbar && (
+          <div className="my-1 h-px bg-border" />
+          <div ref={actionsRef} className="inline-flex w-max flex-col">
             <button
               type="button"
               onClick={() => {
-                dispatchAction("minimize-window");
+                dispatchAction("new-note");
               }}
               className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              Minimize Window
+              New Note
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              dispatchAction("toggle-maximize");
-            }}
-            className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Toggle Maximize
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              dispatchAction("hide-window");
-            }}
-            className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Hide Window
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              dispatchAction("close-window");
-            }}
-            className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Close Window
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                dispatchAction("open-settings");
+              }}
+              className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              Open Settings
+            </button>
+            {!settings.hideNoteWindowsFromTaskbar && (
+              <button
+                type="button"
+                onClick={() => {
+                  dispatchAction("minimize-window");
+                }}
+                className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                Minimize Window
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                dispatchAction("toggle-maximize");
+              }}
+              className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              Toggle Maximize
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                dispatchAction("hide-window");
+              }}
+              className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              Hide Window
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                dispatchAction("close-window");
+              }}
+              className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              Close Window
+            </button>
+          </div>
         </div>
       </div>
     </div>

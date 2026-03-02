@@ -40,11 +40,13 @@ function getContextMenuContext() {
   if (!targetWindowLabel || !noteId) return null;
   const rawAnchorX = Number.parseInt(params.get("anchorX") ?? "", 10);
   const rawAnchorY = Number.parseInt(params.get("anchorY") ?? "", 10);
+  const rawOpacity = Number.parseFloat(params.get("noteOpacity") ?? "");
   return {
     targetWindowLabel,
     noteId,
     anchorX: Number.isFinite(rawAnchorX) ? rawAnchorX : 0,
     anchorY: Number.isFinite(rawAnchorY) ? rawAnchorY : 0,
+    noteOpacity: Number.isFinite(rawOpacity) ? Math.min(Math.max(rawOpacity, 0), 1) : 1,
   };
 }
 
