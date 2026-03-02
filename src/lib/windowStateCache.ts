@@ -24,6 +24,7 @@ export interface CachedWindowState {
   visibility: WindowVisibility;
   alwaysOnTop: boolean;
   opacity: number;
+  scrollTop: number;
   bounds: WindowBounds;
   updatedAt: string;
 }
@@ -44,6 +45,7 @@ const LOCK_RETRY_MS = 20;
 const LOCK_TIMEOUT_MS = 1000;
 const NOTE_OPACITY_MIN = 0;
 const NOTE_OPACITY_MAX = 1;
+const NOTE_SCROLL_TOP_MIN = 0;
 
 interface UpdateWindowStateOptions {
   pushHiddenToTop?: boolean;
@@ -83,6 +85,11 @@ function asOpacity(value: unknown) {
   return Math.min(Math.max(value, NOTE_OPACITY_MIN), NOTE_OPACITY_MAX);
 }
 
+function asScrollTop(value: unknown) {
+  if (typeof value !== "number" || Number.isNaN(value)) return 0;
+  return Math.max(value, NOTE_SCROLL_TOP_MIN);
+}
+
 function buildEmptyCache(): WindowStateCache {
   return {
     version: CACHE_VERSION,
@@ -109,6 +116,7 @@ function sanitizeWindowState(value: unknown): CachedWindowState | null {
     visibility: asVisibility(source.visibility),
     alwaysOnTop: source.alwaysOnTop === true,
     opacity: asOpacity(source.opacity),
+    scrollTop: asScrollTop(source.scrollTop),
     bounds: asBounds(source.bounds),
     updatedAt,
   };
@@ -298,6 +306,7 @@ export async function upsertWindowState(
     const nextState: CachedWindowState = {
       ...state,
       opacity: asOpacity(state.opacity),
+      scrollTop: asScrollTop(state.scrollTop),
       updatedAt: state.updatedAt || now,
     };
     const cacheKey = buildNoteCacheKey(nextState.notePath);

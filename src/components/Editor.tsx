@@ -97,12 +97,51 @@ function EditorInner({ defaultValue, onChange }: EditorInnerProps) {
 interface EditorProps {
   defaultValue: string;
   onChange: (markdown: string) => void;
+  initialScrollTop?: number;
+  onScrollTopChange?: (scrollTop: number) => void;
   style?: CSSProperties;
 }
 
-export function Editor({ defaultValue, onChange, style }: EditorProps) {
+export function Editor({
+  defaultValue,
+  onChange,
+  initialScrollTop = 0,
+  onScrollTopChange,
+  style,
+}: EditorProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const handleScroll = useCallback(
+    (event: React.UIEvent<HTMLDivElement>) => {
+      if (!onScrollTopChange) return;
+      onScrollTopChange(event.currentTarget.scrollTop);
+    },
+    [onScrollTopChange],
+  );
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const nextScrollTop = Math.max(0, initialScrollTop);
+    const apply = () => {
+      container.scrollTop = nextScrollTop;
+    };
+    apply();
+    const frame = window.requestAnimationFrame(apply);
+    const timer = window.setTimeout(apply, 120);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [defaultValue, initialScrollTop]);
+
   return (
-    <div className="milkdown-editor pinote-scrollbar min-h-0 flex-1" style={style}>
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="milkdown-editor pinote-scrollbar min-h-0 flex-1"
+      style={style}
+    >
       <MilkdownProvider>
         <EditorInner defaultValue={defaultValue} onChange={onChange} />
       </MilkdownProvider>

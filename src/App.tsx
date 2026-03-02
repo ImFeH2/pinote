@@ -47,6 +47,7 @@ const NEW_NOTE_POSITION_OFFSET_Y = 28;
 const NOTE_OPACITY_MIN = 0;
 const NOTE_OPACITY_MAX = 1;
 const NOTE_OPACITY_STEP = 0.05;
+const NOTE_SCROLL_STATE_DEBOUNCE_MS = 200;
 
 interface MiddleDragState {
   pointerStartX: number;
@@ -114,7 +115,11 @@ function App({
   const middleDragLastPosition = useRef<{ x: number; y: number } | null>(null);
   const middleDragFrame = useRef<number | null>(null);
   const noteOpacityRef = useRef(initialWindowOpacity);
+  const scrollPersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noteScrollTopRef = useRef(0);
   const closeRequestState = useRef<"idle" | "persisting" | "ready">("idle");
+  const [initialEditorScrollTop, setInitialEditorScrollTop] = useState(0);
+  const [windowStateReady, setWindowStateReady] = useState(false);
 
   useEffect(() => {
     noteOpacityRef.current = noteOpacity;
@@ -127,17 +132,35 @@ function App({
   }, [load]);
 
   useEffect(() => {
+    let disposed = false;
+    setWindowStateReady(false);
     getWindowState(windowLabel)
       .then((state) => {
+        if (disposed) return;
         if (!state) return;
         if (state.noteId !== noteId) return;
         setNoteOpacityState(clamp(state.opacity, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX));
+        const cachedScrollTop = Math.max(0, state.scrollTop);
+        noteScrollTopRef.current = cachedScrollTop;
+        setInitialEditorScrollTop(cachedScrollTop);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (disposed) return;
+        setWindowStateReady(true);
+      });
+    return () => {
+      disposed = true;
+    };
   }, [noteId, windowLabel]);
 
   const persistWindowState = useCallback(
-    async (visibility?: WindowVisibility, pushHiddenToTop = false, opacity?: number) => {
+    async (
+      visibility?: WindowVisibility,
+      pushHiddenToTop = false,
+      opacity?: number,
+      scrollTop?: number,
+    ) => {
       try {
         const [position, size, currentAlwaysOnTop, visible] = await Promise.all([
           appWindow.outerPosition(),
@@ -151,6 +174,7 @@ function App({
           NOTE_OPACITY_MIN,
           NOTE_OPACITY_MAX,
         );
+        const nextScrollTop = Math.max(0, scrollTop ?? noteScrollTopRef.current);
         await upsertWindowState(
           {
             windowId: windowLabel,
@@ -159,6 +183,7 @@ function App({
             visibility: nextVisibility,
             alwaysOnTop: currentAlwaysOnTop,
             opacity: nextOpacity,
+            scrollTop: nextScrollTop,
             bounds: {
               x: position.x,
               y: position.y,
@@ -183,6 +208,20 @@ function App({
     [save],
   );
 
+  const handleScrollTopChange = useCallback(
+    (scrollTop: number) => {
+      const nextScrollTop = Math.max(0, Number.isFinite(scrollTop) ? scrollTop : 0);
+      noteScrollTopRef.current = nextScrollTop;
+      if (scrollPersistTimer.current) {
+        clearTimeout(scrollPersistTimer.current);
+      }
+      scrollPersistTimer.current = setTimeout(() => {
+        void persistWindowState(undefined, false, undefined, nextScrollTop);
+      }, NOTE_SCROLL_STATE_DEBOUNCE_MS);
+    },
+    [persistWindowState],
+  );
+
   const hideWindow = useCallback(async () => {
     try {
       const [position, size, currentAlwaysOnTop] = await Promise.all([
@@ -198,6 +237,7 @@ function App({
           visibility: "hidden",
           alwaysOnTop: currentAlwaysOnTop,
           opacity: noteOpacityRef.current,
+          scrollTop: Math.max(0, noteScrollTopRef.current),
           bounds: {
             x: position.x,
             y: position.y,
@@ -215,8 +255,9 @@ function App({
   }, [appWindow, noteId, notePath, windowLabel]);
 
   useEffect(() => {
+    if (!windowStateReady) return;
     void persistWindowState();
-  }, [alwaysOnTop, persistWindowState]);
+  }, [alwaysOnTop, persistWindowState, windowStateReady]);
 
   useEffect(() => {
     let disposed = false;
@@ -224,12 +265,15 @@ function App({
     const setupWindowListeners = async () => {
       const handlers = await Promise.all([
         appWindow.onMoved(() => {
+          if (!windowStateReady) return;
           void persistWindowState();
         }),
         appWindow.onResized(() => {
+          if (!windowStateReady) return;
           void persistWindowState();
         }),
         appWindow.onFocusChanged(({ payload }) => {
+          if (!windowStateReady) return;
           if (!payload) return;
           void persistWindowState("visible");
         }),
@@ -271,7 +315,15 @@ function App({
       }
       unlistenHandlers = [];
     };
-  }, [appWindow, persistWindowState, windowLabel]);
+  }, [appWindow, persistWindowState, windowLabel, windowStateReady]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollPersistTimer.current) {
+        clearTimeout(scrollPersistTimer.current);
+      }
+    };
+  }, []);
 
   const openSettings = useCallback(() => {
     openSettingsWindow().catch((error) => {
@@ -758,7 +810,13 @@ function App({
         <Pin size={11} />
       </div>
       <div className="relative flex flex-1 flex-col overflow-hidden">
-        <Editor defaultValue={initialContent} onChange={handleChange} style={editorStyle} />
+        <Editor
+          defaultValue={initialContent}
+          onChange={handleChange}
+          initialScrollTop={initialEditorScrollTop}
+          onScrollTopChange={handleScrollTopChange}
+          style={editorStyle}
+        />
       </div>
     </div>
   );

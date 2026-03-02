@@ -38,6 +38,7 @@ interface OpenNoteWindowOptions {
   focus?: boolean;
   alwaysOnTop?: boolean;
   opacity?: number;
+  scrollTop?: number;
   bounds?: WindowBounds;
   skipTaskbar?: boolean;
 }
@@ -49,6 +50,7 @@ export interface OpenedNoteWindow {
   visibility: WindowVisibility;
   alwaysOnTop: boolean;
   opacity: number;
+  scrollTop: number;
   bounds: WindowBounds;
   updatedAt: string;
 }
@@ -128,6 +130,7 @@ async function getWindowSnapshot(
   noteId: string,
   notePath: string,
   opacity = 1,
+  scrollTop = 0,
 ): Promise<OpenedNoteWindow> {
   const [position, size, alwaysOnTop, visible] = await Promise.all([
     window.outerPosition(),
@@ -142,6 +145,7 @@ async function getWindowSnapshot(
     visibility: visible ? "visible" : "hidden",
     alwaysOnTop,
     opacity,
+    scrollTop: Math.max(0, scrollTop),
     bounds: {
       x: position.x,
       y: position.y,
@@ -435,13 +439,25 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
     await existing.setSkipTaskbar(skipTaskbar);
     if (options.visibility === "hidden") {
       await existing.hide();
-      return getWindowSnapshot(existing, normalizedNoteId, notePath, options.opacity ?? 1);
+      return getWindowSnapshot(
+        existing,
+        normalizedNoteId,
+        notePath,
+        options.opacity ?? 1,
+        options.scrollTop ?? 0,
+      );
     }
     await existing.show();
     if (options.focus !== false) {
       await existing.setFocus();
     }
-    return getWindowSnapshot(existing, normalizedNoteId, notePath, options.opacity ?? 1);
+    return getWindowSnapshot(
+      existing,
+      normalizedNoteId,
+      notePath,
+      options.opacity ?? 1,
+      options.scrollTop ?? 0,
+    );
   }
 
   const noteWindow = await createNoteWindow(windowId, normalizedNoteId, notePath, {
@@ -450,13 +466,25 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
   });
   if (options.visibility === "hidden") {
     await noteWindow.hide();
-    return getWindowSnapshot(noteWindow, normalizedNoteId, notePath, options.opacity ?? 1);
+    return getWindowSnapshot(
+      noteWindow,
+      normalizedNoteId,
+      notePath,
+      options.opacity ?? 1,
+      options.scrollTop ?? 0,
+    );
   }
   await noteWindow.show();
   if (options.focus !== false) {
     await noteWindow.setFocus();
   }
-  return getWindowSnapshot(noteWindow, normalizedNoteId, notePath, options.opacity ?? 1);
+  return getWindowSnapshot(
+    noteWindow,
+    normalizedNoteId,
+    notePath,
+    options.opacity ?? 1,
+    options.scrollTop ?? 0,
+  );
 }
 
 export async function emitSettingsUpdated(settings: Settings) {

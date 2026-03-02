@@ -40,6 +40,7 @@ export async function restoreWindowsFromCacheOrCreateNew(options: RestoreWindows
       focus: state.visibility === "visible" && state.windowId === focusWindowId,
       alwaysOnTop: state.alwaysOnTop,
       opacity: state.opacity,
+      scrollTop: state.scrollTop,
       bounds: state.bounds,
       skipTaskbar: options.skipTaskbar,
     });
@@ -69,6 +70,7 @@ export async function openCliMarkdownNotes(
       visibility: "visible",
       focus: index === notePaths.length - 1,
       opacity: previous?.opacity ?? 1,
+      scrollTop: previous?.scrollTop ?? 0,
       skipTaskbar: options.skipTaskbar,
     });
     await upsertWindowState(opened);
