@@ -19,7 +19,6 @@ type SettingsEventPayload = {
 };
 
 const SETTINGS_WINDOW_LABEL = "settings";
-const CLI_OPEN_NOTE_REQUESTED_EVENT = "cli-open-note-requested";
 const NOTE_CONTEXT_MENU_ACTION_EVENT = "note-context-menu-action";
 const NOTE_CONTEXT_MENU_SYNC_EVENT = "note-context-menu-sync";
 const NOTE_WINDOW_WIDTH = 400;
@@ -56,10 +55,6 @@ export interface OpenedNoteWindow {
   scrollTop: number;
   bounds: WindowBounds;
   updatedAt: string;
-}
-
-export interface CliOpenNoteRequest {
-  notePath: string;
 }
 
 export type NoteContextMenuAction =
@@ -217,10 +212,6 @@ export async function openSettingsWindow() {
   await settingsWindow.setFocus();
 }
 
-export async function consumeCliOpenNoteRequests() {
-  return invoke<CliOpenNoteRequest[]>("consume_cli_open_note_requests");
-}
-
 export async function getOpenWithPinoteEnabled() {
   return invoke<boolean>("get_open_with_pinote_enabled");
 }
@@ -235,12 +226,6 @@ export async function getDefaultMarkdownOpenEnabled() {
 
 export async function setDefaultMarkdownOpenEnabled(enabled: boolean) {
   return invoke<boolean>("set_default_markdown_open_enabled", { enabled });
-}
-
-export async function listenCliOpenNoteRequested(handler: () => void): Promise<UnlistenFn> {
-  return listen(CLI_OPEN_NOTE_REQUESTED_EVENT, () => {
-    handler();
-  });
 }
 
 function buildNoteContextMenuWindowLabel(parentWindowLabel: string) {

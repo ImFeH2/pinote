@@ -4,7 +4,13 @@ mod window;
 
 use log::{LevelFilter, error, info};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, path::Path, path::PathBuf, sync::Mutex, thread, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+    path::PathBuf,
+    thread,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_log::{Target, TargetKind};
 #[cfg(target_os = "windows")]
@@ -21,6 +27,9 @@ const NOTE_WINDOW_MIN_HEIGHT: f64 = 1.0;
 const EXISTING_WINDOW_SHAKE_OFFSETS: [i32; 8] = [0, 14, -12, 10, -8, 6, -4, 0];
 const EXISTING_WINDOW_SHAKE_DELAY_MS: u64 = 14;
 const SETTINGS_FILE_NAME: &str = "settings.json";
+const WINDOW_STATE_CACHE_FILE_NAME: &str = "windows.json";
+const WINDOW_STATE_CACHE_VERSION: u32 = 1;
+const DEFAULT_NOTE_DIRECTORY_NAME: &str = "notes";
 const DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR: bool = true;
 #[cfg(target_os = "windows")]
 const OPEN_WITH_PINOTE_MENU_KEY: &str = "OpenWithPinote";
@@ -39,14 +48,40 @@ struct CliOpenNoteRequest {
     note_path: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct StoredSettings {
     hide_note_windows_from_taskbar: Option<bool>,
+    new_note_directory: Option<String>,
 }
 
-#[derive(Default)]
-struct PendingCliOpenNotes(Mutex<Vec<CliOpenNoteRequest>>);
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CachedWindowBounds {
+    x: i32,
+    y: i32,
+    width: f64,
+    height: f64,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CachedWindowState {
+    window_id: String,
+    note_path: String,
+    visibility: String,
+    always_on_top: bool,
+    opacity: Option<f64>,
+    bounds: CachedWindowBounds,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WindowStateCache {
+    version: u32,
+    windows: HashMap<String, CachedWindowState>,
+    window_order: Vec<String>,
+}
 
 fn is_markdown_file_path(path: &Path) -> bool {
     path.extension()
@@ -135,28 +170,174 @@ fn encode_query_component(value: &str) -> String {
     encoded
 }
 
-fn build_note_window_url(window_id: &str, note_path: &str) -> String {
+fn build_note_window_url(window_id: &str, note_path: &str, note_opacity: Option<f64>) -> String {
     let encoded_window_id = encode_query_component(window_id);
     let encoded_note_path = encode_query_component(note_path);
-    format!("index.html?view=note&windowId={encoded_window_id}&notePath={encoded_note_path}")
+    let mut url =
+        format!("index.html?view=note&windowId={encoded_window_id}&notePath={encoded_note_path}");
+    if let Some(opacity) = note_opacity
+        && opacity.is_finite()
+    {
+        let opacity_value = opacity.clamp(0.0, 1.0);
+        let encoded_note_opacity = encode_query_component(&opacity_value.to_string());
+        url.push_str("&noteOpacity=");
+        url.push_str(&encoded_note_opacity);
+    }
+    url
 }
 
-fn load_hide_note_windows_from_taskbar(app: &tauri::AppHandle) -> bool {
+fn load_stored_settings(app: &tauri::AppHandle) -> StoredSettings {
     let path = match app.path().app_data_dir() {
         Ok(dir) => dir.join(SETTINGS_FILE_NAME),
-        Err(_) => return DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR,
+        Err(_) => return StoredSettings::default(),
     };
     let content = match std::fs::read_to_string(path) {
         Ok(value) => value,
-        Err(_) => return DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR,
+        Err(_) => return StoredSettings::default(),
     };
-    let settings: StoredSettings = match serde_json::from_str(&content) {
-        Ok(value) => value,
-        Err(_) => return DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR,
-    };
-    settings
+    serde_json::from_str(&content).unwrap_or_default()
+}
+
+fn load_hide_note_windows_from_taskbar(app: &tauri::AppHandle) -> bool {
+    load_stored_settings(app)
         .hide_note_windows_from_taskbar
         .unwrap_or(DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR)
+}
+
+fn resolve_managed_notes_directory(app: &tauri::AppHandle) -> Option<PathBuf> {
+    let settings = load_stored_settings(app);
+    if let Some(custom) = settings.new_note_directory {
+        let trimmed = custom.trim();
+        if !trimmed.is_empty() {
+            return Some(PathBuf::from(trimmed));
+        }
+    }
+    app.path()
+        .app_data_dir()
+        .ok()
+        .map(|dir| dir.join(DEFAULT_NOTE_DIRECTORY_NAME))
+}
+
+fn create_startup_note_file(app: &tauri::AppHandle) -> Option<String> {
+    let notes_dir = resolve_managed_notes_directory(app)?;
+    if std::fs::create_dir_all(&notes_dir).is_err() {
+        return None;
+    }
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|value| value.as_nanos())
+        .unwrap_or(0);
+    let note_id = format!("{timestamp:032x}");
+    let note_path = notes_dir.join(format!("{note_id}.md"));
+    if !note_path.exists() && std::fs::write(&note_path, "").is_err() {
+        return None;
+    }
+    Some(note_path.to_string_lossy().into_owned())
+}
+
+fn load_cached_windows_for_startup(app: &tauri::AppHandle) -> Vec<CachedWindowState> {
+    let app_data_dir = match app.path().app_data_dir() {
+        Ok(dir) => dir,
+        Err(_) => return Vec::new(),
+    };
+    let cache_file = app_data_dir.join(WINDOW_STATE_CACHE_FILE_NAME);
+    let content = match std::fs::read_to_string(cache_file) {
+        Ok(value) => value,
+        Err(_) => return Vec::new(),
+    };
+    let mut cache = match serde_json::from_str::<WindowStateCache>(&content) {
+        Ok(value) => value,
+        Err(_) => return Vec::new(),
+    };
+    if cache.version != WINDOW_STATE_CACHE_VERSION {
+        return Vec::new();
+    }
+    let mut ordered = Vec::new();
+    for cache_key in cache.window_order {
+        if let Some(state) = cache.windows.remove(&cache_key) {
+            ordered.push(state);
+        }
+    }
+    let mut remaining = cache.windows.into_values().collect::<Vec<_>>();
+    remaining.sort_by(|left, right| left.window_id.cmp(&right.window_id));
+    ordered.extend(remaining);
+    ordered
+}
+
+fn restore_cached_note_windows(app: &tauri::AppHandle, skip_taskbar: bool) -> usize {
+    let cached_windows = load_cached_windows_for_startup(app);
+    if cached_windows.is_empty() {
+        return 0;
+    }
+    let mut restored = 0usize;
+    let mut last_visible_window: Option<WebviewWindow> = None;
+    for cached in cached_windows {
+        let window_id = cached.window_id.trim();
+        let note_path = cached.note_path.trim();
+        if window_id.is_empty() || note_path.is_empty() {
+            continue;
+        }
+        let width = cached.bounds.width.max(NOTE_WINDOW_MIN_WIDTH).round();
+        let height = cached.bounds.height.max(NOTE_WINDOW_MIN_HEIGHT).round();
+        let position_x = cached.bounds.x;
+        let position_y = cached.bounds.y;
+        let visible = cached.visibility != "hidden";
+
+        if let Some(existing) = app.get_webview_window(window_id) {
+            let _ = existing.set_skip_taskbar(skip_taskbar);
+            let _ = existing.set_always_on_top(cached.always_on_top);
+            let _ = existing.set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
+                width as u32,
+                height as u32,
+            )));
+            let _ = existing.set_position(PhysicalPosition::new(position_x, position_y));
+            if visible {
+                let _ = existing.show();
+                last_visible_window = Some(existing);
+            } else {
+                let _ = existing.hide();
+            }
+            restored += 1;
+            continue;
+        }
+
+        let url = build_note_window_url(window_id, note_path, cached.opacity);
+        let window = match WebviewWindowBuilder::new(app, window_id, WebviewUrl::App(url.into()))
+            .title("Pinote")
+            .inner_size(NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT)
+            .min_inner_size(NOTE_WINDOW_MIN_WIDTH, NOTE_WINDOW_MIN_HEIGHT)
+            .decorations(false)
+            .transparent(true)
+            .resizable(true)
+            .always_on_top(cached.always_on_top)
+            .skip_taskbar(skip_taskbar)
+            .visible(false)
+            .build()
+        {
+            Ok(value) => value,
+            Err(err) => {
+                error!("restore_cached_window_failed window_id={window_id:?} error={err}");
+                continue;
+            }
+        };
+        let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
+            width as u32,
+            height as u32,
+        )));
+        let _ = window.set_position(PhysicalPosition::new(position_x, position_y));
+        if visible {
+            let _ = window.show();
+            last_visible_window = Some(window);
+        } else {
+            let _ = window.hide();
+        }
+        restored += 1;
+    }
+    if let Some(window) = last_visible_window {
+        let _ = window.set_focus();
+    }
+    restored
 }
 
 fn open_cli_note_windows_on_main_thread(app: &tauri::AppHandle, requests: &[CliOpenNoteRequest]) {
@@ -193,7 +374,7 @@ fn open_cli_note_windows_on_main_thread(app: &tauri::AppHandle, requests: &[CliO
             }
             continue;
         }
-        let url = build_note_window_url(&window_id, note_path);
+        let url = build_note_window_url(&window_id, note_path, None);
         let window = match WebviewWindowBuilder::new(app, &window_id, WebviewUrl::App(url.into()))
             .title("Pinote")
             .inner_size(NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT)
@@ -463,21 +644,9 @@ fn set_default_markdown_open_enabled(enabled: bool) -> Result<bool, String> {
     }
 }
 
-#[tauri::command]
-fn consume_cli_open_note_requests(
-    state: tauri::State<'_, PendingCliOpenNotes>,
-) -> Result<Vec<CliOpenNoteRequest>, String> {
-    let mut pending = state
-        .0
-        .lock()
-        .map_err(|_| String::from("Failed to access pending CLI note requests"))?;
-    Ok(std::mem::take(&mut *pending))
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .manage(PendingCliOpenNotes::default())
         .manage(window::VisibleWindowToggleState::default())
         .plugin({
             let level = if cfg!(debug_assertions) {
@@ -505,7 +674,6 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
-            consume_cli_open_note_requests,
             get_open_with_pinote_enabled,
             set_open_with_pinote_enabled,
             get_default_markdown_open_enabled,
@@ -515,41 +683,25 @@ pub fn run() {
             let handle = app.handle().clone();
             tray::setup_tray(&handle)?;
             shortcut::setup_shortcuts(&handle)?;
+            let skip_taskbar = load_hide_note_windows_from_taskbar(&handle);
+            let restored_count = restore_cached_note_windows(&handle, skip_taskbar);
             let startup_args = std::env::args().collect::<Vec<_>>();
             let startup_cwd = std::env::current_dir()
                 .ok()
                 .map(|path| path.to_string_lossy().into_owned());
             let startup_requests =
                 parse_cli_open_note_requests(&startup_args, startup_cwd.as_deref());
-            open_cli_note_windows(&handle, startup_requests);
+            if startup_requests.is_empty() {
+                if restored_count == 0
+                    && let Some(note_path) = create_startup_note_file(&handle)
+                {
+                    open_cli_note_windows(&handle, vec![CliOpenNoteRequest { note_path }]);
+                }
+            } else {
+                open_cli_note_windows(&handle, startup_requests);
+            }
 
             info!("app_ready");
-
-            let window = app.get_webview_window("main").unwrap();
-            let _ = window.center();
-
-            #[cfg(target_os = "macos")]
-            window_vibrancy::apply_vibrancy(
-                &window,
-                window_vibrancy::NSVisualEffectMaterial::HudWindow,
-                None,
-                None,
-            )
-            .ok();
-
-            #[cfg(target_os = "windows")]
-            window_vibrancy::apply_acrylic(&window, Some((0, 0, 0, 0))).ok();
-
-            window.on_window_event(move |event| {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    api.prevent_close();
-                    if let Some(win) = handle.get_webview_window("main") {
-                        info!("main_window_hide");
-                        let _ = win.hide();
-                    }
-                }
-            });
-
             Ok(())
         })
         .run(tauri::generate_context!())

@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import App from "@/App";
-import { BootstrapApp } from "@/BootstrapApp";
 import ContextMenuApp from "@/ContextMenuApp";
 import { SettingsProvider } from "@/hooks/useSettings";
 import { SettingsApp } from "@/SettingsApp";
@@ -15,7 +14,7 @@ let hasScheduledSilentUpdateCheck = false;
 
 function getView() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("view") ?? "bootstrap";
+  return params.get("view") ?? "";
 }
 
 function getNoteContext() {
@@ -80,7 +79,9 @@ function Root() {
       />
     );
   }
-  return <BootstrapApp />;
+  return (
+    <div className="flex h-screen items-center justify-center bg-background text-muted-foreground" />
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

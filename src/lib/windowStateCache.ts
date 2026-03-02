@@ -40,7 +40,7 @@ export interface WindowStateCache {
 const CACHE_VERSION = 1;
 const CACHE_FILE = "windows.json";
 const CACHE_LOCK_DIR = "windows.lock";
-const RESERVED_WINDOW_IDS = new Set(["main", "settings"]);
+const RESERVED_WINDOW_IDS = new Set(["settings"]);
 const LOCK_RETRY_MS = 20;
 const LOCK_TIMEOUT_MS = 1000;
 const NOTE_OPACITY_MIN = 0;
