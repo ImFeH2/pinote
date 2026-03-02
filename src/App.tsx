@@ -28,6 +28,7 @@ import {
 } from "@/lib/api";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import { openAndTrackNoteWindow } from "@/lib/windowManager";
+import { recordOpenedNote } from "@/lib/noteHistory";
 import {
   getWindowState,
   removeWindowState,
@@ -145,6 +146,16 @@ function App({
       setInitialContent(content);
     });
   }, [load]);
+
+  useEffect(() => {
+    void recordOpenedNote({
+      notePath,
+      noteId,
+      windowId: windowLabel,
+    }).catch((error) => {
+      console.error("Failed to record note history on note window mount:", error);
+    });
+  }, [noteId, notePath, windowLabel]);
 
   useEffect(() => {
     let disposed = false;
