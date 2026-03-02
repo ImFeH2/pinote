@@ -9,6 +9,8 @@ import {
 } from "react";
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { Effect, getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
+import { dirname } from "@tauri-apps/api/path";
+import { readTextFile, watchImmediate } from "@tauri-apps/plugin-fs";
 import { Pin } from "lucide-react";
 import { Editor } from "@/components/Editor";
 import { cn } from "@/lib/utils";
@@ -49,6 +51,8 @@ const NOTE_OPACITY_MIN = 0;
 const NOTE_OPACITY_MAX = 1;
 const NOTE_OPACITY_STEP = 0.05;
 const NOTE_SCROLL_STATE_DEBOUNCE_MS = 200;
+const EXTERNAL_FILE_RELOAD_DEBOUNCE_MS = 120;
+const SELF_FILE_WRITE_IGNORE_MS = 420;
 
 interface MiddleDragState {
   button: number;
@@ -76,6 +80,10 @@ function resolveEditorFontFamily(value: "system" | "serif" | "mono") {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function normalizePathForCompare(value: string) {
+  return value.trim().replace(/\//g, "\\").toLowerCase();
 }
 
 interface ModifierState {
@@ -125,7 +133,6 @@ function App({
   initialOpacity?: number;
 }) {
   const { toggleTheme } = useTheme();
-  const { save, load } = useAutoSave(notePath);
   const { alwaysOnTop, toggleAlwaysOnTop } = useWindowControl();
   const { settings } = useSettings();
   const appWindow = useMemo(() => getCurrentWindow(), []);
@@ -142,12 +149,30 @@ function App({
   const noteOpacityRef = useRef(initialWindowOpacity);
   const scrollPersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteScrollTopRef = useRef(0);
+  const latestEditorContentRef = useRef("");
+  const persistedContentRef = useRef("");
+  const pendingExternalContentRef = useRef<string | null>(null);
+  const ignoreExternalWatchUntilRef = useRef(0);
+  const externalReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suppressEditorScrollUntilRef = useRef(0);
   const suppressEditorScrollTopRef = useRef(0);
   const closeRequestState = useRef<"idle" | "persisting" | "ready">("idle");
   const [initialEditorScrollTop, setInitialEditorScrollTop] = useState(0);
   const [windowStateReady, setWindowStateReady] = useState(false);
   const [runtimePlatform, setRuntimePlatform] = useState<RuntimePlatform>("other");
+  const [hasExternalFileChange, setHasExternalFileChange] = useState(false);
+  const [editorReloadToken, setEditorReloadToken] = useState(0);
+
+  const handlePersistedContent = useCallback((content: string, source: "load" | "save") => {
+    persistedContentRef.current = content;
+    if (source === "save") {
+      ignoreExternalWatchUntilRef.current = Date.now() + SELF_FILE_WRITE_IGNORE_MS;
+    }
+  }, []);
+
+  const { save, load, isSavePending } = useAutoSave(notePath, {
+    onPersisted: handlePersistedContent,
+  });
 
   useEffect(() => {
     noteOpacityRef.current = noteOpacity;
@@ -155,6 +180,10 @@ function App({
 
   useEffect(() => {
     load().then((content) => {
+      latestEditorContentRef.current = content;
+      persistedContentRef.current = content;
+      pendingExternalContentRef.current = null;
+      setHasExternalFileChange(false);
       setInitialContent(content);
     });
   }, [load]);
@@ -257,6 +286,7 @@ function App({
 
   const handleChange = useCallback(
     (markdown: string) => {
+      latestEditorContentRef.current = markdown;
       save(markdown);
     },
     [save],
@@ -275,6 +305,27 @@ function App({
     },
     [persistWindowState],
   );
+
+  const applyExternalFileContent = useCallback((content: string) => {
+    latestEditorContentRef.current = content;
+    persistedContentRef.current = content;
+    pendingExternalContentRef.current = null;
+    setHasExternalFileChange(false);
+    setInitialEditorScrollTop(Math.max(0, noteScrollTopRef.current));
+    setInitialContent(content);
+    setEditorReloadToken((value) => value + 1);
+  }, []);
+
+  const reloadExternalFileContent = useCallback(() => {
+    const pending = pendingExternalContentRef.current;
+    if (pending === null) return;
+    applyExternalFileContent(pending);
+  }, [applyExternalFileContent]);
+
+  const dismissExternalFileChange = useCallback(() => {
+    pendingExternalContentRef.current = null;
+    setHasExternalFileChange(false);
+  }, []);
 
   const hideWindow = useCallback(async () => {
     try {
@@ -329,6 +380,85 @@ function App({
       window.removeEventListener("scroll", handleScrollCapture, true);
     };
   }, []);
+
+  useEffect(() => {
+    if (initialContent === null) return;
+    let disposed = false;
+    let unwatch: (() => void) | null = null;
+    const watchedPath = notePath.trim();
+    const normalizedWatchedPath = normalizePathForCompare(watchedPath);
+
+    const scheduleReload = () => {
+      if (externalReloadTimerRef.current) {
+        clearTimeout(externalReloadTimerRef.current);
+      }
+      externalReloadTimerRef.current = setTimeout(() => {
+        void (async () => {
+          if (disposed) return;
+          if (Date.now() < ignoreExternalWatchUntilRef.current) return;
+          const fileContent = await readTextFile(watchedPath).catch((error) => {
+            console.error("Failed to read externally updated file:", error);
+            return null;
+          });
+          if (disposed) return;
+          if (fileContent === null) return;
+          if (fileContent === latestEditorContentRef.current) return;
+          const hasLocalUnsavedChanges =
+            isSavePending() || latestEditorContentRef.current !== persistedContentRef.current;
+          if (hasLocalUnsavedChanges) {
+            pendingExternalContentRef.current = fileContent;
+            setHasExternalFileChange(true);
+            return;
+          }
+          applyExternalFileContent(fileContent);
+        })();
+      }, EXTERNAL_FILE_RELOAD_DEBOUNCE_MS);
+    };
+
+    void dirname(watchedPath)
+      .then((watchRootPath) => {
+        if (disposed) return null;
+        return watchImmediate(
+          watchRootPath,
+          (event) => {
+            if (disposed) return;
+            const eventPaths = Array.isArray(event.paths) ? event.paths : [];
+            if (eventPaths.length === 0) {
+              scheduleReload();
+              return;
+            }
+            const hasTargetPath = eventPaths.some((path) => {
+              return normalizePathForCompare(path) === normalizedWatchedPath;
+            });
+            if (!hasTargetPath) return;
+            scheduleReload();
+          },
+          { recursive: false },
+        );
+      })
+      .then((unwatchFn) => {
+        if (!unwatchFn) return;
+        if (disposed) {
+          unwatchFn();
+          return;
+        }
+        unwatch = unwatchFn;
+      })
+      .catch((error) => {
+        console.error("Failed to watch note file changes:", error);
+      });
+
+    return () => {
+      disposed = true;
+      if (externalReloadTimerRef.current) {
+        clearTimeout(externalReloadTimerRef.current);
+        externalReloadTimerRef.current = null;
+      }
+      if (unwatch) {
+        unwatch();
+      }
+    };
+  }, [applyExternalFileContent, initialContent, isSavePending, notePath]);
 
   useEffect(() => {
     const applyEffects = async () => {
@@ -999,6 +1129,25 @@ function App({
         onMouseDown={startWindowDrag}
         className="absolute left-0 right-0 top-0 z-20 h-1.5 cursor-grab"
       />
+      {hasExternalFileChange ? (
+        <div className="absolute left-2 right-2 top-2 z-40 flex items-center gap-2 rounded-md border border-amber-400/50 bg-amber-300/20 px-2.5 py-1.5 text-xs text-amber-950 shadow-sm dark:border-amber-300/45 dark:bg-amber-200/12 dark:text-amber-100">
+          <span className="min-w-0 flex-1 truncate">File changed externally.</span>
+          <button
+            type="button"
+            onClick={reloadExternalFileContent}
+            className="rounded px-1.5 py-0.5 font-medium text-amber-950 hover:bg-amber-300/40 dark:text-amber-100 dark:hover:bg-amber-200/20"
+          >
+            Reload
+          </button>
+          <button
+            type="button"
+            onClick={dismissExternalFileChange}
+            className="rounded px-1.5 py-0.5 text-amber-900/90 hover:bg-amber-300/28 dark:text-amber-100/90 dark:hover:bg-amber-200/16"
+          >
+            Ignore
+          </button>
+        </div>
+      ) : null}
       <div
         className={cn(
           "pinote-pinned-badge pointer-events-none absolute right-3 top-3 z-30 flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200",
@@ -1010,6 +1159,7 @@ function App({
       </div>
       <div className="relative flex flex-1 flex-col overflow-hidden">
         <Editor
+          key={`editor-${editorReloadToken}`}
           defaultValue={initialContent}
           onChange={handleChange}
           initialScrollTop={initialEditorScrollTop}

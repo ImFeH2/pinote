@@ -4,6 +4,12 @@ import { dirname } from "@tauri-apps/api/path";
 
 const DEBOUNCE_MS = 500;
 
+type PersistSource = "load" | "save";
+
+interface UseAutoSaveOptions {
+  onPersisted?: (content: string, source: PersistSource) => void;
+}
+
 async function ensureParentDir(notePath: string) {
   const parent = await dirname(notePath);
   const dirExists = await exists(parent);
@@ -12,20 +18,30 @@ async function ensureParentDir(notePath: string) {
   }
 }
 
-export function useAutoSave(notePath: string) {
+export function useAutoSave(notePath: string, options: UseAutoSaveOptions = {}) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSaveRef = useRef(false);
+  const onPersistedRef = useRef(options.onPersisted);
+
+  useEffect(() => {
+    onPersistedRef.current = options.onPersisted;
+  }, [options.onPersisted]);
 
   const save = useCallback(
     (content: string) => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
+      pendingSaveRef.current = true;
       timerRef.current = setTimeout(async () => {
         try {
           await ensureParentDir(notePath);
           await writeTextFile(notePath, content);
+          onPersistedRef.current?.(content, "save");
         } catch (e) {
           console.error("Failed to save note:", e);
+        } finally {
+          pendingSaveRef.current = false;
         }
       }, DEBOUNCE_MS);
     },
@@ -37,20 +53,27 @@ export function useAutoSave(notePath: string) {
       await ensureParentDir(notePath);
       const fileExists = await exists(notePath);
       if (!fileExists) return "";
-      return await readTextFile(notePath);
+      const content = await readTextFile(notePath);
+      onPersistedRef.current?.(content, "load");
+      return content;
     } catch (e) {
       console.error("Failed to load note:", e);
       return "";
     }
   }, [notePath]);
 
+  const isSavePending = useCallback(() => {
+    return pendingSaveRef.current;
+  }, []);
+
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
+      pendingSaveRef.current = false;
     };
   }, []);
 
-  return { save, load };
+  return { save, load, isSavePending };
 }
