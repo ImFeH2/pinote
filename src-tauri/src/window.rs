@@ -292,8 +292,16 @@ pub fn show_all_hidden_windows(app: &tauri::AppHandle) {
 pub fn show_settings_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
     if let Some(window) = app.get_webview_window("settings") {
         info!("settings_window_show_existing");
+        let was_always_on_top = window.is_always_on_top().unwrap_or(false);
+        if window.is_minimized().unwrap_or(false) {
+            let _ = window.unminimize();
+        }
         let _ = window.show();
         let _ = window.set_focus();
+        if !was_always_on_top {
+            let _ = window.set_always_on_top(true);
+            let _ = window.set_always_on_top(false);
+        }
         return Ok(());
     }
 
@@ -310,6 +318,8 @@ pub fn show_settings_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> 
     .resizable(true)
     .min_inner_size(760.0, 520.0)
     .build()?;
+    let _ = window.show();
+    let _ = window.set_focus();
 
     let window_clone = window.clone();
     window.on_window_event(move |event| {

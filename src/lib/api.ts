@@ -213,8 +213,17 @@ async function resolveNoteWindowSkipTaskbar(preferredValue: boolean | undefined)
 export async function openSettingsWindow() {
   const existing = await WebviewWindow.getByLabel(SETTINGS_WINDOW_LABEL);
   const settingsWindow = existing ?? (await createSettingsWindow());
+  const wasAlwaysOnTop = await settingsWindow.isAlwaysOnTop().catch(() => false);
+  const isMinimized = await settingsWindow.isMinimized().catch(() => false);
+  if (isMinimized) {
+    await settingsWindow.unminimize().catch(() => {});
+  }
   await settingsWindow.show();
   await settingsWindow.setFocus();
+  if (!wasAlwaysOnTop) {
+    await settingsWindow.setAlwaysOnTop(true).catch(() => {});
+    await settingsWindow.setAlwaysOnTop(false).catch(() => {});
+  }
 }
 
 export async function getOpenWithPinoteEnabled() {
