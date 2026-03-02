@@ -8,6 +8,11 @@ import {
 
 interface RestoreWindowsOptions {
   skipCreateWhenEmpty?: boolean;
+  skipTaskbar?: boolean;
+}
+
+interface OpenCliMarkdownNotesOptions {
+  skipTaskbar?: boolean;
 }
 
 export async function restoreWindowsFromCacheOrCreateNew(options: RestoreWindowsOptions = {}) {
@@ -18,6 +23,7 @@ export async function restoreWindowsFromCacheOrCreateNew(options: RestoreWindows
     const opened = await openNoteWindow(noteId, {
       visibility: "visible",
       focus: true,
+      skipTaskbar: options.skipTaskbar,
     });
     await upsertWindowState(opened);
     return;
@@ -35,12 +41,16 @@ export async function restoreWindowsFromCacheOrCreateNew(options: RestoreWindows
       alwaysOnTop: state.alwaysOnTop,
       opacity: state.opacity,
       bounds: state.bounds,
+      skipTaskbar: options.skipTaskbar,
     });
     await upsertWindowState(opened);
   }
 }
 
-export async function openCliMarkdownNotes(requests: CliOpenNoteRequest[]) {
+export async function openCliMarkdownNotes(
+  requests: CliOpenNoteRequest[],
+  options: OpenCliMarkdownNotesOptions = {},
+) {
   const notePaths: string[] = [];
   const seen = new Set<string>();
   for (const request of requests) {
@@ -59,6 +69,7 @@ export async function openCliMarkdownNotes(requests: CliOpenNoteRequest[]) {
       visibility: "visible",
       focus: index === notePaths.length - 1,
       opacity: previous?.opacity ?? 1,
+      skipTaskbar: options.skipTaskbar,
     });
     await upsertWindowState(opened);
   }

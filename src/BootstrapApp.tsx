@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useSettings } from "@/hooks/useSettings";
 import {
   consumeCliOpenNoteRequests,
   listenCliOpenNoteRequested,
@@ -14,6 +15,7 @@ function getErrorMessage(error: unknown) {
 }
 
 export function BootstrapApp() {
+  const { settings } = useSettings();
   const [bootError, setBootError] = useState<string | null>(null);
   const didBootstrap = useRef(false);
 
@@ -29,7 +31,9 @@ export function BootstrapApp() {
         .then(async () => {
           const requests = await consumeCliOpenNoteRequests();
           if (requests.length === 0) return;
-          await openCliMarkdownNotes(requests);
+          await openCliMarkdownNotes(requests, {
+            skipTaskbar: settings.hideNoteWindowsFromTaskbar,
+          });
         })
         .catch((error) => {
           console.error("Failed to process CLI markdown requests:", error);
@@ -42,9 +46,12 @@ export function BootstrapApp() {
         const initialRequests: CliOpenNoteRequest[] = await consumeCliOpenNoteRequests();
         await restoreWindowsFromCacheOrCreateNew({
           skipCreateWhenEmpty: initialRequests.length > 0,
+          skipTaskbar: settings.hideNoteWindowsFromTaskbar,
         });
         if (initialRequests.length > 0) {
-          await openCliMarkdownNotes(initialRequests);
+          await openCliMarkdownNotes(initialRequests, {
+            skipTaskbar: settings.hideNoteWindowsFromTaskbar,
+          });
         }
         if (disposed) return;
         unlistenCli = await listenCliOpenNoteRequested(() => {
@@ -66,7 +73,7 @@ export function BootstrapApp() {
         unlistenCli();
       }
     };
-  }, []);
+  }, [settings.hideNoteWindowsFromTaskbar]);
 
   return (
     <div className="flex h-screen items-center justify-center bg-background text-foreground">

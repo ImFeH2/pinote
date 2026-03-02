@@ -13,6 +13,7 @@ import { type WheelResizeModifier } from "@/stores/settings";
 import {
   getDefaultMarkdownOpenEnabled,
   getOpenWithPinoteEnabled,
+  setNoteWindowsSkipTaskbar,
   setDefaultMarkdownOpenEnabled,
   setOpenWithPinoteEnabled,
 } from "@/lib/api";
@@ -138,6 +139,8 @@ export function SettingsApp() {
   const [contextMenuError, setContextMenuError] = useState<string | null>(null);
   const [defaultOpenBusy, setDefaultOpenBusy] = useState(false);
   const [defaultOpenError, setDefaultOpenError] = useState<string | null>(null);
+  const [taskbarBusy, setTaskbarBusy] = useState(false);
+  const [taskbarError, setTaskbarError] = useState<string | null>(null);
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const lineHeightText = settings.editorLineHeight.toFixed(1);
@@ -223,6 +226,20 @@ export function SettingsApp() {
       setDefaultOpenBusy(false);
     }
   }, [settings.defaultMarkdownOpenWithPinote, updateSettings]);
+
+  const handleTaskbarVisibility = useCallback(async () => {
+    const next = !settings.hideNoteWindowsFromTaskbar;
+    setTaskbarBusy(true);
+    try {
+      await setNoteWindowsSkipTaskbar(next);
+      updateSettings({ hideNoteWindowsFromTaskbar: next });
+      setTaskbarError(null);
+    } catch (error) {
+      setTaskbarError(getErrorMessage(error));
+    } finally {
+      setTaskbarBusy(false);
+    }
+  }, [settings.hideNoteWindowsFromTaskbar, updateSettings]);
 
   const handleManualUpdateCheck = useCallback(async () => {
     setUpdateBusy(true);
@@ -647,6 +664,35 @@ export function SettingsApp() {
               </div>
 
               {startupError && <div className="text-xs text-destructive">{startupError}</div>}
+
+              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
+                <div className="flex flex-col gap-1">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    Hide Note Windows From Taskbar
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    Control whether note windows are hidden from the system taskbar.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={taskbarBusy}
+                  onClick={() => {
+                    void handleTaskbarVisibility();
+                  }}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                    settings.hideNoteWindowsFromTaskbar
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-accent",
+                    taskbarBusy && "cursor-not-allowed opacity-60",
+                  )}
+                >
+                  {settings.hideNoteWindowsFromTaskbar ? "Enabled" : "Disabled"}
+                </button>
+              </div>
+
+              {taskbarError && <div className="text-xs text-destructive">{taskbarError}</div>}
 
               <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
                 <div className="flex flex-col gap-1">

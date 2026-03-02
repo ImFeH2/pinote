@@ -10,7 +10,7 @@ import {
   resolveManagedNotePath,
 } from "@/lib/notes";
 import type { WindowBounds, WindowVisibility } from "@/lib/windowStateCache";
-import type { Settings } from "@/stores/settings";
+import { loadSettings, type Settings } from "@/stores/settings";
 
 type SettingsEventPayload = {
   settings: Settings;
@@ -25,6 +25,7 @@ const NOTE_WINDOW_WIDTH = 400;
 const NOTE_WINDOW_HEIGHT = 500;
 const NOTE_WINDOW_MIN_WIDTH = 1;
 const NOTE_WINDOW_MIN_HEIGHT = 1;
+const NOTE_WINDOW_LABEL_PREFIX = "note-";
 const NOTE_CONTEXT_MENU_WINDOW_SUFFIX = "-context-menu";
 const NOTE_CONTEXT_MENU_WIDTH = 224;
 const NOTE_CONTEXT_MENU_HEIGHT = 180;
@@ -38,6 +39,7 @@ interface OpenNoteWindowOptions {
   alwaysOnTop?: boolean;
   opacity?: number;
   bounds?: WindowBounds;
+  skipTaskbar?: boolean;
 }
 
 export interface OpenedNoteWindow {
@@ -172,6 +174,7 @@ async function createNoteWindow(
     transparent: true,
     resizable: true,
     alwaysOnTop: options.alwaysOnTop ?? false,
+    skipTaskbar: options.skipTaskbar ?? true,
     visible: options.visibility !== "hidden",
   } as ConstructorParameters<typeof WebviewWindow>[1]);
 
@@ -182,6 +185,22 @@ async function createNoteWindow(
   }
 
   return noteWindow;
+}
+
+function isNoteWindowLabel(label: string) {
+  return (
+    label.startsWith(NOTE_WINDOW_LABEL_PREFIX) && !label.endsWith(NOTE_CONTEXT_MENU_WINDOW_SUFFIX)
+  );
+}
+
+async function resolveNoteWindowSkipTaskbar(preferredValue: boolean | undefined) {
+  if (typeof preferredValue === "boolean") return preferredValue;
+  try {
+    const settings = await loadSettings();
+    return settings.hideNoteWindowsFromTaskbar;
+  } catch {
+    return true;
+  }
 }
 
 export async function openSettingsWindow() {
@@ -309,6 +328,12 @@ export async function closeNoteContextMenu(parentWindowLabel: string) {
   await existing.hide().catch(() => {});
 }
 
+export async function setNoteWindowsSkipTaskbar(skipTaskbar: boolean) {
+  const windows = await WebviewWindow.getAll();
+  const targets = windows.filter((window) => isNoteWindowLabel(window.label));
+  await Promise.all(targets.map((window) => window.setSkipTaskbar(skipTaskbar)));
+}
+
 async function emitNoteContextMenuSync(targetLabel: string, context: NoteContextMenuContext) {
   await emitTo<NoteContextMenuContext>(targetLabel, NOTE_CONTEXT_MENU_SYNC_EVENT, context);
 }
@@ -397,6 +422,7 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
   const normalizedNoteId = normalizeNoteId(noteId);
   const notePath = options.notePath?.trim() || (await resolveManagedNotePath(normalizedNoteId));
   const windowId = options.windowId?.trim() || buildNoteWindowId(notePath);
+  const skipTaskbar = await resolveNoteWindowSkipTaskbar(options.skipTaskbar);
   const existing = await WebviewWindow.getByLabel(windowId);
   if (existing) {
     if (options.bounds) {
@@ -406,6 +432,7 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
     if (typeof options.alwaysOnTop === "boolean") {
       await existing.setAlwaysOnTop(options.alwaysOnTop);
     }
+    await existing.setSkipTaskbar(skipTaskbar);
     if (options.visibility === "hidden") {
       await existing.hide();
       return getWindowSnapshot(existing, normalizedNoteId, notePath, options.opacity ?? 1);
@@ -417,7 +444,10 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
     return getWindowSnapshot(existing, normalizedNoteId, notePath, options.opacity ?? 1);
   }
 
-  const noteWindow = await createNoteWindow(windowId, normalizedNoteId, notePath, options);
+  const noteWindow = await createNoteWindow(windowId, normalizedNoteId, notePath, {
+    ...options,
+    skipTaskbar,
+  });
   if (options.visibility === "hidden") {
     await noteWindow.hide();
     return getWindowSnapshot(noteWindow, normalizedNoteId, notePath, options.opacity ?? 1);

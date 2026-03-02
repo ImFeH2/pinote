@@ -305,6 +305,7 @@ function App({
         return openNoteWindow(targetNoteId, {
           alwaysOnTop: currentAlwaysOnTop,
           opacity: noteOpacityRef.current,
+          skipTaskbar: settings.hideNoteWindowsFromTaskbar,
           bounds: {
             x: nextX,
             y: nextY,
@@ -319,7 +320,7 @@ function App({
       .catch((error) => {
         console.error("Failed to open note window:", error);
       });
-  }, [appWindow]);
+  }, [appWindow, settings.hideNoteWindowsFromTaskbar]);
 
   const minimizeWindow = useCallback(() => {
     appWindow.minimize().catch((error) => {

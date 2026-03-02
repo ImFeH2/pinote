@@ -3,7 +3,7 @@ mod tray;
 mod window;
 
 use log::{LevelFilter, error, info};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, path::Path, path::PathBuf, sync::Mutex};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_log::{Target, TargetKind};
@@ -18,6 +18,8 @@ const NOTE_WINDOW_WIDTH: f64 = 400.0;
 const NOTE_WINDOW_HEIGHT: f64 = 500.0;
 const NOTE_WINDOW_MIN_WIDTH: f64 = 1.0;
 const NOTE_WINDOW_MIN_HEIGHT: f64 = 1.0;
+const SETTINGS_FILE_NAME: &str = "settings.json";
+const DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR: bool = true;
 #[cfg(target_os = "windows")]
 const OPEN_WITH_PINOTE_MENU_KEY: &str = "OpenWithPinote";
 #[cfg(target_os = "windows")]
@@ -33,6 +35,12 @@ const PINOTE_MARKDOWN_FILE_TYPE: &str = "Pinote Markdown File";
 #[serde(rename_all = "camelCase")]
 struct CliOpenNoteRequest {
     note_path: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredSettings {
+    hide_note_windows_from_taskbar: Option<bool>,
 }
 
 #[derive(Default)]
@@ -131,10 +139,29 @@ fn build_note_window_url(window_id: &str, note_path: &str) -> String {
     format!("index.html?view=note&windowId={encoded_window_id}&notePath={encoded_note_path}")
 }
 
+fn load_hide_note_windows_from_taskbar(app: &tauri::AppHandle) -> bool {
+    let path = match app.path().app_data_dir() {
+        Ok(dir) => dir.join(SETTINGS_FILE_NAME),
+        Err(_) => return DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR,
+    };
+    let content = match std::fs::read_to_string(path) {
+        Ok(value) => value,
+        Err(_) => return DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR,
+    };
+    let settings: StoredSettings = match serde_json::from_str(&content) {
+        Ok(value) => value,
+        Err(_) => return DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR,
+    };
+    settings
+        .hide_note_windows_from_taskbar
+        .unwrap_or(DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR)
+}
+
 fn open_cli_note_windows_on_main_thread(app: &tauri::AppHandle, requests: &[CliOpenNoteRequest]) {
     if requests.is_empty() {
         return;
     }
+    let skip_taskbar = load_hide_note_windows_from_taskbar(app);
     let last_index = requests.len() - 1;
     for (index, request) in requests.iter().enumerate() {
         let note_path = request.note_path.trim();
@@ -147,6 +174,11 @@ fn open_cli_note_windows_on_main_thread(app: &tauri::AppHandle, requests: &[CliO
             if let Err(err) = existing.show() {
                 error!("cli_open_existing_window_show_failed window_id={window_id:?} error={err}");
                 continue;
+            }
+            if let Err(err) = existing.set_skip_taskbar(skip_taskbar) {
+                error!(
+                    "cli_open_existing_window_skip_taskbar_failed window_id={window_id:?} error={err}"
+                );
             }
             if should_focus && let Err(err) = existing.set_focus() {
                 error!("cli_open_existing_window_focus_failed window_id={window_id:?} error={err}");
@@ -162,6 +194,7 @@ fn open_cli_note_windows_on_main_thread(app: &tauri::AppHandle, requests: &[CliO
             .transparent(true)
             .resizable(true)
             .always_on_top(false)
+            .skip_taskbar(skip_taskbar)
             .visible(true)
             .build()
         {

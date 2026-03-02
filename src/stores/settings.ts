@@ -14,6 +14,7 @@ export interface Settings {
   editorPaddingX: number;
   editorPaddingY: number;
   launchAtStartup: boolean;
+  hideNoteWindowsFromTaskbar: boolean;
   wheelResizeModifier: WheelResizeModifier;
   wheelOpacityModifier: WheelResizeModifier;
   openWithPinoteContextMenu: boolean;
@@ -36,6 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
   editorPaddingX: 10,
   editorPaddingY: 10,
   launchAtStartup: false,
+  hideNoteWindowsFromTaskbar: true,
   wheelResizeModifier: "alt",
   wheelOpacityModifier: "ctrl",
   openWithPinoteContextMenu: false,
