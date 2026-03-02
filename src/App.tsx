@@ -6,7 +6,6 @@ import {
   useState,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { Effect, getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
@@ -79,10 +78,14 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function wheelModifierMatchesEvent(
-  event: ReactWheelEvent<HTMLDivElement>,
-  modifier: WheelResizeModifier,
-) {
+interface ModifierState {
+  altKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  metaKey: boolean;
+}
+
+function wheelModifierMatchesEvent(event: ModifierState, modifier: WheelResizeModifier) {
   if (modifier === "alt") {
     return event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey;
   }
@@ -139,6 +142,8 @@ function App({
   const noteOpacityRef = useRef(initialWindowOpacity);
   const scrollPersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteScrollTopRef = useRef(0);
+  const suppressEditorScrollUntilRef = useRef(0);
+  const suppressEditorScrollTopRef = useRef(0);
   const closeRequestState = useRef<"idle" | "persisting" | "ready">("idle");
   const [initialEditorScrollTop, setInitialEditorScrollTop] = useState(0);
   const [windowStateReady, setWindowStateReady] = useState(false);
@@ -307,6 +312,23 @@ function App({
     if (!windowStateReady) return;
     void persistWindowState();
   }, [alwaysOnTop, persistWindowState, windowStateReady]);
+
+  useEffect(() => {
+    const handleScrollCapture = (event: Event) => {
+      if (Date.now() > suppressEditorScrollUntilRef.current) return;
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (!target.classList.contains("milkdown-editor")) return;
+      const lockedTop = suppressEditorScrollTopRef.current;
+      if (Math.abs(target.scrollTop - lockedTop) < 0.5) return;
+      target.scrollTop = lockedTop;
+    };
+
+    window.addEventListener("scroll", handleScrollCapture, true);
+    return () => {
+      window.removeEventListener("scroll", handleScrollCapture, true);
+    };
+  }, []);
 
   useEffect(() => {
     const applyEffects = async () => {
@@ -745,27 +767,50 @@ function App({
     [persistWindowState],
   );
 
-  const handleWindowWheel = useCallback(
-    (event: ReactWheelEvent<HTMLDivElement>) => {
-      if (wheelModifierMatchesEvent(event, settings.wheelOpacityModifier)) {
+  useEffect(() => {
+    const handleWindowWheel = (event: WheelEvent) => {
+      const consumeWheelEvent = () => {
+        const editor =
+          event.target instanceof HTMLElement
+            ? event.target.closest<HTMLElement>(".milkdown-editor")
+            : document.querySelector<HTMLElement>(".milkdown-editor");
+        suppressEditorScrollTopRef.current = editor?.scrollTop ?? noteScrollTopRef.current;
+        suppressEditorScrollUntilRef.current = Date.now() + 140;
         event.preventDefault();
+        event.stopPropagation();
+        if (typeof event.stopImmediatePropagation === "function") {
+          event.stopImmediatePropagation();
+        }
+      };
+
+      if (wheelModifierMatchesEvent(event, settings.wheelOpacityModifier)) {
+        consumeWheelEvent();
         closeContextMenu();
         adjustOpacityByWheel(event.deltaY);
         return;
       }
       if (!wheelModifierMatchesEvent(event, settings.wheelResizeModifier)) return;
-      event.preventDefault();
+      consumeWheelEvent();
       closeContextMenu();
       void resizeWindowByWheel(event.deltaY, event.clientX, event.clientY);
-    },
-    [
-      adjustOpacityByWheel,
-      closeContextMenu,
-      resizeWindowByWheel,
-      settings.wheelOpacityModifier,
-      settings.wheelResizeModifier,
-    ],
-  );
+    };
+
+    window.addEventListener("wheel", handleWindowWheel, {
+      capture: true,
+      passive: false,
+    });
+    return () => {
+      window.removeEventListener("wheel", handleWindowWheel, {
+        capture: true,
+      });
+    };
+  }, [
+    adjustOpacityByWheel,
+    closeContextMenu,
+    resizeWindowByWheel,
+    settings.wheelOpacityModifier,
+    settings.wheelResizeModifier,
+  ]);
 
   useEffect(() => {
     if (settings.wheelResizeModifier !== "alt" && settings.wheelOpacityModifier !== "alt") {
@@ -948,7 +993,6 @@ function App({
       className="pinote-window relative flex h-screen flex-col overflow-hidden rounded-lg"
       style={pinnedVisualStyle}
       onContextMenu={openContextMenu}
-      onWheelCapture={handleWindowWheel}
     >
       <div className="absolute inset-0 bg-background" style={noteBackgroundStyle} />
       <div
