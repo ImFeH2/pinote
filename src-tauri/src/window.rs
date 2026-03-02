@@ -1,9 +1,13 @@
 use log::info;
 use serde::Deserialize;
-use std::collections::HashMap;
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use std::{collections::HashMap, thread, time::Duration};
+use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
 const CACHE_VERSION: u32 = 1;
+const NOTE_WINDOW_PREFIX: &str = "note-";
+const NOTE_CONTEXT_MENU_WINDOW_SUFFIX: &str = "-context-menu";
+const EXISTING_WINDOW_SHAKE_OFFSETS: [i32; 8] = [0, 14, -12, 10, -8, 6, -4, 0];
+const EXISTING_WINDOW_SHAKE_DELAY_MS: u64 = 14;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,25 +35,64 @@ fn load_window_state_cache(app: &tauri::AppHandle) -> Option<WindowStateCache> {
     Some(cache)
 }
 
-pub fn restore_hidden_window(app: &tauri::AppHandle) {
-    let Some(cache) = load_window_state_cache(app) else {
+fn is_note_window_label(label: &str) -> bool {
+    label.starts_with(NOTE_WINDOW_PREFIX) && !label.ends_with(NOTE_CONTEXT_MENU_WINDOW_SUFFIX)
+}
+
+fn shake_window(window: &WebviewWindow) {
+    let Ok(position) = window.outer_position() else {
         return;
     };
+    let base_x = position.x;
+    let base_y = position.y;
+    for offset in EXISTING_WINDOW_SHAKE_OFFSETS {
+        let _ = window.set_position(PhysicalPosition::new(base_x + offset, base_y));
+        thread::sleep(Duration::from_millis(EXISTING_WINDOW_SHAKE_DELAY_MS));
+    }
+}
 
-    for cache_key in cache.hidden_stack.iter().rev() {
-        let Some(state) = cache.windows.get(cache_key) else {
+fn focus_and_shake_window(window: &WebviewWindow) {
+    let _ = window.show();
+    if window.set_focus().is_ok() {
+        shake_window(window);
+    }
+}
+
+fn focus_and_shake_all_note_windows(app: &tauri::AppHandle) {
+    let mut windows = app
+        .webview_windows()
+        .into_iter()
+        .filter(|(label, _)| is_note_window_label(label))
+        .collect::<Vec<_>>();
+    windows.sort_by(|(left, _), (right, _)| left.cmp(right));
+    for (_, window) in windows {
+        let Ok(visible) = window.is_visible() else {
             continue;
         };
-        if state.visibility != "hidden" {
+        if !visible {
             continue;
         }
-        let Some(window) = app.get_webview_window(&state.window_id) else {
-            continue;
-        };
-        let _ = window.show();
-        let _ = window.set_focus();
-        break;
+        focus_and_shake_window(&window);
     }
+}
+
+pub fn restore_hidden_window(app: &tauri::AppHandle) {
+    if let Some(cache) = load_window_state_cache(app) {
+        for cache_key in cache.hidden_stack.iter().rev() {
+            let Some(state) = cache.windows.get(cache_key) else {
+                continue;
+            };
+            if state.visibility != "hidden" {
+                continue;
+            }
+            let Some(window) = app.get_webview_window(&state.window_id) else {
+                continue;
+            };
+            focus_and_shake_window(&window);
+            return;
+        }
+    }
+    focus_and_shake_all_note_windows(app);
 }
 
 pub fn show_settings_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
