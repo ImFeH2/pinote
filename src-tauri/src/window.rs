@@ -164,6 +164,25 @@ fn shake_visible_note_windows_simultaneously(app: &tauri::AppHandle) {
     }
 }
 
+fn bring_visible_note_windows_to_front(app: &tauri::AppHandle) {
+    let labels = visible_note_window_labels(app);
+    for label in labels {
+        let Some(window) = app.get_webview_window(&label) else {
+            continue;
+        };
+        if window.is_minimized().unwrap_or(false) {
+            let _ = window.unminimize();
+        }
+        let was_always_on_top = window.is_always_on_top().unwrap_or(false);
+        let _ = window.show();
+        let _ = window.set_focus();
+        if !was_always_on_top {
+            let _ = window.set_always_on_top(true);
+            let _ = window.set_always_on_top(false);
+        }
+    }
+}
+
 fn hidden_note_window_labels(cache: &WindowStateCache) -> Vec<String> {
     let mut labels = Vec::new();
     let mut seen = HashSet::new();
@@ -267,6 +286,7 @@ pub fn restore_hidden_window(app: &tauri::AppHandle) {
     if restore_latest_hidden_window(app) {
         return;
     }
+    bring_visible_note_windows_to_front(app);
     shake_visible_note_windows_simultaneously(app);
 }
 
