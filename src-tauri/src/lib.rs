@@ -91,6 +91,45 @@ fn is_markdown_file_path(path: &Path) -> bool {
         })
 }
 
+#[cfg(target_os = "windows")]
+fn normalize_windows_cli_note_path(path: PathBuf) -> PathBuf {
+    use std::path::{Component, Prefix};
+    let mut components = path.components();
+    let Some(Component::Prefix(prefix_component)) = components.next() else {
+        return path;
+    };
+    match prefix_component.kind() {
+        Prefix::VerbatimDisk(letter) => {
+            let mut normalized = PathBuf::from(format!("{}:\\", char::from(letter)));
+            for component in components {
+                if matches!(component, Component::RootDir) {
+                    continue;
+                }
+                normalized.push(component.as_os_str());
+            }
+            normalized
+        }
+        Prefix::VerbatimUNC(server, share) => {
+            let mut normalized = PathBuf::from(r"\\");
+            normalized.push(server);
+            normalized.push(share);
+            for component in components {
+                if matches!(component, Component::RootDir) {
+                    continue;
+                }
+                normalized.push(component.as_os_str());
+            }
+            normalized
+        }
+        _ => path,
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn normalize_windows_cli_note_path(path: PathBuf) -> PathBuf {
+    path
+}
+
 fn resolve_cli_note_path(raw_path: &str, cwd: Option<&Path>) -> Option<String> {
     let trimmed = raw_path.trim();
     if trimmed.is_empty() {
@@ -114,6 +153,7 @@ fn resolve_cli_note_path(raw_path: &str, cwd: Option<&Path>) -> Option<String> {
         Ok(path) => path,
         Err(_) => resolved,
     };
+    let normalized = normalize_windows_cli_note_path(normalized);
     Some(normalized.to_string_lossy().into_owned())
 }
 
