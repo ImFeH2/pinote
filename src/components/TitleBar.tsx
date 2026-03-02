@@ -1,6 +1,7 @@
 import { useCallback, type MouseEvent, type WheelEvent } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { FilePlus2, Settings2, Minus, Square, X } from "lucide-react";
+import { logError } from "@/lib/logger";
 
 interface TitleBarProps {
   title: string;
@@ -29,7 +30,9 @@ export function TitleBar({
           .setFocus()
           .then(() => appWindow.startDragging())
           .catch((error) => {
-            console.error("Failed to start dragging window:", error);
+            logError("title-bar", "start_dragging_failed", error, {
+              windowId: appWindow.label,
+            });
           });
       });
     },
@@ -38,7 +41,9 @@ export function TitleBar({
 
   const handleMinimize = useCallback(() => {
     appWindow.minimize().catch((error) => {
-      console.error("Failed to minimize window:", error);
+      logError("title-bar", "minimize_failed", error, {
+        windowId: appWindow.label,
+      });
     });
   }, [appWindow]);
 
@@ -52,13 +57,17 @@ export function TitleBar({
         return appWindow.maximize();
       })
       .catch((error) => {
-        console.error("Failed to toggle maximize window:", error);
+        logError("title-bar", "toggle_maximize_failed", error, {
+          windowId: appWindow.label,
+        });
       });
   }, [appWindow]);
 
   const handleClose = useCallback(() => {
     appWindow.close().catch((error) => {
-      console.error("Failed to close window:", error);
+      logError("title-bar", "close_failed", error, {
+        windowId: appWindow.label,
+      });
     });
   }, [appWindow]);
 

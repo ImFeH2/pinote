@@ -30,6 +30,7 @@ import {
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import { openAndTrackNoteWindow } from "@/lib/windowManager";
 import { recordOpenedNote } from "@/lib/noteHistory";
+import { logDebug, logError } from "@/lib/logger";
 import {
   getWindowState,
   removeWindowState,
@@ -167,7 +168,7 @@ function App({
 
   const handlePersistedContent = useCallback(
     (content: string, source: "load" | "save") => {
-      console.warn("external_watch_persisted", {
+      logDebug("note-window", "external_watch_persisted", {
         source,
         notePath,
         length: content.length,
@@ -204,7 +205,11 @@ function App({
       noteId,
       windowId: windowLabel,
     }).catch((error) => {
-      console.error("Failed to record note history on note window mount:", error);
+      logError("note-window", "record_note_history_failed_on_mount", error, {
+        notePath,
+        noteId,
+        windowId: windowLabel,
+      });
     });
   }, [noteId, notePath, windowLabel]);
 
@@ -298,7 +303,11 @@ function App({
           { pushHiddenToTop },
         );
       } catch (error) {
-        console.error("Failed to persist window state:", error);
+        logError("note-window", "persist_window_state_failed", error, {
+          windowId: windowLabel,
+          notePath,
+          noteId,
+        });
       }
     },
     [appWindow, noteId, notePath, windowLabel],
@@ -328,7 +337,7 @@ function App({
 
   const applyExternalFileContent = useCallback(
     (content: string) => {
-      console.warn("external_watch_apply", {
+      logDebug("note-window", "external_watch_apply", {
         notePath,
         length: content.length,
       });
@@ -346,10 +355,10 @@ function App({
   const reloadExternalFileContent = useCallback(() => {
     const pending = pendingExternalContentRef.current;
     if (pending === null) {
-      console.warn("external_watch_reload_skipped_no_pending", { notePath });
+      logDebug("note-window", "external_watch_reload_skipped_no_pending", { notePath });
       return;
     }
-    console.warn("external_watch_reload_manual", {
+    logDebug("note-window", "external_watch_reload_manual", {
       notePath,
       length: pending.length,
     });
@@ -357,7 +366,7 @@ function App({
   }, [applyExternalFileContent, notePath]);
 
   const dismissExternalFileChange = useCallback(() => {
-    console.warn("external_watch_ignore", { notePath });
+    logDebug("note-window", "external_watch_ignore", { notePath });
     pendingExternalContentRef.current = null;
     setHasExternalFileChange(false);
   }, [notePath]);
@@ -378,12 +387,12 @@ function App({
       );
       await appWindow.hide();
     } catch (error) {
-      console.error("Failed to hide window:", error);
+      logError("note-window", "hide_window_failed", error, { windowId: windowLabel });
       forceHiddenVisibilityRef.current = false;
     } finally {
       hideInProgressRef.current = false;
     }
-  }, [appWindow, persistWindowState]);
+  }, [appWindow, persistWindowState, windowLabel]);
 
   useEffect(() => {
     if (!windowStateReady) return;
@@ -413,14 +422,14 @@ function App({
     let unwatch: (() => void) | null = null;
     const watchedPath = notePath.trim();
     const normalizedWatchedPath = normalizePathForCompare(watchedPath);
-    console.warn("external_watch_setup_begin", {
+    logDebug("note-window", "external_watch_setup_begin", {
       notePath,
       watchedPath,
       normalizedWatchedPath,
     });
 
     const scheduleReload = () => {
-      console.warn("external_watch_schedule_reload", { notePath, watchedPath });
+      logDebug("note-window", "external_watch_schedule_reload", { notePath, watchedPath });
       if (externalReloadTimerRef.current) {
         clearTimeout(externalReloadTimerRef.current);
       }
@@ -428,20 +437,26 @@ function App({
         void (async () => {
           if (disposed) return;
           if (Date.now() < ignoreExternalWatchUntilRef.current) {
-            console.warn("external_watch_skip_self_write_window", { notePath, watchedPath });
+            logDebug("note-window", "external_watch_skip_self_write_window", {
+              notePath,
+              watchedPath,
+            });
             return;
           }
           const fileContent = await readTextFile(watchedPath).catch((error) => {
-            console.error("Failed to read externally updated file:", error);
+            logError("note-window", "external_watch_read_file_failed", error, {
+              notePath,
+              watchedPath,
+            });
             return null;
           });
           if (disposed) return;
           if (fileContent === null) {
-            console.warn("external_watch_skip_read_null", { notePath, watchedPath });
+            logDebug("note-window", "external_watch_skip_read_null", { notePath, watchedPath });
             return;
           }
           if (fileContent === latestEditorContentRef.current) {
-            console.warn("external_watch_skip_same_as_editor", {
+            logDebug("note-window", "external_watch_skip_same_as_editor", {
               notePath,
               watchedPath,
               length: fileContent.length,
@@ -451,7 +466,7 @@ function App({
           const hasLocalUnsavedChanges =
             isSavePending() || latestEditorContentRef.current !== persistedContentRef.current;
           if (hasLocalUnsavedChanges) {
-            console.warn("external_watch_detect_conflict", {
+            logDebug("note-window", "external_watch_detect_conflict", {
               notePath,
               watchedPath,
               length: fileContent.length,
@@ -460,7 +475,7 @@ function App({
             setHasExternalFileChange(true);
             return;
           }
-          console.warn("external_watch_apply_auto", {
+          logDebug("note-window", "external_watch_apply_auto", {
             notePath,
             watchedPath,
             length: fileContent.length,
@@ -472,7 +487,7 @@ function App({
 
     void dirname(watchedPath)
       .then((watchRootPath) => {
-        console.warn("external_watch_root_resolved", {
+        logDebug("note-window", "external_watch_root_resolved", {
           notePath,
           watchedPath,
           watchRootPath,
@@ -482,7 +497,7 @@ function App({
           watchRootPath,
           (event) => {
             if (disposed) return;
-            console.warn("external_watch_event", {
+            logDebug("note-window", "external_watch_event", {
               notePath,
               watchedPath,
               watchRootPath,
@@ -491,7 +506,7 @@ function App({
             });
             const eventPaths = Array.isArray(event.paths) ? event.paths : [];
             if (eventPaths.length === 0) {
-              console.warn("external_watch_event_no_paths", {
+              logDebug("note-window", "external_watch_event_no_paths", {
                 notePath,
                 watchedPath,
                 watchRootPath,
@@ -503,7 +518,7 @@ function App({
               return normalizePathForCompare(path) === normalizedWatchedPath;
             });
             if (!hasTargetPath) {
-              console.warn("external_watch_event_ignored_other_path", {
+              logDebug("note-window", "external_watch_event_ignored_other_path", {
                 notePath,
                 watchedPath,
                 watchRootPath,
@@ -519,19 +534,25 @@ function App({
       .then((unwatchFn) => {
         if (!unwatchFn) return;
         if (disposed) {
-          console.warn("external_watch_setup_disposed_before_bind", { notePath, watchedPath });
+          logDebug("note-window", "external_watch_setup_disposed_before_bind", {
+            notePath,
+            watchedPath,
+          });
           unwatchFn();
           return;
         }
-        console.warn("external_watch_setup_bound", { notePath, watchedPath });
+        logDebug("note-window", "external_watch_setup_bound", { notePath, watchedPath });
         unwatch = unwatchFn;
       })
       .catch((error) => {
-        console.error("Failed to watch note file changes:", error);
+        logError("note-window", "external_watch_setup_failed", error, {
+          notePath,
+          watchedPath,
+        });
       });
 
     return () => {
-      console.warn("external_watch_cleanup", { notePath, watchedPath });
+      logDebug("note-window", "external_watch_cleanup", { notePath, watchedPath });
       disposed = true;
       if (externalReloadTimerRef.current) {
         clearTimeout(externalReloadTimerRef.current);
@@ -550,7 +571,10 @@ function App({
         const primaryEffect = getWindowsPrimaryEffect(selectedEffect);
         if (!primaryEffect) {
           await appWindow.clearEffects().catch((error) => {
-            console.error("Failed to clear note window effects:", error);
+            logError("note-window", "clear_effects_failed", error, {
+              platform: runtimePlatform,
+              reason: "windows_none",
+            });
           });
           return;
         }
@@ -565,14 +589,20 @@ function App({
           if (applied) return;
         }
         await appWindow.clearEffects().catch((error) => {
-          console.error("Failed to clear note window effects:", error);
+          logError("note-window", "clear_effects_failed", error, {
+            platform: runtimePlatform,
+            reason: "windows_fallback_failed",
+          });
         });
         return;
       }
       if (runtimePlatform === "macos") {
         if (!settings.noteGlassEffectMacos) {
           await appWindow.clearEffects().catch((error) => {
-            console.error("Failed to clear note window effects:", error);
+            logError("note-window", "clear_effects_failed", error, {
+              platform: runtimePlatform,
+              reason: "macos_disabled",
+            });
           });
           return;
         }
@@ -581,12 +611,17 @@ function App({
             effects: [Effect.HudWindow],
           })
           .catch((error) => {
-            console.error("Failed to apply macOS glass effect:", error);
+            logError("note-window", "apply_macos_glass_effect_failed", error, {
+              platform: runtimePlatform,
+            });
           });
         return;
       }
       await appWindow.clearEffects().catch((error) => {
-        console.error("Failed to clear note window effects:", error);
+        logError("note-window", "clear_effects_failed", error, {
+          platform: runtimePlatform,
+          reason: "other_platform",
+        });
       });
     };
     void applyEffects();
@@ -621,13 +656,17 @@ function App({
           closeRequestState.current = "persisting";
           void removeWindowState(windowLabel)
             .catch((error) => {
-              console.error("Failed to remove window state:", error);
+              logError("note-window", "remove_window_state_failed", error, {
+                windowId: windowLabel,
+              });
             })
             .finally(() => {
               closeRequestState.current = "ready";
               appWindow.close().catch((error) => {
                 closeRequestState.current = "idle";
-                console.error("Failed to close window:", error);
+                logError("note-window", "close_window_failed_on_request", error, {
+                  windowId: windowLabel,
+                });
               });
             });
         }),
@@ -661,9 +700,9 @@ function App({
 
   const openSettings = useCallback(() => {
     openSettingsWindow().catch((error) => {
-      console.error("Failed to open settings window:", error);
+      logError("note-window", "open_settings_window_failed", error, { windowId: windowLabel });
     });
-  }, []);
+  }, [windowLabel]);
 
   const openNote = useCallback(() => {
     Promise.all([appWindow.outerPosition(), appWindow.innerSize(), appWindow.isAlwaysOnTop()])
@@ -701,9 +740,12 @@ function App({
         });
       })
       .catch((error) => {
-        console.error("Failed to open note window:", error);
+        logError("note-window", "open_note_window_failed", error, {
+          windowId: windowLabel,
+          notePath,
+        });
       });
-  }, [appWindow, settings.hideNoteWindowsFromTaskbar]);
+  }, [appWindow, notePath, settings.hideNoteWindowsFromTaskbar, windowLabel]);
 
   const minimizeWindow = useCallback(() => {
     if (settings.hideNoteWindowsFromTaskbar) {
@@ -711,9 +753,9 @@ function App({
       return;
     }
     appWindow.minimize().catch((error) => {
-      console.error("Failed to minimize window:", error);
+      logError("note-window", "minimize_window_failed", error, { windowId: windowLabel });
     });
-  }, [appWindow, hideWindow, settings.hideNoteWindowsFromTaskbar]);
+  }, [appWindow, hideWindow, settings.hideNoteWindowsFromTaskbar, windowLabel]);
 
   const toggleMaximizeWindow = useCallback(() => {
     appWindow
@@ -725,25 +767,27 @@ function App({
         return appWindow.maximize();
       })
       .catch((error) => {
-        console.error("Failed to toggle maximize window:", error);
+        logError("note-window", "toggle_maximize_window_failed", error, {
+          windowId: windowLabel,
+        });
       });
-  }, [appWindow]);
+  }, [appWindow, windowLabel]);
 
   const closeWindow = useCallback(() => {
     appWindow.close().catch((error) => {
-      console.error("Failed to close window:", error);
+      logError("note-window", "close_window_failed", error, { windowId: windowLabel });
     });
-  }, [appWindow]);
+  }, [appWindow, windowLabel]);
 
   const startWindowDrag = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
       if (event.button !== 0) return;
       event.preventDefault();
       appWindow.startDragging().catch((error) => {
-        console.error("Failed to start dragging window:", error);
+        logError("note-window", "start_dragging_failed", error, { windowId: windowLabel });
       });
     },
-    [appWindow],
+    [appWindow, windowLabel],
   );
 
   const closeContextMenu = useCallback(() => {
@@ -758,9 +802,9 @@ function App({
     if (last && last.x === target.x && last.y === target.y) return;
     middleDragLastPosition.current = target;
     appWindow.setPosition(new PhysicalPosition(target.x, target.y)).catch((error) => {
-      console.error("Failed to move window by middle drag:", error);
+      logError("note-window", "move_window_by_drag_failed", error, { windowId: windowLabel });
     });
-  }, [appWindow]);
+  }, [appWindow, windowLabel]);
 
   const scheduleMiddleDragPosition = useCallback(() => {
     if (middleDragFrame.current !== null) return;
@@ -819,7 +863,7 @@ function App({
           scheduleMiddleDragPosition();
         })
         .catch((error) => {
-          console.error("Failed to prepare middle drag state:", error);
+          logError("note-window", "prepare_drag_state_failed", error, { windowId: windowLabel });
         });
     };
 
@@ -829,7 +873,13 @@ function App({
       window.removeEventListener("auxclick", handleMiddleAuxClick, true);
       window.removeEventListener("mousedown", handlePointerMouseDown, true);
     };
-  }, [appWindow, closeContextMenu, scheduleMiddleDragPosition, settings.dragMouseButton]);
+  }, [
+    appWindow,
+    closeContextMenu,
+    scheduleMiddleDragPosition,
+    settings.dragMouseButton,
+    windowLabel,
+  ]);
 
   useEffect(() => {
     const suppressContextMenuOnce = () => {
@@ -887,7 +937,9 @@ function App({
               });
             })
             .catch((error) => {
-              console.error("Failed to open context menu by right click:", error);
+              logError("note-window", "open_context_menu_by_right_click_failed", error, {
+                windowId: windowLabel,
+              });
             });
         }
       }
@@ -955,14 +1007,14 @@ function App({
         await appWindow.setSize(new PhysicalSize(width, height));
         await appWindow.setPosition(new PhysicalPosition(nextX, nextY));
       } catch (error) {
-        console.error("Failed to resize window by wheel:", error);
+        logError("note-window", "resize_window_by_wheel_failed", error, { windowId: windowLabel });
       } finally {
         window.setTimeout(() => {
           wheelResizeLock.current = false;
         }, 16);
       }
     },
-    [appWindow],
+    [appWindow, windowLabel],
   );
 
   const adjustOpacityByWheel = useCallback(
@@ -1128,7 +1180,9 @@ function App({
         unlisten = handler;
       })
       .catch((error) => {
-        console.error("Failed to listen for context menu actions:", error);
+        logError("note-window", "listen_context_menu_actions_failed", error, {
+          windowId: windowLabel,
+        });
       });
 
     return () => {
@@ -1172,7 +1226,10 @@ function App({
           });
         })
         .catch((error) => {
-          console.error("Failed to open context menu window:", error);
+          logError("note-window", "open_context_menu_window_failed", error, {
+            windowId: windowLabel,
+            noteId,
+          });
         });
     },
     [appWindow, noteId, windowLabel],

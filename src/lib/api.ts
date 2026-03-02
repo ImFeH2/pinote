@@ -10,6 +10,7 @@ import {
   resolveManagedNotePath,
 } from "@/lib/notes";
 import { recordOpenedNote } from "@/lib/noteHistory";
+import { logError } from "@/lib/logger";
 import type { WindowBounds, WindowVisibility } from "@/lib/windowStateCache";
 import { loadSettings, type Settings } from "@/stores/settings";
 
@@ -464,7 +465,11 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
     noteId: normalizedNoteId,
     windowId,
   }).catch((error) => {
-    console.error("Failed to record note history:", error);
+    logError("api", "record_note_history_failed", error, {
+      notePath,
+      noteId: normalizedNoteId,
+      windowId,
+    });
   });
   const skipTaskbar = await resolveNoteWindowSkipTaskbar(options.skipTaskbar);
   const existing = await WebviewWindow.getByLabel(windowId);

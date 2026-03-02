@@ -2,7 +2,7 @@ mod shortcut;
 mod tray;
 mod window;
 
-use log::{LevelFilter, error, info};
+use log::{Level, LevelFilter, error, info};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -12,7 +12,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
-use tauri_plugin_log::{Target, TargetKind};
+use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 #[cfg(target_os = "windows")]
 use winreg::{
     RegKey,
@@ -31,6 +31,8 @@ const WINDOW_STATE_CACHE_FILE_NAME: &str = "windows.json";
 const WINDOW_STATE_CACHE_VERSION: u32 = 1;
 const DEFAULT_NOTE_DIRECTORY_NAME: &str = "notes";
 const DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR: bool = true;
+const LOGS_DIRECTORY_NAME: &str = "logs";
+const LOG_FILE_NAME: &str = "pinote";
 #[cfg(target_os = "windows")]
 const OPEN_WITH_PINOTE_MENU_KEY: &str = "OpenWithPinote";
 #[cfg(target_os = "windows")]
@@ -224,6 +226,22 @@ fn build_note_window_url(window_id: &str, note_path: &str, note_opacity: Option<
         url.push_str(&encoded_note_opacity);
     }
     url
+}
+
+fn level_allowed_for_filter(level: Level, minimum: LevelFilter) -> bool {
+    match minimum {
+        LevelFilter::Off => false,
+        LevelFilter::Error => matches!(level, Level::Error),
+        LevelFilter::Warn => matches!(level, Level::Error | Level::Warn),
+        LevelFilter::Info => matches!(level, Level::Error | Level::Warn | Level::Info),
+        LevelFilter::Debug => {
+            matches!(
+                level,
+                Level::Error | Level::Warn | Level::Info | Level::Debug
+            )
+        }
+        LevelFilter::Trace => true,
+    }
 }
 
 fn load_stored_settings(app: &tauri::AppHandle) -> StoredSettings {
@@ -704,17 +722,6 @@ fn get_runtime_platform() -> &'static str {
 pub fn run() {
     tauri::Builder::default()
         .manage(window::VisibleWindowToggleState::default())
-        .plugin({
-            let level = if cfg!(debug_assertions) {
-                LevelFilter::Debug
-            } else {
-                LevelFilter::Warn
-            };
-            tauri_plugin_log::Builder::new()
-                .level(level)
-                .targets([Target::new(TargetKind::Stdout)])
-                .build()
-        })
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -738,6 +745,31 @@ pub fn run() {
         ])
         .setup(|app| {
             let handle = app.handle().clone();
+            let stdout_level = if cfg!(debug_assertions) {
+                LevelFilter::Debug
+            } else {
+                LevelFilter::Warn
+            };
+            let file_level = LevelFilter::Debug;
+            let logs_path = handle.path().app_data_dir()?.join(LOGS_DIRECTORY_NAME);
+            std::fs::create_dir_all(&logs_path)?;
+            let log_plugin = tauri_plugin_log::Builder::new()
+                .clear_targets()
+                .level(LevelFilter::Debug)
+                .rotation_strategy(RotationStrategy::KeepSome(5))
+                .max_file_size(2_000_000)
+                .targets([
+                    Target::new(TargetKind::Stdout).filter(move |metadata| {
+                        level_allowed_for_filter(metadata.level(), stdout_level)
+                    }),
+                    Target::new(TargetKind::Folder {
+                        path: logs_path,
+                        file_name: Some(LOG_FILE_NAME.to_string()),
+                    })
+                    .filter(move |metadata| level_allowed_for_filter(metadata.level(), file_level)),
+                ])
+                .build();
+            handle.plugin(log_plugin)?;
             tray::setup_tray(&handle)?;
             shortcut::setup_shortcuts(&handle)?;
             let skip_taskbar = load_hide_note_windows_from_taskbar(&handle);

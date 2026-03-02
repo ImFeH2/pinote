@@ -17,6 +17,7 @@ import {
 } from "@/lib/api";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
+import { logError } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 
 const MENU_EDGE_GAP = 8;
@@ -76,7 +77,11 @@ function ContextMenuApp({
     (action: NoteContextMenuAction) => {
       emitNoteContextMenuAction(context.targetWindowLabel, action)
         .catch((error) => {
-          console.error("Failed to emit context menu action:", error);
+          logError("context-menu", "emit_action_failed", error, {
+            windowId: menuWindow.label,
+            targetWindowLabel: context.targetWindowLabel,
+            action,
+          });
         })
         .finally(() => {
           closeMenu();
@@ -97,7 +102,9 @@ function ContextMenuApp({
         unlistenFocusChanged = unlisten;
       })
       .catch((error) => {
-        console.error("Failed to subscribe context menu focus listener:", error);
+        logError("context-menu", "subscribe_focus_listener_failed", error, {
+          windowId: menuWindow.label,
+        });
       });
 
     const handleEscape = (event: KeyboardEvent) => {
@@ -130,7 +137,9 @@ function ContextMenuApp({
         unlisten = handler;
       })
       .catch((error) => {
-        console.error("Failed to subscribe context menu sync listener:", error);
+        logError("context-menu", "subscribe_sync_listener_failed", error, {
+          windowId: menuWindow.label,
+        });
       });
     return () => {
       if (unlisten) {
@@ -243,7 +252,11 @@ function ContextMenuApp({
         await menuWindow.setPosition(new PhysicalPosition(nextX, nextY));
       })
       .catch((error) => {
-        console.error("Failed to fit context menu window:", error);
+        logError("context-menu", "fit_window_to_content_failed", error, {
+          windowId: menuWindow.label,
+          anchorX: context.anchorX,
+          anchorY: context.anchorY,
+        });
       });
   }, [context.anchorX, context.anchorY, menuWindow, updateTitleOverflow]);
 

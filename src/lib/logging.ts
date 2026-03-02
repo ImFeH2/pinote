@@ -1,7 +1,7 @@
-import { info } from "@tauri-apps/plugin-log";
+import { logInfo } from "@/lib/logger";
 
 export function setupLogging(url: string) {
   if (import.meta.env.DEV) {
-    info(`frontend_ready url=${url}`);
+    logInfo("frontend", "ready", { url });
   }
 }

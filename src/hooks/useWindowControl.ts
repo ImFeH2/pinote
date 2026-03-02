@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { logError } from "@/lib/logger";
 
 export function useWindowControl(defaultAlwaysOnTop = false) {
   const appWindow = useMemo(() => getCurrentWindow(), []);
@@ -20,7 +21,9 @@ export function useWindowControl(defaultAlwaysOnTop = false) {
       await appWindow.setAlwaysOnTop(next);
       setAlwaysOnTop(next);
     } catch (error) {
-      console.error("Failed to toggle always on top:", error);
+      logError("window-control", "toggle_always_on_top_failed", error, {
+        windowId: appWindow.label,
+      });
     }
   }, [alwaysOnTop, appWindow]);
 

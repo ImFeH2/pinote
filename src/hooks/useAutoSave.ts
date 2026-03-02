@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { readTextFile, writeTextFile, mkdir, exists } from "@tauri-apps/plugin-fs";
 import { dirname } from "@tauri-apps/api/path";
+import { logDebug, logError } from "@/lib/logger";
 
 const DEBOUNCE_MS = 500;
 
@@ -32,7 +33,7 @@ export function useAutoSave(notePath: string, options: UseAutoSaveOptions = {}) 
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
-      console.warn("note_save_scheduled", {
+      logDebug("auto-save", "save_scheduled", {
         notePath,
         length: content.length,
       });
@@ -41,13 +42,13 @@ export function useAutoSave(notePath: string, options: UseAutoSaveOptions = {}) 
         try {
           await ensureParentDir(notePath);
           await writeTextFile(notePath, content);
-          console.warn("note_save_persisted", {
+          logDebug("auto-save", "save_persisted", {
             notePath,
             length: content.length,
           });
           onPersistedRef.current?.(content, "save");
         } catch (e) {
-          console.error("Failed to save note:", e);
+          logError("auto-save", "save_failed", e, { notePath });
         } finally {
           pendingSaveRef.current = false;
         }
@@ -58,22 +59,22 @@ export function useAutoSave(notePath: string, options: UseAutoSaveOptions = {}) 
 
   const load = useCallback(async (): Promise<string> => {
     try {
-      console.warn("note_load_begin", { notePath });
+      logDebug("auto-save", "load_begin", { notePath });
       await ensureParentDir(notePath);
       const fileExists = await exists(notePath);
       if (!fileExists) {
-        console.warn("note_load_missing_file", { notePath });
+        logDebug("auto-save", "load_missing_file", { notePath });
         return "";
       }
       const content = await readTextFile(notePath);
-      console.warn("note_load_success", {
+      logDebug("auto-save", "load_success", {
         notePath,
         length: content.length,
       });
       onPersistedRef.current?.(content, "load");
       return content;
     } catch (e) {
-      console.error("Failed to load note:", e);
+      logError("auto-save", "load_failed", e, { notePath });
       return "";
     }
   }, [notePath]);

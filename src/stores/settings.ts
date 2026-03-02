@@ -1,4 +1,5 @@
 import { readTextFile, writeTextFile, exists, BaseDirectory } from "@tauri-apps/plugin-fs";
+import { logError } from "@/lib/logger";
 
 type Theme = "light" | "dark" | "system";
 export type EditorFontFamily = "system" | "serif" | "mono";
@@ -169,6 +170,6 @@ export async function saveSettings(settings: Settings): Promise<void> {
       baseDir: BaseDirectory.AppData,
     });
   } catch (e) {
-    console.error("Failed to save settings:", e);
+    logError("settings", "save_failed", e);
   }
 }
