@@ -1,7 +1,7 @@
 use log::info;
 use serde::Deserialize;
 use std::{collections::HashMap, collections::HashSet, sync::Mutex, thread, time::Duration};
-use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder};
 
 const CACHE_VERSION: u32 = 1;
 const NOTE_WINDOW_PREFIX: &str = "note-";
@@ -127,25 +127,6 @@ fn is_note_window_label(label: &str) -> bool {
     label.starts_with(NOTE_WINDOW_PREFIX) && !label.ends_with(NOTE_CONTEXT_MENU_WINDOW_SUFFIX)
 }
 
-fn shake_window(window: &WebviewWindow) {
-    let Ok(position) = window.outer_position() else {
-        return;
-    };
-    let base_x = position.x;
-    let base_y = position.y;
-    for offset in EXISTING_WINDOW_SHAKE_OFFSETS {
-        let _ = window.set_position(PhysicalPosition::new(base_x + offset, base_y));
-        thread::sleep(Duration::from_millis(EXISTING_WINDOW_SHAKE_DELAY_MS));
-    }
-}
-
-fn focus_and_shake_window(window: &WebviewWindow) {
-    let _ = window.show();
-    if window.set_focus().is_ok() {
-        shake_window(window);
-    }
-}
-
 fn visible_note_window_labels(app: &tauri::AppHandle) -> Vec<String> {
     let mut labels = app
         .webview_windows()
@@ -160,13 +141,26 @@ fn visible_note_window_labels(app: &tauri::AppHandle) -> Vec<String> {
     labels
 }
 
-fn focus_and_shake_all_note_windows(app: &tauri::AppHandle) {
+fn shake_visible_note_windows_simultaneously(app: &tauri::AppHandle) {
     let labels = visible_note_window_labels(app);
+    let mut windows = Vec::new();
     for label in labels {
         let Some(window) = app.get_webview_window(&label) else {
             continue;
         };
-        focus_and_shake_window(&window);
+        let Ok(position) = window.outer_position() else {
+            continue;
+        };
+        windows.push((window, position.x, position.y));
+    }
+    if windows.is_empty() {
+        return;
+    }
+    for offset in EXISTING_WINDOW_SHAKE_OFFSETS {
+        for (window, base_x, base_y) in &windows {
+            let _ = window.set_position(PhysicalPosition::new(*base_x + offset, *base_y));
+        }
+        thread::sleep(Duration::from_millis(EXISTING_WINDOW_SHAKE_DELAY_MS));
     }
 }
 
@@ -261,7 +255,8 @@ pub fn restore_latest_hidden_window(app: &tauri::AppHandle) -> bool {
                 "visible",
                 false,
             );
-            focus_and_shake_window(&window);
+            let _ = window.show();
+            let _ = window.set_focus();
             return true;
         }
     }
@@ -272,15 +267,17 @@ pub fn restore_hidden_window(app: &tauri::AppHandle) {
     if restore_latest_hidden_window(app) {
         return;
     }
-    focus_and_shake_all_note_windows(app);
+    shake_visible_note_windows_simultaneously(app);
 }
 
 pub fn show_all_hidden_windows(app: &tauri::AppHandle) {
     let Some(cache) = load_window_state_cache(app) else {
+        shake_visible_note_windows_simultaneously(app);
         return;
     };
     let labels_to_restore = hidden_note_window_labels(&cache);
     if labels_to_restore.is_empty() {
+        shake_visible_note_windows_simultaneously(app);
         return;
     }
     update_window_visibility_in_cache(app, &labels_to_restore, "visible", false);
