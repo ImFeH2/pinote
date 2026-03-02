@@ -52,6 +52,8 @@ const NOTE_OPACITY_STEP = 0.05;
 const NOTE_SCROLL_STATE_DEBOUNCE_MS = 200;
 
 interface MiddleDragState {
+  button: number;
+  allowMove: boolean;
   pointerStartX: number;
   pointerStartY: number;
   pointerCurrentX: number;
@@ -93,6 +95,10 @@ function wheelModifierMatchesEvent(
   return event.metaKey && !event.altKey && !event.ctrlKey && !event.shiftKey;
 }
 
+function resolveDragMouseButtonCode(button: "middle" | "right") {
+  return button === "right" ? 2 : 1;
+}
+
 function getWindowsPrimaryEffect(effect: WindowsGlassEffect) {
   if (effect === "mica") return Effect.Mica;
   if (effect === "acrylic") return Effect.Acrylic;
@@ -129,6 +135,7 @@ function App({
   const middleDragPendingPosition = useRef<{ x: number; y: number } | null>(null);
   const middleDragLastPosition = useRef<{ x: number; y: number } | null>(null);
   const middleDragFrame = useRef<number | null>(null);
+  const suppressNextContextMenu = useRef(false);
   const noteOpacityRef = useRef(initialWindowOpacity);
   const scrollPersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteScrollTopRef = useRef(0);
@@ -527,16 +534,22 @@ function App({
   }, [applyMiddleDragPosition]);
 
   useEffect(() => {
+    const dragButton = resolveDragMouseButtonCode(settings.dragMouseButton);
+
     const handleMiddleAuxClick = (event: MouseEvent) => {
       if (event.button !== 1) return;
       event.preventDefault();
     };
 
-    const handleMiddleMouseDown = (event: MouseEvent) => {
-      if (event.button !== 1) return;
+    const handlePointerMouseDown = (event: MouseEvent) => {
+      const isDragButton = event.button === dragButton;
+      const isMiddleToggleButton = event.button === 1;
+      if (!isDragButton && !isMiddleToggleButton) return;
       event.preventDefault();
       closeContextMenu();
       const nextState: MiddleDragState = {
+        button: event.button,
+        allowMove: isDragButton,
         pointerStartX: event.screenX,
         pointerStartY: event.screenY,
         pointerCurrentX: event.screenX,
@@ -559,6 +572,7 @@ function App({
           state.windowStartY = position.y;
           state.scaleFactor = scaleFactor;
           state.ready = true;
+          if (!state.allowMove) return;
           const deltaX = state.pointerCurrentX - state.pointerStartX;
           const deltaY = state.pointerCurrentY - state.pointerStartY;
           if (deltaX === 0 && deltaY === 0) return;
@@ -574,14 +588,21 @@ function App({
     };
 
     window.addEventListener("auxclick", handleMiddleAuxClick, true);
-    window.addEventListener("mousedown", handleMiddleMouseDown, true);
+    window.addEventListener("mousedown", handlePointerMouseDown, true);
     return () => {
       window.removeEventListener("auxclick", handleMiddleAuxClick, true);
-      window.removeEventListener("mousedown", handleMiddleMouseDown, true);
+      window.removeEventListener("mousedown", handlePointerMouseDown, true);
     };
-  }, [appWindow, closeContextMenu, scheduleMiddleDragPosition]);
+  }, [appWindow, closeContextMenu, scheduleMiddleDragPosition, settings.dragMouseButton]);
 
   useEffect(() => {
+    const suppressContextMenuOnce = () => {
+      suppressNextContextMenu.current = true;
+      window.setTimeout(() => {
+        suppressNextContextMenu.current = false;
+      }, 200);
+    };
+
     const handleMouseMove = (event: MouseEvent) => {
       const state = middleDragState.current;
       if (!state) return;
@@ -594,6 +615,7 @@ function App({
         state.moved = true;
       }
       if (!state.ready) return;
+      if (!state.allowMove) return;
       middleDragPendingPosition.current = {
         x: state.windowStartX + Math.round(deltaX * state.scaleFactor),
         y: state.windowStartY + Math.round(deltaY * state.scaleFactor),
@@ -611,13 +633,36 @@ function App({
         middleDragFrame.current = null;
       }
       if (!state) return;
-      if (shouldToggleAlwaysOnTop && !state.moved) {
+      if (state.allowMove && state.button === 2) {
+        suppressContextMenuOnce();
+        if (!state.moved) {
+          closeContextMenu();
+          void appWindow
+            .scaleFactor()
+            .then((scaleFactor) => {
+              return openNoteContextMenu({
+                parentWindowLabel: windowLabel,
+                targetWindowLabel: windowLabel,
+                noteId,
+                screenX: state.pointerCurrentX,
+                screenY: state.pointerCurrentY,
+                scaleFactor,
+              });
+            })
+            .catch((error) => {
+              console.error("Failed to open context menu by right click:", error);
+            });
+        }
+      }
+      if (shouldToggleAlwaysOnTop && state.button === 1 && !state.moved) {
         toggleAlwaysOnTop();
       }
     };
 
     const handleMouseUp = (event: MouseEvent) => {
-      if (event.button !== 1) return;
+      const state = middleDragState.current;
+      if (!state) return;
+      if (event.button !== state.button) return;
       finishMiddleInteraction(true);
     };
 
@@ -633,7 +678,14 @@ function App({
       window.removeEventListener("mouseup", handleMouseUp, true);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [scheduleMiddleDragPosition, toggleAlwaysOnTop]);
+  }, [
+    appWindow,
+    closeContextMenu,
+    noteId,
+    scheduleMiddleDragPosition,
+    toggleAlwaysOnTop,
+    windowLabel,
+  ]);
 
   const resizeWindowByWheel = useCallback(
     async (deltaY: number, anchorX: number, anchorY: number) => {
@@ -822,6 +874,11 @@ function App({
 
   const openContextMenu = useCallback(
     (event: ReactMouseEvent<HTMLDivElement>) => {
+      if (suppressNextContextMenu.current) {
+        suppressNextContextMenu.current = false;
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
       const screenX = event.screenX;
       const screenY = event.screenY;

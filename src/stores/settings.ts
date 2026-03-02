@@ -4,6 +4,7 @@ type Theme = "light" | "dark" | "system";
 export type EditorFontFamily = "system" | "serif" | "mono";
 export type WheelResizeModifier = "alt" | "ctrl" | "shift" | "meta";
 export type WindowsGlassEffect = "none" | "mica" | "acrylic" | "blur";
+export type DragMouseButton = "middle" | "right";
 const SETTINGS_FILE = "settings.json";
 
 export interface Settings {
@@ -20,6 +21,7 @@ export interface Settings {
   hideNoteWindowsFromTaskbar: boolean;
   wheelResizeModifier: WheelResizeModifier;
   wheelOpacityModifier: WheelResizeModifier;
+  dragMouseButton: DragMouseButton;
   openWithPinoteContextMenu: boolean;
   defaultMarkdownOpenWithPinote: boolean;
   lastUpdateCheckAt?: string;
@@ -46,6 +48,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hideNoteWindowsFromTaskbar: true,
   wheelResizeModifier: "alt",
   wheelOpacityModifier: "ctrl",
+  dragMouseButton: "middle",
   openWithPinoteContextMenu: false,
   defaultMarkdownOpenWithPinote: false,
   shortcuts: {
@@ -75,6 +78,11 @@ function sanitizeWheelModifier(value: unknown, fallback: WheelResizeModifier): W
     return value;
   }
   return fallback;
+}
+
+function sanitizeDragMouseButton(value: unknown): DragMouseButton {
+  if (value === "middle" || value === "right") return value;
+  return DEFAULT_SETTINGS.dragMouseButton;
 }
 
 function sanitizeWindowsGlassEffect(value: unknown): WindowsGlassEffect {
@@ -120,6 +128,7 @@ function mergeSettings(stored: StoredSettings): Settings {
       rest.wheelOpacityModifier,
       DEFAULT_SETTINGS.wheelOpacityModifier,
     ),
+    dragMouseButton: sanitizeDragMouseButton(rest.dragMouseButton),
     shortcuts: mergedShortcuts,
   };
 }

@@ -6,9 +6,9 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 
 - **Markdown Workspace** — WYSIWYG editing with auto-save and multi-note windows
 - **Always-on-Top Clarity** — Pin notes above other apps and identify state with border glow and a pin badge
-- **Mouse-first Window Control** — Middle-click toggles pin, middle-drag moves the window, right-click opens quick actions
+- **Mouse-first Window Control** — Middle-click toggles pin, drag-to-move button is configurable (`Middle`/`Right`), and right-click opens quick actions
 - **Cursor-centered Resize** — `Alt+Wheel` by default, with support for `Ctrl` / `Shift` / `Meta`
-- **Shortcut & Interaction Customization** — Configure keyboard shortcuts and wheel resize modifier in Settings
+- **Shortcut & Interaction Customization** — Configure keyboard shortcuts, wheel modifiers, and drag mouse button in Settings
 - **Quick Access** — Global shortcut (`Alt+N`) and system tray action restore the most recently hidden note window
 - **Session Restore** — Window state cache restores note windows (position, size, pin state, visibility) on next launch
 - **Scroll Position Restore** — Each note remembers editor scroll position across hide/show and restart
@@ -38,10 +38,10 @@ Shortcuts can be changed in the Settings window.
 | ------------------- | ------------------------------------- |
 | `Alt+Wheel`         | Resize window around cursor           |
 | `Middle Click`      | Toggle always on top                  |
-| `Middle Drag`       | Move window                           |
+| `Middle Drag`       | Move window (default, configurable)   |
 | `Right Click`       | Open context menu with common actions |
 
-`Alt+Wheel` modifier can be changed to `Ctrl`, `Shift`, or `Meta` in Settings.
+`Alt+Wheel` modifier can be changed to `Ctrl`, `Shift`, or `Meta` in Settings. Drag button can be changed to `Middle` or `Right`.
 
 ## Development
 

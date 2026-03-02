@@ -10,7 +10,11 @@ import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
 import { resolveDefaultNotesDirectory } from "@/lib/notes";
 import { searchNoteHistory, type NoteHistorySearchResult } from "@/lib/noteHistory";
-import { type WheelResizeModifier, type WindowsGlassEffect } from "@/stores/settings";
+import {
+  type DragMouseButton,
+  type WheelResizeModifier,
+  type WindowsGlassEffect,
+} from "@/stores/settings";
 import {
   getRuntimePlatform,
   type RuntimePlatform,
@@ -62,6 +66,11 @@ const wheelResizeModifierOptions: Array<{ value: WheelResizeModifier; label: str
   { value: "ctrl", label: "Ctrl" },
   { value: "shift", label: "Shift" },
   { value: "meta", label: "Meta" },
+];
+
+const dragMouseButtonOptions: Array<{ value: DragMouseButton; label: string }> = [
+  { value: "middle", label: "Middle" },
+  { value: "right", label: "Right" },
 ];
 
 const windowsGlassEffectOptions: Array<{ value: WindowsGlassEffect; label: string }> = [
@@ -186,6 +195,9 @@ export function SettingsApp() {
   const activeWheelOpacityModifier =
     wheelResizeModifierOptions.find((item) => item.value === settings.wheelOpacityModifier) ??
     wheelResizeModifierOptions[1];
+  const activeDragMouseButton =
+    dragMouseButtonOptions.find((item) => item.value === settings.dragMouseButton) ??
+    dragMouseButtonOptions[0];
   const customNotesDirectory = settings.newNoteDirectory.trim();
   const effectiveNotesDirectory = customNotesDirectory || defaultNotesDirectory;
 
@@ -1016,6 +1028,28 @@ export function SettingsApp() {
                 <div className="text-xs text-muted-foreground">{`${activeWheelOpacityModifier.label} + Wheel adjusts window opacity.`}</div>
               </div>
 
+              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">Drag Mouse Button</div>
+                <div className="flex items-center gap-2">
+                  {dragMouseButtonOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => updateSettings({ dragMouseButton: option.value })}
+                      className={cn(
+                        "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                        settings.dragMouseButton === option.value
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background text-muted-foreground hover:bg-accent",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-xs text-muted-foreground">{`${activeDragMouseButton.label} Drag: Move window`}</div>
+              </div>
+
               <div className="flex flex-col gap-1 rounded-md border border-border bg-background/60 p-3">
                 <div className="text-xs font-medium text-muted-foreground">
                   Current Interactions
@@ -1025,8 +1059,12 @@ export function SettingsApp() {
                 <div className="text-xs text-muted-foreground">
                   Middle Click: Toggle Always On Top
                 </div>
-                <div className="text-xs text-muted-foreground">Middle Drag: Move window</div>
-                <div className="text-xs text-muted-foreground">Right Click: Open context menu</div>
+                <div className="text-xs text-muted-foreground">{`${activeDragMouseButton.label} Drag: Move window`}</div>
+                <div className="text-xs text-muted-foreground">
+                  {activeDragMouseButton.value === "right"
+                    ? "Right Click: Open context menu (click) / Drag window (drag)"
+                    : "Right Click: Open context menu"}
+                </div>
               </div>
             </div>
           )}
