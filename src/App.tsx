@@ -1053,6 +1053,11 @@ function App({
         hideWindow();
         return;
       }
+      if (shortcutMatchesEvent(settings.shortcuts.closeWindow, e)) {
+        e.preventDefault();
+        closeWindow();
+        return;
+      }
       if (shortcutMatchesEvent(settings.shortcuts.toggleAlwaysOnTop, e)) {
         e.preventDefault();
         toggleAlwaysOnTop();
@@ -1066,7 +1071,9 @@ function App({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
+    closeWindow,
     hideWindow,
+    settings.shortcuts.closeWindow,
     settings.shortcuts.hideWindow,
     settings.shortcuts.toggleAlwaysOnTop,
     settings.shortcuts.toggleTheme,

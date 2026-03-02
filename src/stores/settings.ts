@@ -33,6 +33,7 @@ export interface Settings {
     toggleAlwaysOnTop: string;
     toggleTheme: string;
     hideWindow: string;
+    closeWindow: string;
   };
 }
 
@@ -61,6 +62,7 @@ export const DEFAULT_SETTINGS: Settings = {
     toggleAlwaysOnTop: "Ctrl+Shift+T",
     toggleTheme: "Ctrl+Shift+D",
     hideWindow: "Escape",
+    closeWindow: "Ctrl+Shift+W",
   },
 };
 

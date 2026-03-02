@@ -30,6 +30,7 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 | `Ctrl+Shift+T`   | Toggle always on top   |
 | `Ctrl+Shift+D`   | Toggle dark mode       |
 | `Esc`            | Hide window            |
+| `Ctrl+Shift+W`   | Close window           |
 
 Shortcuts can be changed in the Settings window.
 

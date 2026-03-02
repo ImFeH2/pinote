@@ -48,6 +48,7 @@ const shortcutItems = [
   { key: "toggleAlwaysOnTop", label: "Toggle Always On Top" },
   { key: "toggleTheme", label: "Toggle Theme" },
   { key: "hideWindow", label: "Hide Window" },
+  { key: "closeWindow", label: "Close Window" },
 ] as const;
 
 const themeOptions = [
