@@ -124,6 +124,43 @@
     color: var(--color-pinned-badge-text);
   }
 
+  .pinote-menu-title-viewport {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .pinote-menu-title-text {
+    display: block;
+    min-width: 0;
+    width: max-content;
+    max-width: 100%;
+    white-space: nowrap;
+    transform: translateX(0);
+  }
+
+  .pinote-menu-title-text-scroll {
+    max-width: none;
+    animation: pinote-menu-title-marquee var(--pinote-menu-title-duration, 7s) linear infinite
+      alternate;
+    will-change: transform;
+  }
+
+  @keyframes pinote-menu-title-marquee {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(calc(-1 * var(--pinote-menu-title-distance, 0px)));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pinote-menu-title-text-scroll {
+      animation: none;
+      transform: translateX(0);
+    }
+  }
+
   .pinote-scrollbar {
     --pinote-scrollbar-thumb: var(--color-scrollbar-thumb);
     --pinote-scrollbar-track: var(--color-scrollbar-track);

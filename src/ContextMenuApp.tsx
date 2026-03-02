@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
 import {
@@ -9,6 +17,7 @@ import {
 } from "@/lib/api";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
+import { cn } from "@/lib/utils";
 
 const MENU_EDGE_GAP = 8;
 const MENU_MAX_WIDTH = 360;
@@ -31,6 +40,10 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
   const shellRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const actionsRef = useRef<HTMLDivElement | null>(null);
+  const titleViewportRef = useRef<HTMLDivElement | null>(null);
+  const titleTextRef = useRef<HTMLDivElement | null>(null);
+  const [titleScrollDistance, setTitleScrollDistance] = useState(0);
+  const [titleScrollDuration, setTitleScrollDuration] = useState(0);
   const [context, setContext] = useState<NoteContextMenuContext>({
     targetWindowLabel,
     noteId,
@@ -110,6 +123,27 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
   }, []);
 
   const title = context.noteId;
+  const titleShouldScroll = titleScrollDistance > 0;
+
+  const updateTitleOverflow = useCallback(() => {
+    const viewport = titleViewportRef.current;
+    const text = titleTextRef.current;
+    if (!viewport || !text) return;
+    const distance = Math.max(0, Math.ceil(text.scrollWidth - viewport.clientWidth));
+    const nextDistance = distance > 2 ? distance : 0;
+    const nextDuration = nextDistance > 0 ? clamp((nextDistance + 56) / 34, 3.6, 18) : 0;
+    setTitleScrollDistance((prev) => (prev === nextDistance ? prev : nextDistance));
+    setTitleScrollDuration((prev) => (Math.abs(prev - nextDuration) < 0.001 ? prev : nextDuration));
+  }, []);
+
+  const titleStyle = useMemo(
+    () =>
+      ({
+        "--pinote-menu-title-distance": `${titleScrollDistance}px`,
+        "--pinote-menu-title-duration": `${titleScrollDuration}s`,
+      }) as CSSProperties,
+    [titleScrollDistance, titleScrollDuration],
+  );
 
   const fitWindowToContent = useCallback(() => {
     const shell = shellRef.current;
@@ -135,6 +169,7 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
     if (panel.style.width !== panelWidthValue) {
       panel.style.width = panelWidthValue;
     }
+    updateTitleOverflow();
     const measuredShellRect = shell.getBoundingClientRect();
     const heightCss = clamp(Math.ceil(measuredShellRect.height), MENU_MIN_HEIGHT, MENU_MAX_HEIGHT);
     void Promise.all([menuWindow.scaleFactor(), menuWindow.innerSize()])
@@ -193,7 +228,7 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
       .catch((error) => {
         console.error("Failed to fit context menu window:", error);
       });
-  }, [context.anchorX, context.anchorY, menuWindow]);
+  }, [context.anchorX, context.anchorY, menuWindow, updateTitleOverflow]);
 
   useLayoutEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -210,12 +245,40 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
     if (typeof ResizeObserver !== "function") return;
     const observer = new ResizeObserver(() => {
       fitWindowToContent();
+      updateTitleOverflow();
     });
     observer.observe(shell);
     return () => {
       observer.disconnect();
     };
-  }, [fitWindowToContent]);
+  }, [fitWindowToContent, updateTitleOverflow]);
+
+  useEffect(() => {
+    const viewport = titleViewportRef.current;
+    const text = titleTextRef.current;
+    if (!viewport || !text) return;
+    let frame: number | null = null;
+    if (typeof ResizeObserver !== "function") {
+      frame = window.requestAnimationFrame(() => {
+        updateTitleOverflow();
+      });
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      updateTitleOverflow();
+    });
+    observer.observe(viewport);
+    observer.observe(text);
+    frame = window.requestAnimationFrame(() => {
+      updateTitleOverflow();
+    });
+    return () => {
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame);
+      }
+      observer.disconnect();
+    };
+  }, [context.noteId, updateTitleOverflow]);
 
   return (
     <div ref={shellRef} className="inline-block">
@@ -223,11 +286,17 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
         ref={panelRef}
         className="pinote-scrollbar max-w-full overflow-y-auto rounded-lg border border-border bg-background p-1 shadow-lg"
       >
-        <div
-          title={context.noteId}
-          className="block max-w-full truncate px-2 py-1 text-[11px] font-medium text-muted-foreground"
-        >
-          {title}
+        <div ref={titleViewportRef} title={context.noteId} className="pinote-menu-title-viewport">
+          <div
+            ref={titleTextRef}
+            style={titleStyle}
+            className={cn(
+              "pinote-menu-title-text px-2 py-1 text-[11px] font-medium text-muted-foreground",
+              titleShouldScroll ? "pinote-menu-title-text-scroll" : "truncate",
+            )}
+          >
+            {title}
+          </div>
         </div>
         <div className="my-1 h-px bg-border" />
         <div ref={actionsRef} className="inline-flex w-max flex-col">
