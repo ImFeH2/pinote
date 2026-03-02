@@ -8,6 +8,8 @@ use crate::window::{restore_hidden_window, show_all_hidden_windows, toggle_visib
 const DEFAULT_RESTORE_WINDOW_SHORTCUT: &str = "Alt+S";
 const DEFAULT_SHOW_ALL_HIDDEN_WINDOWS_SHORTCUT: &str = "Alt+Shift+H";
 const DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT: &str = "Alt+D";
+const LEGACY_DEFAULT_RESTORE_WINDOW_SHORTCUT: &str = "Alt+N";
+const LEGACY_DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT: &str = "Alt+Shift+N";
 const SETTINGS_FILE_NAME: &str = "settings.json";
 
 struct LoadedShortcuts {
@@ -114,22 +116,31 @@ fn load_shortcuts(app: &tauri::AppHandle) -> LoadedShortcuts {
     let content = path.and_then(|file_path| std::fs::read_to_string(file_path).ok());
     let settings = content.and_then(|raw| serde_json::from_str::<StoredSettings>(&raw).ok());
     let shortcuts = settings.and_then(|stored| stored.shortcuts);
+    let mut restore_window = shortcuts
+        .as_ref()
+        .and_then(|stored| {
+            stored
+                .restore_window
+                .clone()
+                .or(stored.toggle_window.clone())
+        })
+        .unwrap_or_else(|| DEFAULT_RESTORE_WINDOW_SHORTCUT.to_string());
+    let show_all_hidden_windows = shortcuts
+        .as_ref()
+        .and_then(|stored| stored.show_all_hidden_windows.clone())
+        .unwrap_or_else(|| DEFAULT_SHOW_ALL_HIDDEN_WINDOWS_SHORTCUT.to_string());
+    let mut toggle_visible_windows = shortcuts
+        .and_then(|stored| stored.toggle_visible_windows)
+        .unwrap_or_else(|| DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT.to_string());
+    if restore_window == LEGACY_DEFAULT_RESTORE_WINDOW_SHORTCUT
+        && toggle_visible_windows == LEGACY_DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT
+    {
+        restore_window = DEFAULT_RESTORE_WINDOW_SHORTCUT.to_string();
+        toggle_visible_windows = DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT.to_string();
+    }
     LoadedShortcuts {
-        restore_window: shortcuts
-            .as_ref()
-            .and_then(|stored| {
-                stored
-                    .restore_window
-                    .clone()
-                    .or(stored.toggle_window.clone())
-            })
-            .unwrap_or_else(|| DEFAULT_RESTORE_WINDOW_SHORTCUT.to_string()),
-        show_all_hidden_windows: shortcuts
-            .as_ref()
-            .and_then(|stored| stored.show_all_hidden_windows.clone())
-            .unwrap_or_else(|| DEFAULT_SHOW_ALL_HIDDEN_WINDOWS_SHORTCUT.to_string()),
-        toggle_visible_windows: shortcuts
-            .and_then(|stored| stored.toggle_visible_windows)
-            .unwrap_or_else(|| DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT.to_string()),
+        restore_window,
+        show_all_hidden_windows,
+        toggle_visible_windows,
     }
 }

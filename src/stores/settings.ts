@@ -7,6 +7,15 @@ export type WheelResizeModifier = "alt" | "ctrl" | "shift" | "meta";
 export type WindowsGlassEffect = "none" | "mica" | "acrylic" | "blur";
 export type DragMouseButton = "middle" | "right";
 const SETTINGS_FILE = "settings.json";
+const LEGACY_DEFAULT_SHORTCUTS = {
+  restoreWindow: "Alt+N",
+  showAllHiddenWindows: "Alt+Shift+H",
+  toggleVisibleWindows: "Alt+Shift+N",
+  toggleAlwaysOnTop: "Ctrl+Shift+T",
+  toggleTheme: "Ctrl+Shift+D",
+  hideWindow: "Escape",
+  closeWindow: "Ctrl+Shift+W",
+} as const;
 
 export interface Settings {
   theme: Theme;
@@ -144,6 +153,36 @@ function mergeSettings(stored: StoredSettings): Settings {
   };
 }
 
+function shouldMigrateLegacyShortcutDefaults(shortcuts: Settings["shortcuts"]) {
+  return (
+    shortcuts.restoreWindow === LEGACY_DEFAULT_SHORTCUTS.restoreWindow &&
+    shortcuts.showAllHiddenWindows === LEGACY_DEFAULT_SHORTCUTS.showAllHiddenWindows &&
+    shortcuts.toggleVisibleWindows === LEGACY_DEFAULT_SHORTCUTS.toggleVisibleWindows &&
+    shortcuts.toggleAlwaysOnTop === LEGACY_DEFAULT_SHORTCUTS.toggleAlwaysOnTop &&
+    shortcuts.toggleTheme === LEGACY_DEFAULT_SHORTCUTS.toggleTheme &&
+    shortcuts.hideWindow === LEGACY_DEFAULT_SHORTCUTS.hideWindow &&
+    shortcuts.closeWindow === LEGACY_DEFAULT_SHORTCUTS.closeWindow
+  );
+}
+
+function migrateLegacyShortcutDefaults(settings: Settings) {
+  if (!shouldMigrateLegacyShortcutDefaults(settings.shortcuts)) {
+    return { settings, migrated: false };
+  }
+  return {
+    settings: {
+      ...settings,
+      shortcuts: {
+        ...settings.shortcuts,
+        restoreWindow: DEFAULT_SETTINGS.shortcuts.restoreWindow,
+        toggleVisibleWindows: DEFAULT_SETTINGS.shortcuts.toggleVisibleWindows,
+        toggleAlwaysOnTop: DEFAULT_SETTINGS.shortcuts.toggleAlwaysOnTop,
+      },
+    },
+    migrated: true,
+  };
+}
+
 export async function loadSettings(): Promise<Settings> {
   try {
     const fileExists = await exists(SETTINGS_FILE, {
@@ -158,7 +197,12 @@ export async function loadSettings(): Promise<Settings> {
     if (!isRecord(parsed)) {
       return { ...DEFAULT_SETTINGS };
     }
-    return mergeSettings(parsed as StoredSettings);
+    const merged = mergeSettings(parsed as StoredSettings);
+    const { settings, migrated } = migrateLegacyShortcutDefaults(merged);
+    if (migrated) {
+      await saveSettings(settings);
+    }
+    return settings;
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
