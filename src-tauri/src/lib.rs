@@ -9,10 +9,11 @@ use std::{
     path::Path,
     path::PathBuf,
     thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
 use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
+use uuid::Uuid;
 #[cfg(target_os = "windows")]
 use winreg::{
     RegKey,
@@ -281,12 +282,7 @@ fn create_startup_note_file(app: &tauri::AppHandle) -> Option<String> {
     if std::fs::create_dir_all(&notes_dir).is_err() {
         return None;
     }
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .ok()
-        .map(|value| value.as_nanos())
-        .unwrap_or(0);
-    let note_id = format!("{timestamp:032x}");
+    let note_id = Uuid::new_v4().to_string();
     let note_path = notes_dir.join(format!("{note_id}.md"));
     if !note_path.exists() && std::fs::write(&note_path, "").is_err() {
         return None;
@@ -478,6 +474,12 @@ fn open_cli_note_windows(app: &tauri::AppHandle, requests: Vec<CliOpenNoteReques
         open_cli_note_windows_on_main_thread(&handle, &requests);
     }) {
         error!("cli_dispatch_main_thread_failed error={err}");
+    }
+}
+
+pub(crate) fn open_new_note_window(app: &tauri::AppHandle) {
+    if let Some(note_path) = create_startup_note_file(app) {
+        open_cli_note_windows(app, vec![CliOpenNoteRequest { note_path }]);
     }
 }
 

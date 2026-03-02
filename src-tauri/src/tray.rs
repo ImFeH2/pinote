@@ -3,7 +3,10 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
 
-use crate::window::{restore_hidden_window, show_settings_window};
+use crate::{
+    open_new_note_window,
+    window::{restore_hidden_window, restore_latest_hidden_window, show_settings_window},
+};
 
 pub fn setup_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let show_hide = MenuItem::with_id(app, "show_hide", "Restore Hidden", true, None::<&str>)?;
@@ -14,6 +17,7 @@ pub fn setup_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Erro
     let _tray = TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
+        .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show_hide" => {
                 restore_hidden_window(app);
@@ -36,7 +40,10 @@ pub fn setup_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Erro
                 ..
             } = event
             {
-                restore_hidden_window(tray.app_handle());
+                let app = tray.app_handle();
+                if !restore_latest_hidden_window(app) {
+                    open_new_note_window(app);
+                }
             }
         })
         .build(app)?;

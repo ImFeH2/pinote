@@ -243,7 +243,7 @@ pub fn toggle_visible_note_windows(app: &tauri::AppHandle) {
     }
 }
 
-pub fn restore_hidden_window(app: &tauri::AppHandle) {
+pub fn restore_latest_hidden_window(app: &tauri::AppHandle) -> bool {
     if let Some(cache) = load_window_state_cache(app) {
         for cache_key in cache.hidden_stack.iter().rev() {
             let Some(state) = cache.windows.get(cache_key) else {
@@ -262,8 +262,15 @@ pub fn restore_hidden_window(app: &tauri::AppHandle) {
                 false,
             );
             focus_and_shake_window(&window);
-            return;
+            return true;
         }
+    }
+    false
+}
+
+pub fn restore_hidden_window(app: &tauri::AppHandle) {
+    if restore_latest_hidden_window(app) {
+        return;
     }
     focus_and_shake_all_note_windows(app);
 }
