@@ -2,6 +2,8 @@
 
 A lightweight floating markdown scratchpad app for your desktop. Pinote stays on top of your workflow, providing a quick-access area to jot down notes, TODOs, code snippets, and ideas — without breaking your focus.
 
+![Pinote Screenshot](./preview/pinote-screenshot.png)
+
 ## Features
 
 - **Markdown Workspace** — WYSIWYG editing with per-file auto-save and multi-note windows
