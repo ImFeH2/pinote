@@ -11,9 +11,8 @@ import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { Effect, getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
 import { dirname } from "@tauri-apps/api/path";
 import { readTextFile, watchImmediate } from "@tauri-apps/plugin-fs";
-import { Pin } from "lucide-react";
+import { Lock, Pin } from "lucide-react";
 import { Editor } from "@/components/Editor";
-import { cn } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useWindowControl } from "@/hooks/useWindowControl";
@@ -148,6 +147,7 @@ function App({
   const middleDragFrame = useRef<number | null>(null);
   const suppressNextContextMenu = useRef(false);
   const noteOpacityRef = useRef(initialWindowOpacity);
+  const noteReadOnlyRef = useRef(false);
   const scrollPersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteScrollTopRef = useRef(0);
   const latestEditorContentRef = useRef("");
@@ -165,6 +165,7 @@ function App({
   const [runtimePlatform, setRuntimePlatform] = useState<RuntimePlatform>("other");
   const [hasExternalFileChange, setHasExternalFileChange] = useState(false);
   const [editorReloadToken, setEditorReloadToken] = useState(0);
+  const [noteReadOnly, setNoteReadOnly] = useState(false);
 
   const handlePersistedContent = useCallback(
     (content: string, source: "load" | "save") => {
@@ -188,6 +189,10 @@ function App({
   useEffect(() => {
     noteOpacityRef.current = noteOpacity;
   }, [noteOpacity]);
+
+  useEffect(() => {
+    noteReadOnlyRef.current = noteReadOnly;
+  }, [noteReadOnly]);
 
   useEffect(() => {
     load().then((content) => {
@@ -238,6 +243,7 @@ function App({
         if (!state) return;
         if (state.noteId !== noteId) return;
         setNoteOpacityState(clamp(state.opacity, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX));
+        setNoteReadOnly(state.readOnly === true);
         const cachedScrollTop = Math.max(0, state.scrollTop);
         noteScrollTopRef.current = cachedScrollTop;
         setInitialEditorScrollTop(cachedScrollTop);
@@ -258,6 +264,7 @@ function App({
       pushHiddenToTop = false,
       opacity?: number,
       scrollTop?: number,
+      readOnly?: boolean,
     ) => {
       try {
         const [position, size, currentAlwaysOnTop, visible] = await Promise.all([
@@ -290,6 +297,7 @@ function App({
             notePath,
             visibility: nextVisibility,
             alwaysOnTop: currentAlwaysOnTop,
+            readOnly: readOnly ?? noteReadOnlyRef.current,
             opacity: nextOpacity,
             scrollTop: nextScrollTop,
             bounds: {
@@ -315,6 +323,7 @@ function App({
 
   const handleChange = useCallback(
     (markdown: string) => {
+      if (noteReadOnlyRef.current) return;
       latestEditorContentRef.current = markdown;
       save(markdown);
     },
@@ -773,6 +782,13 @@ function App({
       });
   }, [appWindow, windowLabel]);
 
+  const toggleReadOnly = useCallback(() => {
+    const nextReadOnly = !noteReadOnlyRef.current;
+    noteReadOnlyRef.current = nextReadOnly;
+    setNoteReadOnly(nextReadOnly);
+    void persistWindowState(undefined, false, undefined, undefined, nextReadOnly);
+  }, [persistWindowState]);
+
   const closeWindow = useCallback(() => {
     appWindow.close().catch((error) => {
       logError("note-window", "close_window_failed", error, { windowId: windowLabel });
@@ -1113,6 +1129,10 @@ function App({
         action: toggleAlwaysOnTop,
       },
       {
+        shortcut: settings.shortcuts.toggleReadOnly,
+        action: toggleReadOnly,
+      },
+      {
         shortcut: settings.shortcuts.toggleTheme,
         action: toggleTheme,
       },
@@ -1123,8 +1143,10 @@ function App({
       settings.shortcuts.closeWindow,
       settings.shortcuts.hideWindow,
       settings.shortcuts.toggleAlwaysOnTop,
+      settings.shortcuts.toggleReadOnly,
       settings.shortcuts.toggleTheme,
       toggleAlwaysOnTop,
+      toggleReadOnly,
       toggleTheme,
     ],
   );
@@ -1160,6 +1182,10 @@ function App({
       }
       if (action === "toggle-maximize") {
         toggleMaximizeWindow();
+        return;
+      }
+      if (action === "toggle-read-only") {
+        toggleReadOnly();
         return;
       }
       if (action === "hide-window") {
@@ -1199,6 +1225,7 @@ function App({
     openNote,
     openSettings,
     toggleMaximizeWindow,
+    toggleReadOnly,
     windowLabel,
   ]);
 
@@ -1279,6 +1306,7 @@ function App({
   return (
     <div
       data-pinned={alwaysOnTop ? "true" : "false"}
+      data-read-only={noteReadOnly ? "true" : "false"}
       className="pinote-window relative flex h-screen flex-col overflow-hidden rounded-lg"
       style={pinnedVisualStyle}
       onContextMenu={openContextMenu}
@@ -1307,20 +1335,30 @@ function App({
           </button>
         </div>
       ) : null}
-      <div
-        className={cn(
-          "pinote-pinned-badge pointer-events-none absolute right-3 top-3 z-30 flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200",
-          alwaysOnTop ? "translate-y-0" : "-translate-y-1",
-        )}
-        style={{ opacity: alwaysOnTop ? noteOpacity : 0 }}
-      >
-        <Pin size={11} />
+      <div className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1.5">
+        {noteReadOnly ? (
+          <div
+            className="pinote-readonly-badge flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200"
+            style={{ opacity: noteOpacity }}
+          >
+            <Lock size={11} />
+          </div>
+        ) : null}
+        {alwaysOnTop ? (
+          <div
+            className="pinote-pinned-badge flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200"
+            style={{ opacity: noteOpacity }}
+          >
+            <Pin size={11} />
+          </div>
+        ) : null}
       </div>
       <div className="relative flex flex-1 flex-col overflow-hidden">
         <Editor
           key={`editor-${editorReloadToken}`}
           defaultValue={initialContent}
           onChange={handleChange}
+          readOnly={noteReadOnly}
           initialScrollTop={initialEditorScrollTop}
           onScrollTopChange={handleScrollTopChange}
           style={editorStyle}

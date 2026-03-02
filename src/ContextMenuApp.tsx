@@ -376,6 +376,15 @@ function ContextMenuApp({
             <button
               type="button"
               onClick={() => {
+                dispatchAction("toggle-read-only");
+              }}
+              className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              Toggle Read-Only
+            </button>
+            <button
+              type="button"
+              onClick={() => {
                 dispatchAction("hide-window");
               }}
               className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"

@@ -4,6 +4,7 @@ import {
   rootCtx,
   defaultValueCtx,
   editorViewCtx,
+  editorViewOptionsCtx,
 } from "@milkdown/kit/core";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
 import { gfm } from "@milkdown/kit/preset/gfm";
@@ -19,10 +20,11 @@ import "@milkdown/theme-nord/style.css";
 
 interface EditorInnerProps {
   defaultValue: string;
+  readOnly: boolean;
   onChange: (markdown: string) => void;
 }
 
-function EditorInner({ defaultValue, onChange }: EditorInnerProps) {
+function EditorInner({ defaultValue, readOnly, onChange }: EditorInnerProps) {
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -36,6 +38,12 @@ function EditorInner({ defaultValue, onChange }: EditorInnerProps) {
         .config((ctx) => {
           ctx.set(rootCtx, root);
           ctx.set(defaultValueCtx, defaultValue);
+          ctx.update(editorViewOptionsCtx, (prev) => {
+            return {
+              ...prev,
+              editable: () => !readOnly,
+            };
+          });
           ctx.get(listenerCtx).markdownUpdated((_ctx, markdown) => {
             onChangeRef.current(markdown);
           });
@@ -50,8 +58,21 @@ function EditorInner({ defaultValue, onChange }: EditorInnerProps) {
     [],
   );
 
+  useEffect(() => {
+    if (loading) return;
+    const editor = getInstance();
+    if (!editor) return;
+    editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      view.setProps({
+        editable: () => !readOnly,
+      });
+    });
+  }, [getInstance, loading, readOnly]);
+
   const handleContainerClick = useCallback(
     (e: React.MouseEvent) => {
+      if (readOnly) return;
       if (loading) return;
       const editor = getInstance();
       if (!editor) return;
@@ -84,7 +105,7 @@ function EditorInner({ defaultValue, onChange }: EditorInnerProps) {
         view.focus();
       });
     },
-    [loading, getInstance],
+    [getInstance, loading, readOnly],
   );
 
   return (
@@ -97,6 +118,7 @@ function EditorInner({ defaultValue, onChange }: EditorInnerProps) {
 interface EditorProps {
   defaultValue: string;
   onChange: (markdown: string) => void;
+  readOnly?: boolean;
   initialScrollTop?: number;
   onScrollTopChange?: (scrollTop: number) => void;
   style?: CSSProperties;
@@ -105,6 +127,7 @@ interface EditorProps {
 export function Editor({
   defaultValue,
   onChange,
+  readOnly = false,
   initialScrollTop = 0,
   onScrollTopChange,
   style,
@@ -143,7 +166,7 @@ export function Editor({
       style={style}
     >
       <MilkdownProvider>
-        <EditorInner defaultValue={defaultValue} onChange={onChange} />
+        <EditorInner defaultValue={defaultValue} readOnly={readOnly} onChange={onChange} />
       </MilkdownProvider>
     </div>
   );

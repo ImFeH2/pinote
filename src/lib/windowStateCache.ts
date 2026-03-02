@@ -23,6 +23,7 @@ export interface CachedWindowState {
   notePath: string;
   visibility: WindowVisibility;
   alwaysOnTop: boolean;
+  readOnly: boolean;
   opacity: number;
   scrollTop: number;
   bounds: WindowBounds;
@@ -115,6 +116,7 @@ function sanitizeWindowState(value: unknown): CachedWindowState | null {
     notePath,
     visibility: asVisibility(source.visibility),
     alwaysOnTop: source.alwaysOnTop === true,
+    readOnly: source.readOnly === true,
     opacity: asOpacity(source.opacity),
     scrollTop: asScrollTop(source.scrollTop),
     bounds: asBounds(source.bounds),
@@ -305,6 +307,7 @@ export async function upsertWindowState(
     const now = new Date().toISOString();
     const nextState: CachedWindowState = {
       ...state,
+      readOnly: state.readOnly === true,
       opacity: asOpacity(state.opacity),
       scrollTop: asScrollTop(state.scrollTop),
       updatedAt: state.updatedAt || now,

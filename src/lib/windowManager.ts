@@ -8,6 +8,7 @@ import {
 import {
   type WindowBounds,
   type WindowVisibility,
+  getWindowStateByNotePath,
   upsertWindowState,
 } from "@/lib/windowStateCache";
 
@@ -18,6 +19,7 @@ interface OpenAndTrackNoteWindowOptions {
   visibility?: WindowVisibility;
   focus?: boolean;
   alwaysOnTop?: boolean;
+  readOnly?: boolean;
   opacity?: number;
   scrollTop?: number;
   bounds?: WindowBounds;
@@ -46,11 +48,16 @@ export async function openAndTrackNoteWindow(options: OpenAndTrackNoteWindowOpti
     visibility: options.visibility,
     focus: options.focus,
     alwaysOnTop: options.alwaysOnTop,
+    readOnly: options.readOnly,
     opacity: options.opacity,
     scrollTop: options.scrollTop,
     bounds: options.bounds,
     skipTaskbar: options.skipTaskbar,
   });
-  await upsertWindowState(opened);
+  const cached = await getWindowStateByNotePath(nextNotePath);
+  await upsertWindowState({
+    ...opened,
+    readOnly: options.readOnly ?? cached?.readOnly ?? false,
+  });
   return opened;
 }

@@ -18,6 +18,12 @@
   --color-pinned-badge-border: hsl(217 91% 60% / 0.4);
   --color-pinned-badge-bg: hsl(217 91% 60% / 0.16);
   --color-pinned-badge-text: hsl(217 91% 43%);
+  --color-readonly-border: hsl(24 95% 53%);
+  --color-readonly-glow: hsl(24 95% 53% / 0.32);
+  --color-readonly-shadow: hsl(24 95% 53% / 0.28);
+  --color-readonly-badge-border: hsl(24 95% 53% / 0.4);
+  --color-readonly-badge-bg: hsl(24 95% 53% / 0.16);
+  --color-readonly-badge-text: hsl(24 95% 38%);
   --color-scrollbar-track: hsl(210 40% 96.1% / 0.28);
   --color-scrollbar-thumb: hsl(215.4 16.3% 46.9% / 0.5);
   --color-scrollbar-thumb-hover: hsl(215.4 16.3% 46.9% / 0.72);
@@ -46,6 +52,12 @@
     --color-pinned-badge-border: hsl(213 94% 68% / 0.44);
     --color-pinned-badge-bg: hsl(213 94% 68% / 0.2);
     --color-pinned-badge-text: hsl(213 100% 86%);
+    --color-readonly-border: hsl(30 100% 65%);
+    --color-readonly-glow: hsl(30 100% 65% / 0.4);
+    --color-readonly-shadow: hsl(30 100% 65% / 0.34);
+    --color-readonly-badge-border: hsl(30 100% 65% / 0.48);
+    --color-readonly-badge-bg: hsl(30 100% 65% / 0.24);
+    --color-readonly-badge-text: hsl(35 100% 88%);
     --color-scrollbar-track: hsl(217.2 32.6% 17.5% / 0.24);
     --color-scrollbar-thumb: hsl(215 20.2% 65.1% / 0.5);
     --color-scrollbar-thumb-hover: hsl(215 20.2% 65.1% / 0.74);
@@ -100,6 +112,19 @@
     transition: opacity 220ms ease;
   }
 
+  .pinote-window::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    box-shadow:
+      0 0 0 1px var(--color-readonly-border),
+      0 0 28px 3px var(--color-readonly-glow);
+    transition: opacity 220ms ease;
+  }
+
   .pinote-window[data-pinned="true"] {
     border-color: color-mix(
       in srgb,
@@ -118,10 +143,56 @@
     opacity: var(--pinote-visual-opacity);
   }
 
+  .pinote-window[data-read-only="true"] {
+    border-color: color-mix(
+      in srgb,
+      var(--color-readonly-border) var(--pinote-visual-opacity-percent),
+      transparent
+    );
+    box-shadow: 0 16px 36px -18px
+      color-mix(
+        in srgb,
+        var(--color-readonly-shadow) var(--pinote-visual-opacity-percent),
+        transparent
+      );
+  }
+
+  .pinote-window[data-read-only="true"]::after {
+    opacity: var(--pinote-visual-opacity);
+  }
+
+  .pinote-window[data-pinned="true"][data-read-only="true"] {
+    border-color: color-mix(
+      in srgb,
+      color-mix(in srgb, var(--color-pinned-border) 50%, var(--color-readonly-border) 50%)
+        var(--pinote-visual-opacity-percent),
+      transparent
+    );
+    box-shadow:
+      0 16px 36px -18px
+        color-mix(
+          in srgb,
+          var(--color-pinned-shadow) var(--pinote-visual-opacity-percent),
+          transparent
+        ),
+      0 16px 36px -18px
+        color-mix(
+          in srgb,
+          var(--color-readonly-shadow) var(--pinote-visual-opacity-percent),
+          transparent
+        );
+  }
+
   .pinote-pinned-badge {
     border: 1px solid var(--color-pinned-badge-border);
     background: var(--color-pinned-badge-bg);
     color: var(--color-pinned-badge-text);
+  }
+
+  .pinote-readonly-badge {
+    border: 1px solid var(--color-readonly-badge-border);
+    background: var(--color-readonly-badge-bg);
+    color: var(--color-readonly-badge-text);
   }
 
   .pinote-menu-title-viewport {

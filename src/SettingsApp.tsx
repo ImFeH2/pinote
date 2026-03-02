@@ -46,6 +46,7 @@ const shortcutItems = [
   { key: "showAllHiddenWindows", label: "Show All Hidden Windows" },
   { key: "toggleVisibleWindows", label: "Toggle Visible Windows" },
   { key: "toggleAlwaysOnTop", label: "Toggle Always On Top" },
+  { key: "toggleReadOnly", label: "Toggle Read-Only" },
   { key: "toggleTheme", label: "Toggle Theme" },
   { key: "hideWindow", label: "Hide Window" },
   { key: "closeWindow", label: "Close Window" },

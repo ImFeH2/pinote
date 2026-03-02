@@ -12,6 +12,7 @@ const LEGACY_DEFAULT_SHORTCUTS = {
   showAllHiddenWindows: "Alt+Shift+H",
   toggleVisibleWindows: "Alt+Shift+N",
   toggleAlwaysOnTop: "Ctrl+Shift+T",
+  toggleReadOnly: "Alt+R",
   toggleTheme: "Ctrl+Shift+D",
   hideWindow: "Escape",
   closeWindow: "Ctrl+Shift+W",
@@ -41,6 +42,7 @@ export interface Settings {
     showAllHiddenWindows: string;
     toggleVisibleWindows: string;
     toggleAlwaysOnTop: string;
+    toggleReadOnly: string;
     toggleTheme: string;
     hideWindow: string;
     closeWindow: string;
@@ -70,6 +72,7 @@ export const DEFAULT_SETTINGS: Settings = {
     showAllHiddenWindows: "Alt+Shift+H",
     toggleVisibleWindows: "Alt+D",
     toggleAlwaysOnTop: "Alt+A",
+    toggleReadOnly: "Alt+R",
     toggleTheme: "Ctrl+Shift+D",
     hideWindow: "Escape",
     closeWindow: "Ctrl+Shift+W",
@@ -159,6 +162,7 @@ function shouldMigrateLegacyShortcutDefaults(shortcuts: Settings["shortcuts"]) {
     shortcuts.showAllHiddenWindows === LEGACY_DEFAULT_SHORTCUTS.showAllHiddenWindows &&
     shortcuts.toggleVisibleWindows === LEGACY_DEFAULT_SHORTCUTS.toggleVisibleWindows &&
     shortcuts.toggleAlwaysOnTop === LEGACY_DEFAULT_SHORTCUTS.toggleAlwaysOnTop &&
+    shortcuts.toggleReadOnly === LEGACY_DEFAULT_SHORTCUTS.toggleReadOnly &&
     shortcuts.toggleTheme === LEGACY_DEFAULT_SHORTCUTS.toggleTheme &&
     shortcuts.hideWindow === LEGACY_DEFAULT_SHORTCUTS.hideWindow &&
     shortcuts.closeWindow === LEGACY_DEFAULT_SHORTCUTS.closeWindow
@@ -177,6 +181,7 @@ function migrateLegacyShortcutDefaults(settings: Settings) {
         restoreWindow: DEFAULT_SETTINGS.shortcuts.restoreWindow,
         toggleVisibleWindows: DEFAULT_SETTINGS.shortcuts.toggleVisibleWindows,
         toggleAlwaysOnTop: DEFAULT_SETTINGS.shortcuts.toggleAlwaysOnTop,
+        toggleReadOnly: DEFAULT_SETTINGS.shortcuts.toggleReadOnly,
       },
     },
     migrated: true,

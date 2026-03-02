@@ -40,6 +40,7 @@ interface OpenNoteWindowOptions {
   visibility?: WindowVisibility;
   focus?: boolean;
   alwaysOnTop?: boolean;
+  readOnly?: boolean;
   opacity?: number;
   scrollTop?: number;
   bounds?: WindowBounds;
@@ -52,6 +53,7 @@ export interface OpenedNoteWindow {
   notePath: string;
   visibility: WindowVisibility;
   alwaysOnTop: boolean;
+  readOnly: boolean;
   opacity: number;
   scrollTop: number;
   bounds: WindowBounds;
@@ -63,6 +65,7 @@ export type NoteContextMenuAction =
   | "open-settings"
   | "minimize-window"
   | "toggle-maximize"
+  | "toggle-read-only"
   | "hide-window"
   | "close-window";
 
@@ -132,6 +135,7 @@ async function getWindowSnapshot(
   window: WebviewWindow,
   noteId: string,
   notePath: string,
+  readOnly = false,
   opacity = 1,
   scrollTop = 0,
 ): Promise<OpenedNoteWindow> {
@@ -147,6 +151,7 @@ async function getWindowSnapshot(
     notePath,
     visibility: visible ? "visible" : "hidden",
     alwaysOnTop,
+    readOnly,
     opacity,
     scrollTop: Math.max(0, scrollTop),
     bounds: {
@@ -497,6 +502,7 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
         existing,
         normalizedNoteId,
         notePath,
+        options.readOnly ?? false,
         options.opacity ?? 1,
         options.scrollTop ?? 0,
       );
@@ -510,6 +516,7 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
       existing,
       normalizedNoteId,
       notePath,
+      options.readOnly ?? false,
       options.opacity ?? 1,
       options.scrollTop ?? 0,
     );
@@ -525,6 +532,7 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
       noteWindow,
       normalizedNoteId,
       notePath,
+      options.readOnly ?? false,
       options.opacity ?? 1,
       options.scrollTop ?? 0,
     );
@@ -537,6 +545,7 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
     noteWindow,
     normalizedNoteId,
     notePath,
+    options.readOnly ?? false,
     options.opacity ?? 1,
     options.scrollTop ?? 0,
   );
