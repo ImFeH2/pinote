@@ -371,10 +371,14 @@ function App({
   }, [appWindow, settings.hideNoteWindowsFromTaskbar]);
 
   const minimizeWindow = useCallback(() => {
+    if (settings.hideNoteWindowsFromTaskbar) {
+      void hideWindow();
+      return;
+    }
     appWindow.minimize().catch((error) => {
       console.error("Failed to minimize window:", error);
     });
-  }, [appWindow]);
+  }, [appWindow, hideWindow, settings.hideNoteWindowsFromTaskbar]);
 
   const toggleMaximizeWindow = useCallback(() => {
     appWindow

@@ -7,6 +7,7 @@ import {
   type NoteContextMenuAction,
   type NoteContextMenuContext,
 } from "@/lib/api";
+import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 
 const MENU_EDGE_GAP = 8;
@@ -25,6 +26,7 @@ function parsePx(value: string) {
 
 function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteContextMenuContext) {
   useTheme();
+  const { settings } = useSettings();
   const menuWindow = useMemo(() => getCurrentWindow(), []);
   const shellRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -239,15 +241,17 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
           >
             Open Settings
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              dispatchAction("minimize-window");
-            }}
-            className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
-            Minimize Window
-          </button>
+          {!settings.hideNoteWindowsFromTaskbar && (
+            <button
+              type="button"
+              onClick={() => {
+                dispatchAction("minimize-window");
+              }}
+              className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              Minimize Window
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
