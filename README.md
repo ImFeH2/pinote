@@ -4,21 +4,15 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 
 ## Features
 
-- **Markdown Workspace** — WYSIWYG editing with auto-save and multi-note windows
-- **Always-on-Top Clarity** — Pin notes above other apps and identify state with border glow and a pin badge
-- **Mouse-first Window Control** — Middle-click toggles pin, drag-to-move button is configurable (`Middle`/`Right`), and right-click opens quick actions
-- **Cursor-centered Resize** — `Alt+Wheel` by default, with support for `Ctrl` / `Shift` / `Meta`
-- **Shortcut & Interaction Customization** — Configure keyboard shortcuts, wheel modifiers, and drag mouse button in Settings
-- **Quick Access** — Global shortcut (`Alt+S`) and system tray action restore the most recently hidden note window
-- **Session Restore** — Window state cache restores note windows (position, size, pin state, visibility) on next launch
-- **Scroll Position Restore** — Each note remembers editor scroll position across hide/show and restart
+- **Markdown Workspace** — WYSIWYG editing with per-file auto-save and multi-note windows
+- **External File Sync** — Detects external file changes in real time and auto-reloads when safe
+- **Single Window per File** — Opening the same path focuses the existing window instead of creating duplicate editors
+- **Window Workflow Shortcuts** — Restore latest hidden window, show all hidden windows, and toggle the current visible window set
+- **Shortcut & Mouse Customization** — Configure keyboard shortcuts, wheel modifiers, and drag button (`Middle` / `Right`) in Settings
+- **Session Restore** — Restores window position, size, visibility, always-on-top, opacity, and editor scroll position
 - **Searchable Open History** — Find and reopen previously opened notes by path or content
-- **Taskbar Visibility Control** — Hide or show note windows in the system taskbar from Settings (enabled by default)
-- **CLI Markdown Open** — Launch Pinote with `.md`/`.markdown` file paths to open or focus dedicated note windows
-- **Personalized Appearance** — Theme, per-note opacity, typography, page spacing, and modern scrollbar styling
-- **Platform Glass Effects** — Windows uses selectable glass mode (`Mica` default), macOS uses a simple glass toggle, and unsupported platforms hide this option
-- **Desktop Integration** — Note windows are created from UUID-based files in a configurable notes directory, with launch-at-startup support
-- **In-app Maintenance** — Built-in updater, version info, and repository link in About
+- **Appearance & Platform Controls** — Theme, per-note opacity, typography, spacing, taskbar visibility, and optional glass effects
+- **Desktop Integration** — System tray controls, launch-at-startup option, and CLI open for `.md` / `.markdown`
 
 ## Keyboard Shortcuts
 
