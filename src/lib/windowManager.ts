@@ -1,8 +1,15 @@
 import { type CliOpenNoteRequest, openNoteWindow } from "@/lib/api";
-import { buildGeneratedNoteId, getNoteIdFromPath } from "@/lib/notes";
+import {
+  createManagedNoteFile,
+  getNoteIdFromPath,
+  normalizeNoteId,
+  resolveManagedNotePath,
+} from "@/lib/notes";
 import {
   getWindowStateByNotePath,
   listWindowStatesInOrder,
+  type WindowBounds,
+  type WindowVisibility,
   upsertWindowState,
 } from "@/lib/windowStateCache";
 
@@ -15,17 +22,60 @@ interface OpenCliMarkdownNotesOptions {
   skipTaskbar?: boolean;
 }
 
+interface OpenAndTrackNoteWindowOptions {
+  noteId?: string;
+  notePath?: string;
+  windowId?: string;
+  visibility?: WindowVisibility;
+  focus?: boolean;
+  alwaysOnTop?: boolean;
+  opacity?: number;
+  scrollTop?: number;
+  bounds?: WindowBounds;
+  skipTaskbar?: boolean;
+  ensureManagedFile?: boolean;
+}
+
+export async function openAndTrackNoteWindow(options: OpenAndTrackNoteWindowOptions = {}) {
+  const inputPath = options.notePath?.trim() ?? "";
+  let nextNoteId = normalizeNoteId(
+    options.noteId?.trim() || (inputPath ? getNoteIdFromPath(inputPath) : undefined),
+  );
+  let nextNotePath = inputPath;
+  if (!nextNotePath) {
+    if (options.ensureManagedFile) {
+      const managed = await createManagedNoteFile(nextNoteId);
+      nextNoteId = managed.noteId;
+      nextNotePath = managed.notePath;
+    } else {
+      nextNotePath = await resolveManagedNotePath(nextNoteId);
+    }
+  }
+  const opened = await openNoteWindow(nextNoteId, {
+    windowId: options.windowId,
+    notePath: nextNotePath,
+    visibility: options.visibility,
+    focus: options.focus,
+    alwaysOnTop: options.alwaysOnTop,
+    opacity: options.opacity,
+    scrollTop: options.scrollTop,
+    bounds: options.bounds,
+    skipTaskbar: options.skipTaskbar,
+  });
+  await upsertWindowState(opened);
+  return opened;
+}
+
 export async function restoreWindowsFromCacheOrCreateNew(options: RestoreWindowsOptions = {}) {
   const states = await listWindowStatesInOrder();
   if (states.length === 0) {
     if (options.skipCreateWhenEmpty) return;
-    const noteId = buildGeneratedNoteId();
-    const opened = await openNoteWindow(noteId, {
+    await openAndTrackNoteWindow({
       visibility: "visible",
       focus: true,
       skipTaskbar: options.skipTaskbar,
+      ensureManagedFile: true,
     });
-    await upsertWindowState(opened);
     return;
   }
 
@@ -33,7 +83,8 @@ export async function restoreWindowsFromCacheOrCreateNew(options: RestoreWindows
   const focusWindowId = visibleStates[visibleStates.length - 1]?.windowId;
 
   for (const state of states) {
-    const opened = await openNoteWindow(state.noteId, {
+    await openAndTrackNoteWindow({
+      noteId: state.noteId,
       windowId: state.windowId,
       notePath: state.notePath,
       visibility: state.visibility,
@@ -44,7 +95,6 @@ export async function restoreWindowsFromCacheOrCreateNew(options: RestoreWindows
       bounds: state.bounds,
       skipTaskbar: options.skipTaskbar,
     });
-    await upsertWindowState(opened);
   }
 }
 
@@ -65,7 +115,8 @@ export async function openCliMarkdownNotes(
   for (let index = 0; index < notePaths.length; index += 1) {
     const notePath = notePaths[index];
     const previous = await getWindowStateByNotePath(notePath);
-    const opened = await openNoteWindow(getNoteIdFromPath(notePath), {
+    await openAndTrackNoteWindow({
+      noteId: getNoteIdFromPath(notePath),
       notePath,
       visibility: "visible",
       focus: index === notePaths.length - 1,
@@ -73,6 +124,5 @@ export async function openCliMarkdownNotes(
       scrollTop: previous?.scrollTop ?? 0,
       skipTaskbar: options.skipTaskbar,
     });
-    await upsertWindowState(opened);
   }
 }

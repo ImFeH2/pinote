@@ -21,12 +21,11 @@ import {
   closeNoteContextMenu,
   listenNoteContextMenuAction,
   openNoteContextMenu,
-  openNoteWindow,
   openSettingsWindow,
   type NoteContextMenuAction,
 } from "@/lib/api";
-import { buildGeneratedNoteId } from "@/lib/notes";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
+import { openAndTrackNoteWindow } from "@/lib/windowManager";
 import {
   getWindowState,
   removeWindowState,
@@ -332,7 +331,6 @@ function App({
   }, []);
 
   const openNote = useCallback(() => {
-    const targetNoteId = buildGeneratedNoteId();
     Promise.all([appWindow.outerPosition(), appWindow.innerSize(), appWindow.isAlwaysOnTop()])
       .then(async ([position, size, currentAlwaysOnTop]) => {
         let nextX = position.x + NEW_NOTE_POSITION_OFFSET_X;
@@ -354,10 +352,11 @@ function App({
           nextX = clamp(nextX, minX, maxX);
           nextY = clamp(nextY, minY, maxY);
         }
-        return openNoteWindow(targetNoteId, {
+        return openAndTrackNoteWindow({
           alwaysOnTop: currentAlwaysOnTop,
           opacity: noteOpacityRef.current,
           skipTaskbar: settings.hideNoteWindowsFromTaskbar,
+          ensureManagedFile: true,
           bounds: {
             x: nextX,
             y: nextY,
@@ -365,9 +364,6 @@ function App({
             height: size.height,
           },
         });
-      })
-      .then((opened) => {
-        return upsertWindowState(opened);
       })
       .catch((error) => {
         console.error("Failed to open note window:", error);

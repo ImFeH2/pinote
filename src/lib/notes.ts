@@ -1,4 +1,5 @@
-import { appDataDir, resolve } from "@tauri-apps/api/path";
+import { appDataDir, dirname, resolve } from "@tauri-apps/api/path";
+import { exists, mkdir, writeTextFile } from "@tauri-apps/plugin-fs";
 import { loadSettings } from "@/stores/settings";
 const NOTE_WINDOW_PREFIX = "note-";
 const NOTE_FILE_EXTENSION = ".md";
@@ -97,4 +98,31 @@ export async function resolveManagedNotesDirectory() {
 export async function resolveManagedNotePath(noteId: string) {
   const notesDirectory = await resolveManagedNotesDirectory();
   return resolve(notesDirectory, `${normalizeNoteId(noteId)}${NOTE_FILE_EXTENSION}`);
+}
+
+async function ensureParentDirectory(path: string) {
+  const parent = (await dirname(path)).trim();
+  if (!parent) return;
+  const parentExists = await exists(parent);
+  if (parentExists) return;
+  await mkdir(parent, { recursive: true });
+}
+
+export async function ensureNoteFile(notePath: string) {
+  const targetPath = notePath.trim();
+  if (!targetPath) return;
+  const fileExists = await exists(targetPath);
+  if (fileExists) return;
+  await ensureParentDirectory(targetPath);
+  await writeTextFile(targetPath, "");
+}
+
+export async function createManagedNoteFile(noteId?: string) {
+  const normalizedNoteId = normalizeNoteId(noteId);
+  const notePath = await resolveManagedNotePath(normalizedNoteId);
+  await ensureNoteFile(notePath);
+  return {
+    noteId: normalizedNoteId,
+    notePath,
+  };
 }

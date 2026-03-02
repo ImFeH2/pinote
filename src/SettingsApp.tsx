@@ -8,18 +8,17 @@ import { cn } from "@/lib/utils";
 import { TitleBar } from "@/components/TitleBar";
 import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
-import { getNoteIdFromPath, resolveDefaultNotesDirectory } from "@/lib/notes";
+import { resolveDefaultNotesDirectory } from "@/lib/notes";
 import { searchNoteHistory, type NoteHistorySearchResult } from "@/lib/noteHistory";
 import { type WheelResizeModifier } from "@/stores/settings";
 import {
   getDefaultMarkdownOpenEnabled,
   getOpenWithPinoteEnabled,
-  openNoteWindow,
   setNoteWindowsSkipTaskbar,
   setDefaultMarkdownOpenEnabled,
   setOpenWithPinoteEnabled,
 } from "@/lib/api";
-import { upsertWindowState } from "@/lib/windowStateCache";
+import { openAndTrackNoteWindow } from "@/lib/windowManager";
 import {
   checkForUpdates,
   downloadUpdate,
@@ -346,14 +345,13 @@ export function SettingsApp() {
     if (!notePath) return;
     setHistoryOpeningPath(notePath);
     try {
-      const noteId = item.noteId.trim() || getNoteIdFromPath(notePath);
-      const opened = await openNoteWindow(noteId, {
+      await openAndTrackNoteWindow({
+        noteId: item.noteId,
         notePath,
         windowId: item.windowId.trim() || undefined,
         visibility: "visible",
         focus: true,
       });
-      await upsertWindowState(opened);
       setHistoryError(null);
       setHistoryReloadToken((value) => value + 1);
     } catch (error) {
