@@ -1046,40 +1046,49 @@ function App({
     };
   }, [settings.wheelOpacityModifier, settings.wheelResizeModifier]);
 
+  const localShortcutActions = useMemo(
+    () => [
+      {
+        shortcut: settings.shortcuts.hideWindow,
+        action: hideWindow,
+      },
+      {
+        shortcut: settings.shortcuts.closeWindow,
+        action: closeWindow,
+      },
+      {
+        shortcut: settings.shortcuts.toggleAlwaysOnTop,
+        action: toggleAlwaysOnTop,
+      },
+      {
+        shortcut: settings.shortcuts.toggleTheme,
+        action: toggleTheme,
+      },
+    ],
+    [
+      closeWindow,
+      hideWindow,
+      settings.shortcuts.closeWindow,
+      settings.shortcuts.hideWindow,
+      settings.shortcuts.toggleAlwaysOnTop,
+      settings.shortcuts.toggleTheme,
+      toggleAlwaysOnTop,
+      toggleTheme,
+    ],
+  );
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (shortcutMatchesEvent(settings.shortcuts.hideWindow, e)) {
+      for (const item of localShortcutActions) {
+        if (!shortcutMatchesEvent(item.shortcut, e)) continue;
         e.preventDefault();
-        hideWindow();
+        item.action();
         return;
-      }
-      if (shortcutMatchesEvent(settings.shortcuts.closeWindow, e)) {
-        e.preventDefault();
-        closeWindow();
-        return;
-      }
-      if (shortcutMatchesEvent(settings.shortcuts.toggleAlwaysOnTop, e)) {
-        e.preventDefault();
-        toggleAlwaysOnTop();
-        return;
-      }
-      if (shortcutMatchesEvent(settings.shortcuts.toggleTheme, e)) {
-        e.preventDefault();
-        toggleTheme();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    closeWindow,
-    hideWindow,
-    settings.shortcuts.closeWindow,
-    settings.shortcuts.hideWindow,
-    settings.shortcuts.toggleAlwaysOnTop,
-    settings.shortcuts.toggleTheme,
-    toggleAlwaysOnTop,
-    toggleTheme,
-  ]);
+  }, [localShortcutActions]);
 
   useEffect(() => {
     let disposed = false;
