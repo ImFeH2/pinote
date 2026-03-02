@@ -478,6 +478,7 @@ fn consume_cli_open_note_requests(
 pub fn run() {
     tauri::Builder::default()
         .manage(PendingCliOpenNotes::default())
+        .manage(window::VisibleWindowToggleState::default())
         .plugin({
             let level = if cfg!(debug_assertions) {
                 LevelFilter::Debug

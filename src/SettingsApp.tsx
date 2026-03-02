@@ -37,6 +37,7 @@ const HISTORY_SEARCH_DEBOUNCE_MS = 120;
 
 const shortcutItems = [
   { key: "restoreWindow", label: "Restore Hidden Window" },
+  { key: "toggleVisibleWindows", label: "Toggle Visible Windows" },
   { key: "toggleAlwaysOnTop", label: "Toggle Always On Top" },
   { key: "toggleTheme", label: "Toggle Theme" },
   { key: "hideWindow", label: "Hide Window" },
