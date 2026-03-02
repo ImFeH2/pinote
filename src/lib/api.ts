@@ -179,7 +179,7 @@ async function createNoteWindow(
     resizable: true,
     alwaysOnTop: options.alwaysOnTop ?? false,
     skipTaskbar: options.skipTaskbar ?? true,
-    visible: options.visibility !== "hidden",
+    visible: false,
   } as ConstructorParameters<typeof WebviewWindow>[1]);
 
   await waitForWindowCreated(noteWindow);
