@@ -125,13 +125,18 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
       parsePx(panelStyles.borderLeftWidth) +
       parsePx(panelStyles.borderRightWidth);
     const actionsRect = actions.getBoundingClientRect();
-    const shellRect = shell.getBoundingClientRect();
     const widthCss = clamp(
       Math.ceil(actionsRect.width + shellPaddingX + panelPaddingX),
       1,
       MENU_MAX_WIDTH,
     );
-    const heightCss = clamp(Math.ceil(shellRect.height), MENU_MIN_HEIGHT, MENU_MAX_HEIGHT);
+    const panelWidthCss = Math.max(1, widthCss - shellPaddingX);
+    const panelWidthValue = `${panelWidthCss}px`;
+    if (panel.style.width !== panelWidthValue) {
+      panel.style.width = panelWidthValue;
+    }
+    const measuredShellRect = shell.getBoundingClientRect();
+    const heightCss = clamp(Math.ceil(measuredShellRect.height), MENU_MIN_HEIGHT, MENU_MAX_HEIGHT);
     void Promise.all([menuWindow.scaleFactor(), menuWindow.innerSize()])
       .then(async ([scaleFactor, size]) => {
         const factor = Number.isFinite(scaleFactor) && scaleFactor > 0 ? scaleFactor : 1;
@@ -216,9 +221,12 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
     <div ref={shellRef} className="inline-block">
       <div
         ref={panelRef}
-        className="pinote-scrollbar overflow-y-auto rounded-lg border border-border bg-background p-1 shadow-lg"
+        className="pinote-scrollbar max-w-full overflow-y-auto rounded-lg border border-border bg-background p-1 shadow-lg"
       >
-        <div className="truncate px-2 py-1 text-[11px] font-medium text-muted-foreground">
+        <div
+          title={context.noteId}
+          className="block max-w-full truncate px-2 py-1 text-[11px] font-medium text-muted-foreground"
+        >
           {title}
         </div>
         <div className="my-1 h-px bg-border" />
