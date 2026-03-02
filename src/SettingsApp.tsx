@@ -10,8 +10,10 @@ import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
 import { resolveDefaultNotesDirectory } from "@/lib/notes";
 import { searchNoteHistory, type NoteHistorySearchResult } from "@/lib/noteHistory";
-import { type WheelResizeModifier } from "@/stores/settings";
+import { type WheelResizeModifier, type WindowsGlassEffect } from "@/stores/settings";
 import {
+  getRuntimePlatform,
+  type RuntimePlatform,
   getDefaultMarkdownOpenEnabled,
   getOpenWithPinoteEnabled,
   setNoteWindowsSkipTaskbar,
@@ -60,6 +62,13 @@ const wheelResizeModifierOptions: Array<{ value: WheelResizeModifier; label: str
   { value: "ctrl", label: "Ctrl" },
   { value: "shift", label: "Shift" },
   { value: "meta", label: "Meta" },
+];
+
+const windowsGlassEffectOptions: Array<{ value: WindowsGlassEffect; label: string }> = [
+  { value: "mica", label: "Mica" },
+  { value: "acrylic", label: "Acrylic" },
+  { value: "blur", label: "Blur" },
+  { value: "none", label: "Disabled" },
 ];
 
 const sections = [
@@ -157,10 +166,10 @@ export function SettingsApp() {
   const [historyResults, setHistoryResults] = useState<NoteHistorySearchResult[]>([]);
   const [historyOpeningPath, setHistoryOpeningPath] = useState<string | null>(null);
   const [historyReloadToken, setHistoryReloadToken] = useState(0);
+  const [runtimePlatform, setRuntimePlatform] = useState<RuntimePlatform>("other");
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const lineHeightText = settings.editorLineHeight.toFixed(1);
-  const noteGlassBlurText = `${settings.noteGlassBlur.toFixed(1)}px`;
   const paddingXText = `${settings.editorPaddingX}px`;
   const paddingYText = `${settings.editorPaddingY}px`;
   const canDownloadUpdate =
@@ -489,6 +498,22 @@ export function SettingsApp() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    getRuntimePlatform()
+      .then((platform) => {
+        if (!active) return;
+        setRuntimePlatform(platform);
+      })
+      .catch(() => {
+        if (!active) return;
+        setRuntimePlatform("other");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       <TitleBar title="Settings" showSettings={false} />
@@ -602,26 +627,55 @@ export function SettingsApp() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">Glass Effect</div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground">Blur Strength</div>
-                    <div className="text-xs text-muted-foreground">{noteGlassBlurText}</div>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={40}
-                    step={0.1}
-                    value={settings.noteGlassBlur}
-                    onChange={(event) =>
-                      updateSettings({ noteGlassBlur: Number(event.target.value) })
-                    }
-                    className="h-1 w-full cursor-pointer accent-primary"
-                  />
+              {runtimePlatform !== "other" && (
+                <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
+                  <div className="text-xs font-medium text-muted-foreground">Glass Effect</div>
+                  {runtimePlatform === "windows" ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        {windowsGlassEffectOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => updateSettings({ noteGlassEffectWindows: option.value })}
+                            className={cn(
+                              "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                              settings.noteGlassEffectWindows === option.value
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-background text-muted-foreground hover:bg-accent",
+                            )}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Applies to all note windows.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground">Enable Glass Effect</div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateSettings({
+                            noteGlassEffectMacos: !settings.noteGlassEffectMacos,
+                          })
+                        }
+                        className={cn(
+                          "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                          settings.noteGlassEffectMacos
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-muted-foreground hover:bg-accent",
+                        )}
+                      >
+                        {settings.noteGlassEffectMacos ? "Enabled" : "Disabled"}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
 
               <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
                 <div className="text-xs font-medium text-muted-foreground">Page Spacing</div>

@@ -3,12 +3,14 @@ import { readTextFile, writeTextFile, exists, BaseDirectory } from "@tauri-apps/
 type Theme = "light" | "dark" | "system";
 export type EditorFontFamily = "system" | "serif" | "mono";
 export type WheelResizeModifier = "alt" | "ctrl" | "shift" | "meta";
+export type WindowsGlassEffect = "none" | "mica" | "acrylic" | "blur";
 const SETTINGS_FILE = "settings.json";
 
 export interface Settings {
   theme: Theme;
   newNoteDirectory: string;
-  noteGlassBlur: number;
+  noteGlassEffectWindows: WindowsGlassEffect;
+  noteGlassEffectMacos: boolean;
   editorFontFamily: EditorFontFamily;
   editorFontSize: number;
   editorLineHeight: number;
@@ -33,7 +35,8 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   newNoteDirectory: "",
-  noteGlassBlur: 0,
+  noteGlassEffectWindows: "mica",
+  noteGlassEffectMacos: true,
   editorFontFamily: "system",
   editorFontSize: 15,
   editorLineHeight: 1.2,
@@ -74,15 +77,23 @@ function sanitizeWheelModifier(value: unknown, fallback: WheelResizeModifier): W
   return fallback;
 }
 
-function sanitizeNoteGlassBlur(value: unknown) {
-  if (typeof value !== "number" || Number.isNaN(value)) return DEFAULT_SETTINGS.noteGlassBlur;
-  return Math.min(Math.max(value, 0), 40);
+function sanitizeWindowsGlassEffect(value: unknown): WindowsGlassEffect {
+  if (value === "none" || value === "mica" || value === "acrylic" || value === "blur") {
+    return value;
+  }
+  return DEFAULT_SETTINGS.noteGlassEffectWindows;
+}
+
+function sanitizeBoolean(value: unknown, fallback: boolean) {
+  if (typeof value === "boolean") return value;
+  return fallback;
 }
 
 function stripExtraFields(stored: StoredSettings): Partial<Omit<Settings, "shortcuts">> {
-  const copy = { ...stored };
+  const copy = { ...stored } as Record<string, unknown>;
   delete copy.shortcuts;
-  return copy;
+  delete copy.noteGlassBlur;
+  return copy as Partial<Omit<Settings, "shortcuts">>;
 }
 
 function mergeSettings(stored: StoredSettings): Settings {
@@ -96,7 +107,11 @@ function mergeSettings(stored: StoredSettings): Settings {
     ...DEFAULT_SETTINGS,
     ...rest,
     newNoteDirectory: sanitizeNewNoteDirectory(rest.newNoteDirectory),
-    noteGlassBlur: sanitizeNoteGlassBlur(rest.noteGlassBlur),
+    noteGlassEffectWindows: sanitizeWindowsGlassEffect(rest.noteGlassEffectWindows),
+    noteGlassEffectMacos: sanitizeBoolean(
+      rest.noteGlassEffectMacos,
+      DEFAULT_SETTINGS.noteGlassEffectMacos,
+    ),
     wheelResizeModifier: sanitizeWheelModifier(
       rest.wheelResizeModifier,
       DEFAULT_SETTINGS.wheelResizeModifier,

@@ -85,6 +85,8 @@ interface NoteContextMenuActionPayload {
   action: NoteContextMenuAction;
 }
 
+export type RuntimePlatform = "windows" | "macos" | "other";
+
 async function waitForWindowCreated(window: WebviewWindow) {
   await new Promise<void>((resolve, reject) => {
     window
@@ -226,6 +228,10 @@ export async function getDefaultMarkdownOpenEnabled() {
 
 export async function setDefaultMarkdownOpenEnabled(enabled: boolean) {
   return invoke<boolean>("set_default_markdown_open_enabled", { enabled });
+}
+
+export async function getRuntimePlatform() {
+  return invoke<RuntimePlatform>("get_runtime_platform");
 }
 
 function buildNoteContextMenuWindowLabel(parentWindowLabel: string) {

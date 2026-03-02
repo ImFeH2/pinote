@@ -16,7 +16,7 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Taskbar Visibility Control** — Hide or show note windows in the system taskbar from Settings (enabled by default)
 - **CLI Markdown Open** — Launch Pinote with `.md`/`.markdown` file paths to open or focus dedicated note windows
 - **Personalized Appearance** — Theme, per-note opacity, typography, page spacing, and modern scrollbar styling
-- **Glass Blur Control** — Tune a global frosted-glass strength that adjusts both blur effect and glass translucency in Settings
+- **Platform Glass Effects** — Windows uses selectable glass mode (`Mica` default), macOS uses a simple glass toggle, and unsupported platforms hide this option
 - **Desktop Integration** — Note windows are created from UUID-based files in a configurable notes directory, with launch-at-startup support
 - **In-app Maintenance** — Built-in updater, version info, and repository link in About
 

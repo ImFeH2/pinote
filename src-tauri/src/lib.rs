@@ -644,6 +644,22 @@ fn set_default_markdown_open_enabled(enabled: bool) -> Result<bool, String> {
     }
 }
 
+#[tauri::command]
+fn get_runtime_platform() -> &'static str {
+    #[cfg(target_os = "windows")]
+    {
+        return "windows";
+    }
+    #[cfg(target_os = "macos")]
+    {
+        return "macos";
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    {
+        "other"
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -674,6 +690,7 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
+            get_runtime_platform,
             get_open_with_pinote_enabled,
             set_open_with_pinote_enabled,
             get_default_markdown_open_enabled,

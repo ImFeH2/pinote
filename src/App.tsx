@@ -19,10 +19,12 @@ import { useWindowControl } from "@/hooks/useWindowControl";
 import { useSettings } from "@/hooks/useSettings";
 import {
   closeNoteContextMenu,
+  getRuntimePlatform,
   listenNoteContextMenuAction,
   openNoteContextMenu,
   openSettingsWindow,
   type NoteContextMenuAction,
+  type RuntimePlatform,
 } from "@/lib/api";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import { openAndTrackNoteWindow } from "@/lib/windowManager";
@@ -32,7 +34,7 @@ import {
   type WindowVisibility,
   upsertWindowState,
 } from "@/lib/windowStateCache";
-import { type WheelResizeModifier } from "@/stores/settings";
+import { type WheelResizeModifier, type WindowsGlassEffect } from "@/stores/settings";
 import "@/styles/App.css";
 
 const WINDOW_MIN_WIDTH = 1;
@@ -47,8 +49,6 @@ const NOTE_OPACITY_MIN = 0;
 const NOTE_OPACITY_MAX = 1;
 const NOTE_OPACITY_STEP = 0.05;
 const NOTE_SCROLL_STATE_DEBOUNCE_MS = 200;
-const NOTE_GLASS_TINT_FACTOR_MIN = 0.08;
-const NOTE_GLASS_TINT_FACTOR_MAX = 0.34;
 
 interface MiddleDragState {
   pointerStartX: number;
@@ -76,17 +76,6 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function resolveGlassBackgroundOpacity(noteOpacity: number, blurStrength: number) {
-  const clampedOpacity = clamp(noteOpacity, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX);
-  const clamped = Math.min(Math.max(blurStrength, 0), 40);
-  if (clamped <= 0) return clampedOpacity;
-  const ratio = clamped / 40;
-  const eased = Math.pow(ratio, 0.6);
-  const tintFactor =
-    NOTE_GLASS_TINT_FACTOR_MIN + (NOTE_GLASS_TINT_FACTOR_MAX - NOTE_GLASS_TINT_FACTOR_MIN) * eased;
-  return clamp(clampedOpacity * tintFactor, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX);
-}
-
 function wheelModifierMatchesEvent(
   event: ReactWheelEvent<HTMLDivElement>,
   modifier: WheelResizeModifier,
@@ -101,6 +90,19 @@ function wheelModifierMatchesEvent(
     return event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
   }
   return event.metaKey && !event.altKey && !event.ctrlKey && !event.shiftKey;
+}
+
+function getWindowsPrimaryEffect(effect: WindowsGlassEffect) {
+  if (effect === "mica") return Effect.Mica;
+  if (effect === "acrylic") return Effect.Acrylic;
+  if (effect === "blur") return Effect.Blur;
+  return null;
+}
+
+function getWindowsFallbackEffects(effect: WindowsGlassEffect) {
+  if (effect === "mica") return [Effect.Acrylic, Effect.Blur];
+  if (effect === "acrylic") return [Effect.Blur];
+  return [];
 }
 
 function App({
@@ -132,6 +134,7 @@ function App({
   const closeRequestState = useRef<"idle" | "persisting" | "ready">("idle");
   const [initialEditorScrollTop, setInitialEditorScrollTop] = useState(0);
   const [windowStateReady, setWindowStateReady] = useState(false);
+  const [runtimePlatform, setRuntimePlatform] = useState<RuntimePlatform>("other");
 
   useEffect(() => {
     noteOpacityRef.current = noteOpacity;
@@ -142,6 +145,22 @@ function App({
       setInitialContent(content);
     });
   }, [load]);
+
+  useEffect(() => {
+    let disposed = false;
+    getRuntimePlatform()
+      .then((platform) => {
+        if (disposed) return;
+        setRuntimePlatform(platform);
+      })
+      .catch(() => {
+        if (disposed) return;
+        setRuntimePlatform("other");
+      });
+    return () => {
+      disposed = true;
+    };
+  }, []);
 
   useEffect(() => {
     let disposed = false;
@@ -272,34 +291,53 @@ function App({
   }, [alwaysOnTop, persistWindowState, windowStateReady]);
 
   useEffect(() => {
-    const blurStrength = Math.max(0, settings.noteGlassBlur);
     const applyEffects = async () => {
-      if (blurStrength <= 0) {
+      if (runtimePlatform === "windows") {
+        const selectedEffect = settings.noteGlassEffectWindows;
+        const primaryEffect = getWindowsPrimaryEffect(selectedEffect);
+        if (!primaryEffect) {
+          await appWindow.clearEffects().catch((error) => {
+            console.error("Failed to clear note window effects:", error);
+          });
+          return;
+        }
+        const effectsToTry = [primaryEffect, ...getWindowsFallbackEffects(selectedEffect)];
+        for (const effect of effectsToTry) {
+          const applied = await appWindow
+            .setEffects({
+              effects: [effect],
+            })
+            .then(() => true)
+            .catch(() => false);
+          if (applied) return;
+        }
         await appWindow.clearEffects().catch((error) => {
           console.error("Failed to clear note window effects:", error);
         });
         return;
       }
-      const acrylicApplied = await appWindow
-        .setEffects({
-          effects: [Effect.Acrylic],
-        })
-        .then(() => true)
-        .catch((error) => {
-          console.error("Failed to apply acrylic effect:", error);
-          return false;
-        });
-      if (acrylicApplied) return;
-      await appWindow
-        .setEffects({
-          effects: [Effect.Blur],
-        })
-        .catch((error) => {
-          console.error("Failed to apply blur effect:", error);
-        });
+      if (runtimePlatform === "macos") {
+        if (!settings.noteGlassEffectMacos) {
+          await appWindow.clearEffects().catch((error) => {
+            console.error("Failed to clear note window effects:", error);
+          });
+          return;
+        }
+        await appWindow
+          .setEffects({
+            effects: [Effect.HudWindow],
+          })
+          .catch((error) => {
+            console.error("Failed to apply macOS glass effect:", error);
+          });
+        return;
+      }
+      await appWindow.clearEffects().catch((error) => {
+        console.error("Failed to clear note window effects:", error);
+      });
     };
     void applyEffects();
-  }, [appWindow, settings.noteGlassBlur]);
+  }, [appWindow, runtimePlatform, settings.noteGlassEffectMacos, settings.noteGlassEffectWindows]);
 
   useEffect(() => {
     let disposed = false;
@@ -823,12 +861,10 @@ function App({
   );
 
   const noteBackgroundStyle = useMemo(() => {
-    const blurValue = Math.max(0, settings.noteGlassBlur);
-    const effectiveOpacity = resolveGlassBackgroundOpacity(noteOpacity, blurValue);
     return {
-      opacity: effectiveOpacity,
+      opacity: noteOpacity,
     } as CSSProperties;
-  }, [noteOpacity, settings.noteGlassBlur]);
+  }, [noteOpacity]);
 
   if (initialContent === null) {
     return (
