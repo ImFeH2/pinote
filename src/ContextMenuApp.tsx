@@ -212,7 +212,10 @@ function ContextMenuApp({ targetWindowLabel, noteId, anchorX, anchorY }: NoteCon
 
   return (
     <div ref={shellRef} className="inline-block">
-      <div ref={panelRef} className="pinote-scrollbar overflow-y-auto bg-background p-1">
+      <div
+        ref={panelRef}
+        className="pinote-scrollbar overflow-y-auto rounded-lg border border-border bg-background p-1 shadow-lg"
+      >
         <div className="truncate px-2 py-1 text-[11px] font-medium text-muted-foreground">
           {title}
         </div>
