@@ -174,12 +174,14 @@
     flex-direction: column;
     overflow-y: auto;
     user-select: text;
+    background-color: transparent;
   }
 
   .milkdown-editor > div {
     display: flex;
     flex-direction: column;
     flex: 1;
+    background-color: transparent;
   }
 
   .milkdown-editor .editor {
@@ -189,6 +191,7 @@
     font-family: var(--editor-font-family, inherit);
     font-size: var(--editor-font-size, 0.875rem);
     line-height: var(--editor-line-height, 1.625);
+    background-color: transparent;
   }
 
   .milkdown-editor .milkdown-theme-nord {
@@ -207,6 +210,7 @@
     --text-3xl--line-height: var(--editor-line-height, 1.625);
     --leading-tight: var(--editor-line-height, 1.625);
     --leading-relaxed: var(--editor-line-height, 1.625);
+    background-color: transparent;
   }
 
   .milkdown-editor .editor p {

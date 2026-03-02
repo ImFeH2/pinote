@@ -160,6 +160,7 @@ export function SettingsApp() {
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const lineHeightText = settings.editorLineHeight.toFixed(1);
+  const noteGlassBlurText = `${settings.noteGlassBlur.toFixed(1)}px`;
   const paddingXText = `${settings.editorPaddingX}px`;
   const paddingYText = `${settings.editorPaddingY}px`;
   const canDownloadUpdate =
@@ -595,6 +596,27 @@ export function SettingsApp() {
                     value={settings.editorLineHeight}
                     onChange={(event) =>
                       updateSettings({ editorLineHeight: Number(event.target.value) })
+                    }
+                    className="h-1 w-full cursor-pointer accent-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
+                <div className="text-xs font-medium text-muted-foreground">Glass Effect</div>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-muted-foreground">Blur Strength</div>
+                    <div className="text-xs text-muted-foreground">{noteGlassBlurText}</div>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={40}
+                    step={0.1}
+                    value={settings.noteGlassBlur}
+                    onChange={(event) =>
+                      updateSettings({ noteGlassBlur: Number(event.target.value) })
                     }
                     className="h-1 w-full cursor-pointer accent-primary"
                   />

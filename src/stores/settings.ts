@@ -8,6 +8,7 @@ const SETTINGS_FILE = "settings.json";
 export interface Settings {
   theme: Theme;
   newNoteDirectory: string;
+  noteGlassBlur: number;
   editorFontFamily: EditorFontFamily;
   editorFontSize: number;
   editorLineHeight: number;
@@ -32,6 +33,7 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   newNoteDirectory: "",
+  noteGlassBlur: 0,
   editorFontFamily: "system",
   editorFontSize: 15,
   editorLineHeight: 1.2,
@@ -72,6 +74,11 @@ function sanitizeWheelModifier(value: unknown, fallback: WheelResizeModifier): W
   return fallback;
 }
 
+function sanitizeNoteGlassBlur(value: unknown) {
+  if (typeof value !== "number" || Number.isNaN(value)) return DEFAULT_SETTINGS.noteGlassBlur;
+  return Math.min(Math.max(value, 0), 40);
+}
+
 function stripExtraFields(stored: StoredSettings): Partial<Omit<Settings, "shortcuts">> {
   const copy = { ...stored };
   delete copy.shortcuts;
@@ -89,6 +96,7 @@ function mergeSettings(stored: StoredSettings): Settings {
     ...DEFAULT_SETTINGS,
     ...rest,
     newNoteDirectory: sanitizeNewNoteDirectory(rest.newNoteDirectory),
+    noteGlassBlur: sanitizeNoteGlassBlur(rest.noteGlassBlur),
     wheelResizeModifier: sanitizeWheelModifier(
       rest.wheelResizeModifier,
       DEFAULT_SETTINGS.wheelResizeModifier,

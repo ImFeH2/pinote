@@ -9,7 +9,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
-import { getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
+import { Effect, getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
 import { Pin } from "lucide-react";
 import { Editor } from "@/components/Editor";
 import { cn } from "@/lib/utils";
@@ -47,6 +47,8 @@ const NOTE_OPACITY_MIN = 0;
 const NOTE_OPACITY_MAX = 1;
 const NOTE_OPACITY_STEP = 0.05;
 const NOTE_SCROLL_STATE_DEBOUNCE_MS = 200;
+const NOTE_GLASS_TINT_FACTOR_MIN = 0.08;
+const NOTE_GLASS_TINT_FACTOR_MAX = 0.34;
 
 interface MiddleDragState {
   pointerStartX: number;
@@ -72,6 +74,17 @@ function resolveEditorFontFamily(value: "system" | "serif" | "mono") {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function resolveGlassBackgroundOpacity(noteOpacity: number, blurStrength: number) {
+  const clampedOpacity = clamp(noteOpacity, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX);
+  const clamped = Math.min(Math.max(blurStrength, 0), 40);
+  if (clamped <= 0) return clampedOpacity;
+  const ratio = clamped / 40;
+  const eased = Math.pow(ratio, 0.6);
+  const tintFactor =
+    NOTE_GLASS_TINT_FACTOR_MIN + (NOTE_GLASS_TINT_FACTOR_MAX - NOTE_GLASS_TINT_FACTOR_MIN) * eased;
+  return clamp(clampedOpacity * tintFactor, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX);
 }
 
 function wheelModifierMatchesEvent(
@@ -257,6 +270,36 @@ function App({
     if (!windowStateReady) return;
     void persistWindowState();
   }, [alwaysOnTop, persistWindowState, windowStateReady]);
+
+  useEffect(() => {
+    const blurStrength = Math.max(0, settings.noteGlassBlur);
+    const applyEffects = async () => {
+      if (blurStrength <= 0) {
+        await appWindow.clearEffects().catch((error) => {
+          console.error("Failed to clear note window effects:", error);
+        });
+        return;
+      }
+      const acrylicApplied = await appWindow
+        .setEffects({
+          effects: [Effect.Acrylic],
+        })
+        .then(() => true)
+        .catch((error) => {
+          console.error("Failed to apply acrylic effect:", error);
+          return false;
+        });
+      if (acrylicApplied) return;
+      await appWindow
+        .setEffects({
+          effects: [Effect.Blur],
+        })
+        .catch((error) => {
+          console.error("Failed to apply blur effect:", error);
+        });
+    };
+    void applyEffects();
+  }, [appWindow, settings.noteGlassBlur]);
 
   useEffect(() => {
     let disposed = false;
@@ -779,6 +822,14 @@ function App({
     [noteOpacity],
   );
 
+  const noteBackgroundStyle = useMemo(() => {
+    const blurValue = Math.max(0, settings.noteGlassBlur);
+    const effectiveOpacity = resolveGlassBackgroundOpacity(noteOpacity, blurValue);
+    return {
+      opacity: effectiveOpacity,
+    } as CSSProperties;
+  }, [noteOpacity, settings.noteGlassBlur]);
+
   if (initialContent === null) {
     return (
       <div className="flex h-screen items-center justify-center rounded-lg bg-background">
@@ -795,7 +846,7 @@ function App({
       onContextMenu={openContextMenu}
       onWheelCapture={handleWindowWheel}
     >
-      <div className="absolute inset-0 bg-background" style={{ opacity: noteOpacity }} />
+      <div className="absolute inset-0 bg-background" style={noteBackgroundStyle} />
       <div
         onMouseDown={startWindowDrag}
         className="absolute left-0 right-0 top-0 z-20 h-1.5 cursor-grab"
