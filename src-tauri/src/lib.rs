@@ -4,8 +4,8 @@ mod window;
 
 use log::{LevelFilter, error, info};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, path::Path, path::PathBuf, sync::Mutex};
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use std::{collections::HashSet, path::Path, path::PathBuf, sync::Mutex, thread, time::Duration};
+use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_log::{Target, TargetKind};
 #[cfg(target_os = "windows")]
 use winreg::{
@@ -18,6 +18,8 @@ const NOTE_WINDOW_WIDTH: f64 = 400.0;
 const NOTE_WINDOW_HEIGHT: f64 = 500.0;
 const NOTE_WINDOW_MIN_WIDTH: f64 = 1.0;
 const NOTE_WINDOW_MIN_HEIGHT: f64 = 1.0;
+const EXISTING_WINDOW_SHAKE_OFFSETS: [i32; 8] = [0, 14, -12, 10, -8, 6, -4, 0];
+const EXISTING_WINDOW_SHAKE_DELAY_MS: u64 = 14;
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const DEFAULT_HIDE_NOTE_WINDOWS_FROM_TASKBAR: bool = true;
 #[cfg(target_os = "windows")]
@@ -180,8 +182,14 @@ fn open_cli_note_windows_on_main_thread(app: &tauri::AppHandle, requests: &[CliO
                     "cli_open_existing_window_skip_taskbar_failed window_id={window_id:?} error={err}"
                 );
             }
-            if should_focus && let Err(err) = existing.set_focus() {
-                error!("cli_open_existing_window_focus_failed window_id={window_id:?} error={err}");
+            if should_focus {
+                if let Err(err) = existing.set_focus() {
+                    error!(
+                        "cli_open_existing_window_focus_failed window_id={window_id:?} error={err}"
+                    );
+                } else {
+                    shake_existing_window(&existing);
+                }
             }
             continue;
         }
@@ -207,6 +215,18 @@ fn open_cli_note_windows_on_main_thread(app: &tauri::AppHandle, requests: &[CliO
         if should_focus && let Err(err) = window.set_focus() {
             error!("cli_open_new_window_focus_failed window_id={window_id:?} error={err}");
         }
+    }
+}
+
+fn shake_existing_window(window: &WebviewWindow) {
+    let Ok(position) = window.outer_position() else {
+        return;
+    };
+    let base_x = position.x;
+    let base_y = position.y;
+    for offset in EXISTING_WINDOW_SHAKE_OFFSETS {
+        let _ = window.set_position(PhysicalPosition::new(base_x + offset, base_y));
+        thread::sleep(Duration::from_millis(EXISTING_WINDOW_SHAKE_DELAY_MS));
     }
 }
 

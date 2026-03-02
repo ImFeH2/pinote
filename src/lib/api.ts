@@ -31,6 +31,8 @@ const NOTE_CONTEXT_MENU_WINDOW_SUFFIX = "-context-menu";
 const NOTE_CONTEXT_MENU_WIDTH = 224;
 const NOTE_CONTEXT_MENU_HEIGHT = 180;
 const NOTE_CONTEXT_MENU_GAP = 8;
+const EXISTING_NOTE_WINDOW_SHAKE_OFFSETS = [0, 14, -12, 10, -8, 6, -4, 0];
+const EXISTING_NOTE_WINDOW_SHAKE_DELAY_MS = 14;
 
 interface OpenNoteWindowOptions {
   windowId?: string;
@@ -249,6 +251,23 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function shakeExistingNoteWindow(window: WebviewWindow) {
+  const position = await window.outerPosition().catch(() => null);
+  if (!position) return;
+  const baseX = position.x;
+  const baseY = position.y;
+  for (const offset of EXISTING_NOTE_WINDOW_SHAKE_OFFSETS) {
+    await window.setPosition(new PhysicalPosition(baseX + offset, baseY)).catch(() => {});
+    await delay(EXISTING_NOTE_WINDOW_SHAKE_DELAY_MS);
+  }
+}
+
 async function resolveContextMenuPosition(options: OpenNoteContextMenuOptions) {
   const scaleFactor =
     Number.isFinite(options.scaleFactor) && options.scaleFactor > 0 ? options.scaleFactor : 1;
@@ -458,6 +477,7 @@ export async function openNoteWindow(noteId: string, options: OpenNoteWindowOpti
     await existing.show();
     if (options.focus !== false) {
       await existing.setFocus();
+      await shakeExistingNoteWindow(existing);
     }
     return getWindowSnapshot(
       existing,
