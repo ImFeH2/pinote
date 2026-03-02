@@ -43,6 +43,7 @@ const HISTORY_SEARCH_DEBOUNCE_MS = 120;
 
 const shortcutItems = [
   { key: "restoreWindow", label: "Restore Hidden Window" },
+  { key: "showAllHiddenWindows", label: "Show All Hidden Windows" },
   { key: "toggleVisibleWindows", label: "Toggle Visible Windows" },
   { key: "toggleAlwaysOnTop", label: "Toggle Always On Top" },
   { key: "toggleTheme", label: "Toggle Theme" },
@@ -975,7 +976,8 @@ export function SettingsApp() {
                   />
                 ))}
                 <div className="text-xs text-muted-foreground">
-                  Restore Hidden Window is global.
+                  Restore Hidden Window, Show All Hidden Windows, and Toggle Visible Windows are
+                  global.
                 </div>
                 {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
               </div>

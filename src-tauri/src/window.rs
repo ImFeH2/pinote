@@ -170,6 +170,41 @@ fn focus_and_shake_all_note_windows(app: &tauri::AppHandle) {
     }
 }
 
+fn hidden_note_window_labels(cache: &WindowStateCache) -> Vec<String> {
+    let mut labels = Vec::new();
+    let mut seen = HashSet::new();
+    for cache_key in &cache.hidden_stack {
+        let Some(state) = cache.windows.get(cache_key) else {
+            continue;
+        };
+        if state.visibility != "hidden" {
+            continue;
+        }
+        let label = state.window_id.trim();
+        if label.is_empty() {
+            continue;
+        }
+        if !seen.insert(label.to_string()) {
+            continue;
+        }
+        labels.push(label.to_string());
+    }
+    for state in cache.windows.values() {
+        if state.visibility != "hidden" {
+            continue;
+        }
+        let label = state.window_id.trim();
+        if label.is_empty() {
+            continue;
+        }
+        if !seen.insert(label.to_string()) {
+            continue;
+        }
+        labels.push(label.to_string());
+    }
+    labels
+}
+
 pub fn toggle_visible_note_windows(app: &tauri::AppHandle) {
     let state = app.state::<VisibleWindowToggleState>();
     let mut snapshot = match state.0.lock() {
@@ -231,6 +266,27 @@ pub fn restore_hidden_window(app: &tauri::AppHandle) {
         }
     }
     focus_and_shake_all_note_windows(app);
+}
+
+pub fn show_all_hidden_windows(app: &tauri::AppHandle) {
+    let Some(cache) = load_window_state_cache(app) else {
+        return;
+    };
+    let labels_to_restore = hidden_note_window_labels(&cache);
+    if labels_to_restore.is_empty() {
+        return;
+    }
+    update_window_visibility_in_cache(app, &labels_to_restore, "visible", false);
+    let last_index = labels_to_restore.len().saturating_sub(1);
+    for (index, label) in labels_to_restore.into_iter().enumerate() {
+        let Some(window) = app.get_webview_window(&label) else {
+            continue;
+        };
+        let _ = window.show();
+        if index == last_index {
+            let _ = window.set_focus();
+        }
+    }
 }
 
 pub fn show_settings_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> {

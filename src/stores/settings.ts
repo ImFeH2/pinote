@@ -27,6 +27,7 @@ export interface Settings {
   lastUpdateCheckAt?: string;
   shortcuts: {
     restoreWindow: string;
+    showAllHiddenWindows: string;
     toggleVisibleWindows: string;
     toggleAlwaysOnTop: string;
     toggleTheme: string;
@@ -53,6 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultMarkdownOpenWithPinote: false,
   shortcuts: {
     restoreWindow: "Alt+N",
+    showAllHiddenWindows: "Alt+Shift+H",
     toggleVisibleWindows: "Alt+Shift+N",
     toggleAlwaysOnTop: "Ctrl+Shift+T",
     toggleTheme: "Ctrl+Shift+D",

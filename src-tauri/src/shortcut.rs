@@ -3,14 +3,16 @@ use std::str::FromStr;
 use tauri::Manager;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
-use crate::window::{restore_hidden_window, toggle_visible_note_windows};
+use crate::window::{restore_hidden_window, show_all_hidden_windows, toggle_visible_note_windows};
 
 const DEFAULT_RESTORE_WINDOW_SHORTCUT: &str = "Alt+N";
+const DEFAULT_SHOW_ALL_HIDDEN_WINDOWS_SHORTCUT: &str = "Alt+Shift+H";
 const DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT: &str = "Alt+Shift+N";
 const SETTINGS_FILE_NAME: &str = "settings.json";
 
 struct LoadedShortcuts {
     restore_window: String,
+    show_all_hidden_windows: String,
     toggle_visible_windows: String,
 }
 
@@ -24,6 +26,7 @@ struct StoredSettings {
 #[serde(rename_all = "camelCase")]
 struct StoredShortcuts {
     restore_window: Option<String>,
+    show_all_hidden_windows: Option<String>,
     toggle_window: Option<String>,
     toggle_visible_windows: Option<String>,
 }
@@ -33,6 +36,7 @@ pub fn setup_shortcuts(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error:
     register_shortcuts(
         app,
         &shortcuts.restore_window,
+        &shortcuts.show_all_hidden_windows,
         &shortcuts.toggle_visible_windows,
     )
     .map_err(std::io::Error::other)?;
@@ -42,10 +46,15 @@ pub fn setup_shortcuts(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error:
 fn register_shortcuts(
     app: &tauri::AppHandle,
     restore_window_shortcut_text: &str,
+    show_all_hidden_windows_shortcut_text: &str,
     toggle_visible_windows_shortcut_text: &str,
 ) -> Result<(), String> {
     let restore_window_shortcut = Shortcut::from_str(restore_window_shortcut_text)
         .map_err(|error| format!("invalid shortcut `{restore_window_shortcut_text}`: {error}"))?;
+    let show_all_hidden_windows_shortcut =
+        Shortcut::from_str(show_all_hidden_windows_shortcut_text).map_err(|error| {
+            format!("invalid shortcut `{show_all_hidden_windows_shortcut_text}`: {error}")
+        })?;
     let toggle_visible_windows_shortcut = Shortcut::from_str(toggle_visible_windows_shortcut_text)
         .map_err(|error| {
             format!("invalid shortcut `{toggle_visible_windows_shortcut_text}`: {error}")
@@ -65,6 +74,19 @@ fn register_shortcuts(
         })
         .map_err(|error| {
             format!("failed to register global shortcut `{restore_window_shortcut_text}`: {error}")
+        })?;
+
+    manager
+        .on_shortcut(show_all_hidden_windows_shortcut, |app, _shortcut, event| {
+            if event.state != ShortcutState::Pressed {
+                return;
+            }
+            show_all_hidden_windows(app);
+        })
+        .map_err(|error| {
+            format!(
+                "failed to register global shortcut `{show_all_hidden_windows_shortcut_text}`: {error}"
+            )
         })?;
 
     manager
@@ -102,6 +124,10 @@ fn load_shortcuts(app: &tauri::AppHandle) -> LoadedShortcuts {
                     .or(stored.toggle_window.clone())
             })
             .unwrap_or_else(|| DEFAULT_RESTORE_WINDOW_SHORTCUT.to_string()),
+        show_all_hidden_windows: shortcuts
+            .as_ref()
+            .and_then(|stored| stored.show_all_hidden_windows.clone())
+            .unwrap_or_else(|| DEFAULT_SHOW_ALL_HIDDEN_WINDOWS_SHORTCUT.to_string()),
         toggle_visible_windows: shortcuts
             .and_then(|stored| stored.toggle_visible_windows)
             .unwrap_or_else(|| DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT.to_string()),

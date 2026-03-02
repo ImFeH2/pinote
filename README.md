@@ -25,6 +25,7 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 | Default Shortcut | Action                 |
 | ---------------- | ---------------------- |
 | `Alt+N`          | Restore hidden window  |
+| `Alt+Shift+H`    | Show all hidden windows |
 | `Alt+Shift+N`    | Toggle visible windows |
 | `Ctrl+Shift+T`   | Toggle always on top   |
 | `Ctrl+Shift+D`   | Toggle dark mode       |
