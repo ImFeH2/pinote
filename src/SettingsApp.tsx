@@ -42,6 +42,7 @@ const HISTORY_SEARCH_LIMIT = 80;
 const HISTORY_SEARCH_DEBOUNCE_MS = 120;
 
 const shortcutItems = [
+  { key: "newNote", label: "New Note" },
   { key: "restoreWindow", label: "Restore Hidden Window" },
   { key: "showAllHiddenWindows", label: "Show All Hidden Windows" },
   { key: "toggleVisibleWindows", label: "Toggle Visible Windows" },
@@ -1005,8 +1006,8 @@ export function SettingsApp() {
                   />
                 ))}
                 <div className="text-xs text-muted-foreground">
-                  Restore Hidden Window, Show All Hidden Windows, and Toggle Visible Windows are
-                  global.
+                  New Note, Restore Hidden Window, Show All Hidden Windows, and Toggle Visible
+                  Windows are global.
                 </div>
                 {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
               </div>

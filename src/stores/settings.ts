@@ -38,6 +38,7 @@ export interface Settings {
   defaultMarkdownOpenWithPinote: boolean;
   lastUpdateCheckAt?: string;
   shortcuts: {
+    newNote: string;
     restoreWindow: string;
     showAllHiddenWindows: string;
     toggleVisibleWindows: string;
@@ -68,6 +69,7 @@ export const DEFAULT_SETTINGS: Settings = {
   openWithPinoteContextMenu: false,
   defaultMarkdownOpenWithPinote: false,
   shortcuts: {
+    newNote: "Alt+C",
     restoreWindow: "Alt+S",
     showAllHiddenWindows: "Alt+Shift+H",
     toggleVisibleWindows: "Alt+D",
