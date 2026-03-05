@@ -1,13 +1,14 @@
-import { useCallback, useState, type KeyboardEvent } from "react";
+import { useCallback, useState, type KeyboardEvent, type ReactNode } from "react";
 import { eventToShortcut } from "@/lib/shortcuts";
 
 interface ShortcutInputProps {
   label: string;
   value: string;
   onChange: (next: string) => void | Promise<void>;
+  labelMeta?: ReactNode;
 }
 
-export function ShortcutInput({ label, value, onChange }: ShortcutInputProps) {
+export function ShortcutInput({ label, value, onChange, labelMeta }: ShortcutInputProps) {
   const [isRecording, setIsRecording] = useState(false);
 
   const handleKeyDown = useCallback(
@@ -23,7 +24,10 @@ export function ShortcutInput({ label, value, onChange }: ShortcutInputProps) {
 
   return (
     <label className="flex items-center justify-between gap-3">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <span>{label}</span>
+        {labelMeta}
+      </span>
       <input
         type="text"
         readOnly

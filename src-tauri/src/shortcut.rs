@@ -1,5 +1,5 @@
 use log::warn;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use tauri::Manager;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
@@ -16,6 +16,25 @@ const DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT: &str = "Alt+D";
 const LEGACY_DEFAULT_RESTORE_WINDOW_SHORTCUT: &str = "Alt+N";
 const LEGACY_DEFAULT_TOGGLE_VISIBLE_WINDOWS_SHORTCUT: &str = "Alt+Shift+N";
 const SETTINGS_FILE_NAME: &str = "settings.json";
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GlobalShortcutConfig {
+    pub new_note: String,
+    pub restore_window: String,
+    pub show_all_hidden_windows: String,
+    pub toggle_visible_windows: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GlobalShortcutRegistrationSnapshot {
+    pub new_note: bool,
+    pub restore_window: bool,
+    pub show_all_hidden_windows: bool,
+    pub toggle_visible_windows: bool,
+    pub errors: Vec<String>,
+}
 
 struct LoadedShortcuts {
     new_note: String,
@@ -42,17 +61,30 @@ struct StoredShortcuts {
 
 pub fn setup_shortcuts(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let shortcuts = load_shortcuts(app);
-    let errors = register_shortcuts(
+    let snapshot = register_shortcuts(
         app,
         &shortcuts.new_note,
         &shortcuts.restore_window,
         &shortcuts.show_all_hidden_windows,
         &shortcuts.toggle_visible_windows,
     );
-    for message in errors {
+    for message in snapshot.errors {
         warn!("global_shortcut_register_failed error={message}");
     }
     Ok(())
+}
+
+pub fn apply_global_shortcuts(
+    app: &tauri::AppHandle,
+    shortcuts: &GlobalShortcutConfig,
+) -> GlobalShortcutRegistrationSnapshot {
+    register_shortcuts(
+        app,
+        &shortcuts.new_note,
+        &shortcuts.restore_window,
+        &shortcuts.show_all_hidden_windows,
+        &shortcuts.toggle_visible_windows,
+    )
 }
 
 fn register_shortcuts(
@@ -61,12 +93,20 @@ fn register_shortcuts(
     restore_window_shortcut_text: &str,
     show_all_hidden_windows_shortcut_text: &str,
     toggle_visible_windows_shortcut_text: &str,
-) -> Vec<String> {
-    let mut errors = Vec::new();
+) -> GlobalShortcutRegistrationSnapshot {
+    let mut snapshot = GlobalShortcutRegistrationSnapshot {
+        new_note: false,
+        restore_window: false,
+        show_all_hidden_windows: false,
+        toggle_visible_windows: false,
+        errors: Vec::new(),
+    };
 
     let manager = app.global_shortcut();
     if let Err(error) = manager.unregister_all() {
-        errors.push(format!("failed to clear global shortcuts: {error}"));
+        snapshot
+            .errors
+            .push(format!("failed to clear global shortcuts: {error}"));
     }
 
     match Shortcut::from_str(restore_window_shortcut_text) {
@@ -77,13 +117,15 @@ fn register_shortcuts(
                 }
                 restore_hidden_window(app);
             }) {
-                errors.push(format!(
+                snapshot.errors.push(format!(
                     "failed to register global shortcut `{restore_window_shortcut_text}`: {error}"
                 ));
+            } else {
+                snapshot.restore_window = true;
             }
         }
         Err(error) => {
-            errors.push(format!(
+            snapshot.errors.push(format!(
                 "invalid shortcut `{restore_window_shortcut_text}`: {error}"
             ));
         }
@@ -97,13 +139,15 @@ fn register_shortcuts(
                 }
                 open_new_note_window(app);
             }) {
-                errors.push(format!(
+                snapshot.errors.push(format!(
                     "failed to register global shortcut `{new_note_shortcut_text}`: {error}"
                 ));
+            } else {
+                snapshot.new_note = true;
             }
         }
         Err(error) => {
-            errors.push(format!(
+            snapshot.errors.push(format!(
                 "invalid shortcut `{new_note_shortcut_text}`: {error}"
             ));
         }
@@ -117,13 +161,15 @@ fn register_shortcuts(
                 }
                 show_all_hidden_windows(app);
             }) {
-                errors.push(format!(
+                snapshot.errors.push(format!(
                     "failed to register global shortcut `{show_all_hidden_windows_shortcut_text}`: {error}"
                 ));
+            } else {
+                snapshot.show_all_hidden_windows = true;
             }
         }
         Err(error) => {
-            errors.push(format!(
+            snapshot.errors.push(format!(
                 "invalid shortcut `{show_all_hidden_windows_shortcut_text}`: {error}"
             ));
         }
@@ -137,19 +183,21 @@ fn register_shortcuts(
                 }
                 toggle_visible_note_windows(app);
             }) {
-                errors.push(format!(
+                snapshot.errors.push(format!(
                     "failed to register global shortcut `{toggle_visible_windows_shortcut_text}`: {error}"
                 ));
+            } else {
+                snapshot.toggle_visible_windows = true;
             }
         }
         Err(error) => {
-            errors.push(format!(
+            snapshot.errors.push(format!(
                 "invalid shortcut `{toggle_visible_windows_shortcut_text}`: {error}"
             ));
         }
     }
 
-    errors
+    snapshot
 }
 
 fn load_shortcuts(app: &tauri::AppHandle) -> LoadedShortcuts {

@@ -20,6 +20,7 @@ import {
   type RuntimePlatform,
   getDefaultMarkdownOpenEnabled,
   getOpenWithPinoteEnabled,
+  setGlobalShortcuts,
   setNoteWindowsSkipTaskbar,
   setDefaultMarkdownOpenEnabled,
   setOpenWithPinoteEnabled,
@@ -40,6 +41,15 @@ import { FolderOpen, FolderSearch, Github } from "lucide-react";
 const REPOSITORY_URL = "https://github.com/ImFeH2/pinote";
 const HISTORY_SEARCH_LIMIT = 80;
 const HISTORY_SEARCH_DEBOUNCE_MS = 120;
+
+const globalShortcutKeys = [
+  "newNote",
+  "restoreWindow",
+  "showAllHiddenWindows",
+  "toggleVisibleWindows",
+] as const;
+
+type GlobalShortcutKey = (typeof globalShortcutKeys)[number];
 
 const shortcutItems = [
   { key: "newNote", label: "New Note" },
@@ -180,6 +190,14 @@ export function SettingsApp() {
   const [historyOpeningPath, setHistoryOpeningPath] = useState<string | null>(null);
   const [historyReloadToken, setHistoryReloadToken] = useState(0);
   const [runtimePlatform, setRuntimePlatform] = useState<RuntimePlatform>("other");
+  const [globalShortcutRegistration, setGlobalShortcutRegistration] = useState<
+    Record<GlobalShortcutKey, boolean | null>
+  >({
+    newNote: null,
+    restoreWindow: null,
+    showAllHiddenWindows: null,
+    toggleVisibleWindows: null,
+  });
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const lineHeightText = settings.editorLineHeight.toFixed(1);
@@ -214,6 +232,14 @@ export function SettingsApp() {
       }
 
       setShortcutError(null);
+      if (globalShortcutKeys.includes(key as GlobalShortcutKey)) {
+        setGlobalShortcutRegistration({
+          newNote: null,
+          restoreWindow: null,
+          showAllHiddenWindows: null,
+          toggleVisibleWindows: null,
+        });
+      }
       updateSettings({
         shortcuts: {
           [key]: normalized,
@@ -222,6 +248,52 @@ export function SettingsApp() {
     },
     [updateSettings],
   );
+
+  useEffect(() => {
+    if (activeSection !== "shortcuts") return;
+    let cancelled = false;
+    setGlobalShortcutRegistration({
+      newNote: null,
+      restoreWindow: null,
+      showAllHiddenWindows: null,
+      toggleVisibleWindows: null,
+    });
+    const refresh = async () => {
+      try {
+        const snapshot = await setGlobalShortcuts({
+          newNote: settings.shortcuts.newNote,
+          restoreWindow: settings.shortcuts.restoreWindow,
+          showAllHiddenWindows: settings.shortcuts.showAllHiddenWindows,
+          toggleVisibleWindows: settings.shortcuts.toggleVisibleWindows,
+        });
+        if (cancelled) return;
+        setGlobalShortcutRegistration({
+          newNote: snapshot.newNote,
+          restoreWindow: snapshot.restoreWindow,
+          showAllHiddenWindows: snapshot.showAllHiddenWindows,
+          toggleVisibleWindows: snapshot.toggleVisibleWindows,
+        });
+      } catch {
+        if (cancelled) return;
+        setGlobalShortcutRegistration({
+          newNote: null,
+          restoreWindow: null,
+          showAllHiddenWindows: null,
+          toggleVisibleWindows: null,
+        });
+      }
+    };
+    void refresh();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeSection,
+    settings.shortcuts.newNote,
+    settings.shortcuts.restoreWindow,
+    settings.shortcuts.showAllHiddenWindows,
+    settings.shortcuts.toggleVisibleWindows,
+  ]);
 
   const handleLaunchAtStartup = useCallback(async () => {
     const next = !settings.launchAtStartup;
@@ -1003,12 +1075,46 @@ export function SettingsApp() {
                     label={item.label}
                     value={settings.shortcuts[item.key]}
                     onChange={(value) => updateShortcut(item.key, value)}
+                    labelMeta={
+                      globalShortcutKeys.includes(item.key as GlobalShortcutKey) ? (
+                        <span
+                          title={
+                            globalShortcutRegistration[item.key as GlobalShortcutKey] === true
+                              ? "Global shortcut registered"
+                              : globalShortcutRegistration[item.key as GlobalShortcutKey] === false
+                                ? "Global shortcut not registered"
+                                : "Checking global shortcut status"
+                          }
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium",
+                            globalShortcutRegistration[item.key as GlobalShortcutKey] === true
+                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              : globalShortcutRegistration[item.key as GlobalShortcutKey] === false
+                                ? "border-destructive/40 bg-destructive/10 text-destructive"
+                                : "border-border bg-background/60 text-muted-foreground",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full",
+                              globalShortcutRegistration[item.key as GlobalShortcutKey] === true
+                                ? "bg-emerald-500"
+                                : globalShortcutRegistration[item.key as GlobalShortcutKey] ===
+                                    false
+                                  ? "bg-destructive"
+                                  : "bg-muted-foreground/50",
+                            )}
+                          />
+                          Global
+                        </span>
+                      ) : null
+                    }
                   />
                 ))}
                 <div className="text-xs text-muted-foreground">
                   New Note, Restore Hidden Window, Show All Hidden Windows, and Toggle Visible
                   Windows are global. If a global shortcut is already used by another app, it will
-                  be skipped.
+                  be skipped. The Global badge indicates whether the shortcut is registered.
                 </div>
                 {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
               </div>

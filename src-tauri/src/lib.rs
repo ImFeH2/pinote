@@ -720,6 +720,14 @@ fn get_runtime_platform() -> &'static str {
     }
 }
 
+#[tauri::command]
+fn set_global_shortcuts(
+    app: tauri::AppHandle,
+    shortcuts: shortcut::GlobalShortcutConfig,
+) -> Result<shortcut::GlobalShortcutRegistrationSnapshot, String> {
+    Ok(shortcut::apply_global_shortcuts(&app, &shortcuts))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -743,7 +751,8 @@ pub fn run() {
             get_open_with_pinote_enabled,
             set_open_with_pinote_enabled,
             get_default_markdown_open_enabled,
-            set_default_markdown_open_enabled
+            set_default_markdown_open_enabled,
+            set_global_shortcuts
         ])
         .setup(|app| {
             let handle = app.handle().clone();

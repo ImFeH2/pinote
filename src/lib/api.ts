@@ -251,6 +251,25 @@ export async function getRuntimePlatform() {
   return invoke<RuntimePlatform>("get_runtime_platform");
 }
 
+export interface GlobalShortcutConfig {
+  newNote: string;
+  restoreWindow: string;
+  showAllHiddenWindows: string;
+  toggleVisibleWindows: string;
+}
+
+export interface GlobalShortcutRegistrationSnapshot {
+  newNote: boolean;
+  restoreWindow: boolean;
+  showAllHiddenWindows: boolean;
+  toggleVisibleWindows: boolean;
+  errors: string[];
+}
+
+export async function setGlobalShortcuts(shortcuts: GlobalShortcutConfig) {
+  return invoke<GlobalShortcutRegistrationSnapshot>("set_global_shortcuts", { shortcuts });
+}
+
 function buildNoteContextMenuWindowLabel(parentWindowLabel: string) {
   return `${parentWindowLabel}${NOTE_CONTEXT_MENU_WINDOW_SUFFIX}`;
 }
