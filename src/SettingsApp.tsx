@@ -1007,7 +1007,8 @@ export function SettingsApp() {
                 ))}
                 <div className="text-xs text-muted-foreground">
                   New Note, Restore Hidden Window, Show All Hidden Windows, and Toggle Visible
-                  Windows are global.
+                  Windows are global. If a global shortcut is already used by another app, it will
+                  be skipped.
                 </div>
                 {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
               </div>
