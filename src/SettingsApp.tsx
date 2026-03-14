@@ -2,19 +2,27 @@ import { useCallback, useEffect, useState } from "react";
 import { exists, mkdir } from "@tauri-apps/plugin-fs";
 import { getVersion } from "@tauri-apps/api/app";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { AboutSection } from "@/components/settings/AboutSection";
+import { AppearanceSection } from "@/components/settings/AppearanceSection";
+import { HistorySection } from "@/components/settings/HistorySection";
+import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
+import { ShortcutsSection } from "@/components/settings/ShortcutsSection";
+import {
+  dragMouseButtonOptions,
+  globalShortcutKeys,
+  sections,
+  type GlobalShortcutKey,
+  type SettingsSection,
+  type ShortcutKey,
+  wheelResizeModifierOptions,
+} from "@/components/settings/shared";
+import { WindowSection } from "@/components/settings/WindowSection";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
-import { cn } from "@/lib/utils";
 import { TitleBar } from "@/components/TitleBar";
-import { ShortcutInput } from "@/components/ShortcutInput";
 import { normalizeShortcut } from "@/lib/shortcuts";
 import { resolveDefaultNotesDirectory } from "@/lib/notes";
 import { searchNoteHistory, type NoteHistorySearchResult } from "@/lib/noteHistory";
-import {
-  type DragMouseButton,
-  type WheelResizeModifier,
-  type WindowsGlassEffect,
-} from "@/stores/settings";
 import {
   getRuntimePlatform,
   getDefaultMarkdownOpenEnabled,
@@ -36,93 +44,10 @@ import {
 } from "@/lib/updater";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
-import { FolderOpen, FolderSearch, Github } from "lucide-react";
 
 const REPOSITORY_URL = "https://github.com/ImFeH2/pinote";
 const HISTORY_SEARCH_LIMIT = 80;
 const HISTORY_SEARCH_DEBOUNCE_MS = 120;
-
-const globalShortcutKeys = [
-  "newNote",
-  "restoreWindow",
-  "showAllHiddenWindows",
-  "toggleVisibleWindows",
-] as const;
-
-type GlobalShortcutKey = (typeof globalShortcutKeys)[number];
-
-const shortcutItems = [
-  { key: "newNote", label: "New Note" },
-  { key: "restoreWindow", label: "Restore Hidden Window" },
-  { key: "showAllHiddenWindows", label: "Show All Hidden Windows" },
-  { key: "toggleVisibleWindows", label: "Toggle Visible Windows" },
-  { key: "toggleAlwaysOnTop", label: "Toggle Always On Top" },
-  { key: "toggleReadOnly", label: "Toggle Read-Only" },
-  { key: "toggleTheme", label: "Toggle Theme" },
-  { key: "hideWindow", label: "Hide Window" },
-  { key: "closeWindow", label: "Close Window" },
-] as const;
-
-const themeOptions = [
-  { value: "system", label: "System" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-] as const;
-
-const fontFamilyOptions = [
-  { value: "system", label: "System" },
-  { value: "serif", label: "Serif" },
-  { value: "mono", label: "Monospace" },
-] as const;
-
-const wheelResizeModifierOptions: Array<{ value: WheelResizeModifier; label: string }> = [
-  { value: "alt", label: "Alt" },
-  { value: "ctrl", label: "Ctrl" },
-  { value: "shift", label: "Shift" },
-  { value: "meta", label: "Meta" },
-];
-
-const dragMouseButtonOptions: Array<{ value: DragMouseButton; label: string }> = [
-  { value: "middle", label: "Middle" },
-  { value: "right", label: "Right" },
-];
-
-const windowsGlassEffectOptions: Array<{ value: WindowsGlassEffect; label: string }> = [
-  { value: "mica", label: "Mica" },
-  { value: "acrylic", label: "Acrylic" },
-  { value: "blur", label: "Blur" },
-  { value: "none", label: "Disabled" },
-];
-
-const sections = [
-  {
-    id: "appearance",
-    label: "Appearance",
-    description: "Theme and visual style settings.",
-  },
-  {
-    id: "window",
-    label: "Window",
-    description: "Window behavior and startup settings.",
-  },
-  {
-    id: "shortcuts",
-    label: "Shortcuts",
-    description: "Keyboard shortcuts and interaction key customization.",
-  },
-  {
-    id: "history",
-    label: "History",
-    description: "Search and reopen previously opened notes.",
-  },
-  {
-    id: "about",
-    label: "About",
-    description: "Version, updates, and project resources.",
-  },
-] as const;
-
-type SettingsSection = (typeof sections)[number]["id"];
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -224,7 +149,7 @@ export function SettingsApp() {
   const effectiveNotesDirectory = customNotesDirectory || defaultNotesDirectory;
 
   const updateShortcut = useCallback(
-    (key: (typeof shortcutItems)[number]["key"], value: string) => {
+    (key: ShortcutKey, value: string) => {
       const normalized = normalizeShortcut(value);
       if (!normalized) {
         setShortcutError("Invalid shortcut.");
@@ -602,724 +527,97 @@ export function SettingsApp() {
     };
   }, []);
 
+  const sectionContent =
+    activeSection === "appearance" ? (
+      <AppearanceSection
+        settings={settings}
+        runtimePlatform={runtimePlatform}
+        lineHeightText={lineHeightText}
+        paddingXText={paddingXText}
+        paddingYText={paddingYText}
+        updateSettings={updateSettings}
+      />
+    ) : activeSection === "window" ? (
+      <WindowSection
+        settings={settings}
+        defaultNotesDirectory={defaultNotesDirectory}
+        effectiveNotesDirectory={effectiveNotesDirectory}
+        notesDirectoryBusy={notesDirectoryBusy}
+        notesDirectoryError={notesDirectoryError}
+        startupBusy={startupBusy}
+        startupError={startupError}
+        taskbarBusy={taskbarBusy}
+        taskbarError={taskbarError}
+        contextMenuBusy={contextMenuBusy}
+        contextMenuError={contextMenuError}
+        defaultOpenBusy={defaultOpenBusy}
+        defaultOpenError={defaultOpenError}
+        updateSettings={updateSettings}
+        setNotesDirectoryError={setNotesDirectoryError}
+        onChooseNotesDirectory={handleChooseNotesDirectory}
+        onOpenNotesDirectory={handleOpenNotesDirectory}
+        onLaunchAtStartup={handleLaunchAtStartup}
+        onTaskbarVisibility={handleTaskbarVisibility}
+        onContextMenuIntegration={handleContextMenuIntegration}
+        onDefaultOpenIntegration={handleDefaultOpenIntegration}
+      />
+    ) : activeSection === "history" ? (
+      <HistorySection
+        historyQuery={historyQuery}
+        historyLoading={historyLoading}
+        historyResults={historyResults}
+        historyOpeningPath={historyOpeningPath}
+        historyError={historyError}
+        setHistoryQuery={setHistoryQuery}
+        onOpenHistoryItem={handleOpenHistoryItem}
+        formatDateTime={formatDateTime}
+      />
+    ) : activeSection === "shortcuts" ? (
+      <ShortcutsSection
+        settings={settings}
+        shortcutError={shortcutError}
+        globalShortcutRegistration={globalShortcutRegistration}
+        activeWheelResizeModifier={activeWheelResizeModifier}
+        activeWheelOpacityModifier={activeWheelOpacityModifier}
+        activeDragMouseButton={activeDragMouseButton}
+        updateShortcut={updateShortcut}
+        updateSettings={updateSettings}
+      />
+    ) : (
+      <AboutSection
+        appVersion={appVersion}
+        updateBusy={updateBusy}
+        isCheckingUpdate={isCheckingUpdate}
+        isDownloadingUpdate={isDownloadingUpdate}
+        updateStatusText={updateStatusText}
+        updateSnapshot={updateSnapshot}
+        canDownloadUpdate={canDownloadUpdate}
+        canInstallUpdate={canInstallUpdate}
+        settings={settings}
+        updateError={updateError}
+        aboutError={aboutError}
+        repositoryUrl={REPOSITORY_URL}
+        formatDateTime={formatDateTime}
+        onManualUpdateCheck={handleManualUpdateCheck}
+        onDownloadUpdate={handleDownloadUpdate}
+        onInstallUpdate={handleInstallUpdate}
+        onOpenRepository={handleOpenRepository}
+      />
+    );
+
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       <TitleBar title="Settings" showSettings={false} />
 
       <div className="flex min-h-0 flex-1">
-        <aside className="flex w-48 shrink-0 flex-col border-r border-border bg-background/60 p-2">
-          {sections.map((section) => (
-            <button
-              key={section.id}
-              type="button"
-              onClick={() => setActiveSection(section.id)}
-              className={cn(
-                "mb-1 rounded-md px-3 py-2 text-left text-xs font-medium transition-colors",
-                activeSection === section.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-              )}
-            >
-              {section.label}
-            </button>
-          ))}
-        </aside>
+        <SettingsSidebar activeSection={activeSection} onSelect={setActiveSection} />
 
         <main className="pinote-scrollbar min-w-0 flex-1 overflow-y-auto px-5 py-4">
           <div className="mb-4">
             <div className="text-sm font-semibold text-foreground">{activeSectionInfo.label}</div>
             <div className="text-xs text-muted-foreground">{activeSectionInfo.description}</div>
           </div>
-
-          {activeSection === "appearance" && (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">Theme</div>
-                <div className="flex items-center gap-2">
-                  {themeOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => updateSettings({ theme: option.value })}
-                      className={cn(
-                        "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                        settings.theme === option.value
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-background text-muted-foreground hover:bg-accent",
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">Typography</div>
-
-                <div className="flex flex-col gap-2">
-                  <div className="text-xs text-muted-foreground">Font Family</div>
-                  <div className="flex items-center gap-2">
-                    {fontFamilyOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => updateSettings({ editorFontFamily: option.value })}
-                        className={cn(
-                          "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                          settings.editorFontFamily === option.value
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border bg-background text-muted-foreground hover:bg-accent",
-                        )}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground">Font Size</div>
-                    <div className="text-xs text-muted-foreground">{`${settings.editorFontSize}px`}</div>
-                  </div>
-                  <input
-                    type="range"
-                    min={12}
-                    max={24}
-                    step={1}
-                    value={settings.editorFontSize}
-                    onChange={(event) =>
-                      updateSettings({ editorFontSize: Number(event.target.value) })
-                    }
-                    className="h-1 w-full cursor-pointer accent-primary"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground">Line Height</div>
-                    <div className="text-xs text-muted-foreground">{lineHeightText}</div>
-                  </div>
-                  <input
-                    type="range"
-                    min={1.2}
-                    max={2.2}
-                    step={0.1}
-                    value={settings.editorLineHeight}
-                    onChange={(event) =>
-                      updateSettings({ editorLineHeight: Number(event.target.value) })
-                    }
-                    className="h-1 w-full cursor-pointer accent-primary"
-                  />
-                </div>
-              </div>
-
-              {runtimePlatform !== "other" && (
-                <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
-                  <div className="text-xs font-medium text-muted-foreground">Glass Effect</div>
-                  {runtimePlatform === "windows" ? (
-                    <div className="flex flex-col gap-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        {windowsGlassEffectOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => updateSettings({ noteGlassEffectWindows: option.value })}
-                            className={cn(
-                              "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                              settings.noteGlassEffectWindows === option.value
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-border bg-background text-muted-foreground hover:bg-accent",
-                            )}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Applies to all note windows.
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs text-muted-foreground">Enable Glass Effect</div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateSettings({
-                            noteGlassEffectMacos: !settings.noteGlassEffectMacos,
-                          })
-                        }
-                        className={cn(
-                          "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                          settings.noteGlassEffectMacos
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border bg-background text-muted-foreground hover:bg-accent",
-                        )}
-                      >
-                        {settings.noteGlassEffectMacos ? "Enabled" : "Disabled"}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">Page Spacing</div>
-
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground">Horizontal Margin</div>
-                    <div className="text-xs text-muted-foreground">{paddingXText}</div>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={64}
-                    step={1}
-                    value={settings.editorPaddingX}
-                    onChange={(event) =>
-                      updateSettings({ editorPaddingX: Number(event.target.value) })
-                    }
-                    className="h-1 w-full cursor-pointer accent-primary"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground">Vertical Margin</div>
-                    <div className="text-xs text-muted-foreground">{paddingYText}</div>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={64}
-                    step={1}
-                    value={settings.editorPaddingY}
-                    onChange={(event) =>
-                      updateSettings({ editorPaddingY: Number(event.target.value) })
-                    }
-                    className="h-1 w-full cursor-pointer accent-primary"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeSection === "window" && (
-            <div className="flex flex-col gap-4">
-              <div className="rounded-md border border-border bg-background/60 p-3 text-xs text-muted-foreground">
-                Always-on-top state is independent per note window. Use middle click or shortcut in
-                each note to toggle.
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">New Note Directory</div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={settings.newNoteDirectory}
-                    onChange={(event) => {
-                      updateSettings({ newNoteDirectory: event.target.value });
-                      setNotesDirectoryError(null);
-                    }}
-                    placeholder={defaultNotesDirectory || "Loading default directory..."}
-                    disabled={notesDirectoryBusy}
-                    className={cn(
-                      "h-8 flex-1 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none transition-colors focus:border-primary",
-                      notesDirectoryBusy && "cursor-not-allowed opacity-60",
-                    )}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void handleChooseNotesDirectory();
-                    }}
-                    disabled={notesDirectoryBusy}
-                    className={cn(
-                      "inline-flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground transition-colors",
-                      "border-border bg-background text-muted-foreground hover:bg-accent",
-                      notesDirectoryBusy && "cursor-not-allowed opacity-60",
-                    )}
-                    aria-label="Choose directory"
-                    title="Choose directory"
-                  >
-                    <FolderSearch className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={notesDirectoryBusy || !effectiveNotesDirectory}
-                    onClick={() => {
-                      void handleOpenNotesDirectory();
-                    }}
-                    className={cn(
-                      "inline-flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground transition-colors",
-                      "border-border bg-background text-muted-foreground hover:bg-accent",
-                      (notesDirectoryBusy || !effectiveNotesDirectory) &&
-                        "cursor-not-allowed opacity-60",
-                    )}
-                    aria-label="Open directory"
-                    title="Open directory"
-                  >
-                    <FolderOpen className="h-4 w-4" />
-                  </button>
-                </div>
-                {notesDirectoryError && (
-                  <div className="text-xs text-destructive">{notesDirectoryError}</div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">Launch At Startup</div>
-                <button
-                  type="button"
-                  disabled={startupBusy}
-                  onClick={() => {
-                    void handleLaunchAtStartup();
-                  }}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                    settings.launchAtStartup
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-muted-foreground hover:bg-accent",
-                    startupBusy && "cursor-not-allowed opacity-60",
-                  )}
-                >
-                  {settings.launchAtStartup ? "Enabled" : "Disabled"}
-                </button>
-              </div>
-
-              {startupError && <div className="text-xs text-destructive">{startupError}</div>}
-
-              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
-                <div className="flex flex-col gap-1">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    Hide Note Windows From Taskbar
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    Control whether note windows are hidden from the system taskbar.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  disabled={taskbarBusy}
-                  onClick={() => {
-                    void handleTaskbarVisibility();
-                  }}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                    settings.hideNoteWindowsFromTaskbar
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-muted-foreground hover:bg-accent",
-                    taskbarBusy && "cursor-not-allowed opacity-60",
-                  )}
-                >
-                  {settings.hideNoteWindowsFromTaskbar ? "Enabled" : "Disabled"}
-                </button>
-              </div>
-
-              {taskbarError && <div className="text-xs text-destructive">{taskbarError}</div>}
-
-              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
-                <div className="flex flex-col gap-1">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    Context Menu Follows Note Opacity
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    Use note opacity for the context menu background.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    updateSettings({
-                      contextMenuFollowNoteOpacity: !settings.contextMenuFollowNoteOpacity,
-                    });
-                  }}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                    settings.contextMenuFollowNoteOpacity
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-muted-foreground hover:bg-accent",
-                  )}
-                >
-                  {settings.contextMenuFollowNoteOpacity ? "Enabled" : "Disabled"}
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
-                <div className="flex flex-col gap-1">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    Explorer Context Menu
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    Adds "Use Pinote to Open" for .md and .markdown files.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  disabled={contextMenuBusy}
-                  onClick={() => {
-                    void handleContextMenuIntegration();
-                  }}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                    settings.openWithPinoteContextMenu
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-muted-foreground hover:bg-accent",
-                    contextMenuBusy && "cursor-not-allowed opacity-60",
-                  )}
-                >
-                  {settings.openWithPinoteContextMenu ? "Enabled" : "Disabled"}
-                </button>
-              </div>
-
-              {contextMenuError && (
-                <div className="text-xs text-destructive">{contextMenuError}</div>
-              )}
-
-              <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
-                <div className="flex flex-col gap-1">
-                  <div className="text-xs font-medium text-muted-foreground">
-                    Default Markdown Opener
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    Set Pinote as default opener for .md and .markdown files.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  disabled={defaultOpenBusy}
-                  onClick={() => {
-                    void handleDefaultOpenIntegration();
-                  }}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                    settings.defaultMarkdownOpenWithPinote
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-background text-muted-foreground hover:bg-accent",
-                    defaultOpenBusy && "cursor-not-allowed opacity-60",
-                  )}
-                >
-                  {settings.defaultMarkdownOpenWithPinote ? "Enabled" : "Disabled"}
-                </button>
-              </div>
-
-              {defaultOpenError && (
-                <div className="text-xs text-destructive">{defaultOpenError}</div>
-              )}
-            </div>
-          )}
-
-          {activeSection === "history" && (
-            <div className="flex h-full min-h-0 flex-col gap-3">
-              <input
-                type="text"
-                value={historyQuery}
-                onChange={(event) => {
-                  setHistoryQuery(event.target.value);
-                }}
-                placeholder="Search by path or note content"
-                className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none transition-colors focus:border-primary"
-              />
-              <div className="pinote-scrollbar min-h-0 flex-1 overflow-y-auto rounded-md border border-border bg-background/70">
-                {historyLoading ? (
-                  <div className="px-2 py-2 text-xs text-muted-foreground">Searching...</div>
-                ) : historyResults.length === 0 ? (
-                  <div className="px-2 py-2 text-xs text-muted-foreground">No results.</div>
-                ) : (
-                  historyResults.map((item) => {
-                    const key = `${item.notePath}::${item.windowId}`;
-                    const opening = historyOpeningPath === item.notePath;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        disabled={opening}
-                        onClick={() => {
-                          void handleOpenHistoryItem(item);
-                        }}
-                        className={cn(
-                          "flex w-full flex-col gap-1 border-b border-border/70 px-2 py-2 text-left transition-colors last:border-b-0 hover:bg-accent",
-                          opening && "cursor-not-allowed opacity-60",
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="min-w-0 flex-1 truncate text-xs text-foreground">
-                            {item.notePath}
-                          </div>
-                          {item.matchedByContent && (
-                            <span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                              Content
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground">{`Last opened: ${formatDateTime(item.lastOpenedAt)}`}</div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-              {historyError && <div className="text-xs text-destructive">{historyError}</div>}
-            </div>
-          )}
-
-          {activeSection === "shortcuts" && (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">Keyboard Shortcuts</div>
-                {shortcutItems.map((item) => (
-                  <ShortcutInput
-                    key={item.key}
-                    label={item.label}
-                    value={settings.shortcuts[item.key]}
-                    onChange={(value) => updateShortcut(item.key, value)}
-                    labelMeta={
-                      globalShortcutKeys.includes(item.key as GlobalShortcutKey) ? (
-                        <span
-                          title={
-                            globalShortcutRegistration[item.key as GlobalShortcutKey] === true
-                              ? "Global shortcut registered"
-                              : globalShortcutRegistration[item.key as GlobalShortcutKey] === false
-                                ? "Global shortcut not registered"
-                                : "Checking global shortcut status"
-                          }
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium",
-                            globalShortcutRegistration[item.key as GlobalShortcutKey] === true
-                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                              : globalShortcutRegistration[item.key as GlobalShortcutKey] === false
-                                ? "border-destructive/40 bg-destructive/10 text-destructive"
-                                : "border-border bg-background/60 text-muted-foreground",
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "h-1.5 w-1.5 rounded-full",
-                              globalShortcutRegistration[item.key as GlobalShortcutKey] === true
-                                ? "bg-emerald-500"
-                                : globalShortcutRegistration[item.key as GlobalShortcutKey] ===
-                                    false
-                                  ? "bg-destructive"
-                                  : "bg-muted-foreground/50",
-                            )}
-                          />
-                          Global
-                        </span>
-                      ) : null
-                    }
-                  />
-                ))}
-                <div className="text-xs text-muted-foreground">
-                  New Note, Restore Hidden Window, Show All Hidden Windows, and Toggle Visible
-                  Windows are global. If a global shortcut is already used by another app, it will
-                  be skipped. The Global badge indicates whether the shortcut is registered.
-                </div>
-                {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">
-                  Wheel Resize Modifier
-                </div>
-                <div className="flex items-center gap-2">
-                  {wheelResizeModifierOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => updateSettings({ wheelResizeModifier: option.value })}
-                      className={cn(
-                        "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                        settings.wheelResizeModifier === option.value
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-background text-muted-foreground hover:bg-accent",
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="text-xs text-muted-foreground">{`${activeWheelResizeModifier.label} + Wheel resizes the window around cursor.`}</div>
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">
-                  Wheel Opacity Modifier
-                </div>
-                <div className="flex items-center gap-2">
-                  {wheelResizeModifierOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => updateSettings({ wheelOpacityModifier: option.value })}
-                      className={cn(
-                        "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                        settings.wheelOpacityModifier === option.value
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-background text-muted-foreground hover:bg-accent",
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="text-xs text-muted-foreground">{`${activeWheelOpacityModifier.label} + Wheel adjusts window opacity.`}</div>
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">Drag Mouse Button</div>
-                <div className="flex items-center gap-2">
-                  {dragMouseButtonOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => updateSettings({ dragMouseButton: option.value })}
-                      className={cn(
-                        "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                        settings.dragMouseButton === option.value
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-background text-muted-foreground hover:bg-accent",
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="text-xs text-muted-foreground">{`${activeDragMouseButton.label} Drag: Move window`}</div>
-              </div>
-
-              <div className="flex flex-col gap-1 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">
-                  Current Interactions
-                </div>
-                <div className="text-xs text-muted-foreground">{`${activeWheelResizeModifier.label} + Wheel: Resize window around cursor`}</div>
-                <div className="text-xs text-muted-foreground">{`${activeWheelOpacityModifier.label} + Wheel: Adjust window opacity`}</div>
-                <div className="text-xs text-muted-foreground">
-                  Middle Click: Toggle Always On Top
-                </div>
-                <div className="text-xs text-muted-foreground">{`${activeDragMouseButton.label} Drag: Move window`}</div>
-                <div className="text-xs text-muted-foreground">
-                  {activeDragMouseButton.value === "right"
-                    ? "Right Click: Open context menu (click) / Drag window (drag)"
-                    : "Right Click: Open context menu"}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeSection === "about" && (
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">Application</div>
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">Name</div>
-                  <div className="text-xs font-medium text-foreground">Pinote</div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">Current Version</div>
-                  <div className="text-xs font-medium text-foreground">{appVersion}</div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-muted-foreground">Release Channel</div>
-                  <div className="text-xs font-medium text-foreground">Stable</div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-medium text-muted-foreground">Updates</div>
-                  <button
-                    type="button"
-                    disabled={updateBusy || isCheckingUpdate || isDownloadingUpdate}
-                    onClick={() => {
-                      void handleManualUpdateCheck();
-                    }}
-                    className={cn(
-                      "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                      "border-border bg-background text-muted-foreground hover:bg-accent",
-                      (updateBusy || isCheckingUpdate || isDownloadingUpdate) &&
-                        "cursor-not-allowed opacity-60",
-                    )}
-                  >
-                    {isCheckingUpdate ? "Checking..." : "Check Updates"}
-                  </button>
-                </div>
-
-                <div className="text-xs text-muted-foreground">{updateStatusText}</div>
-
-                {updateSnapshot.latestVersion && (
-                  <div className="text-xs text-muted-foreground">
-                    {`Current ${updateSnapshot.currentVersion || "unknown"} -> Latest ${updateSnapshot.latestVersion}`}
-                  </div>
-                )}
-
-                {isDownloadingUpdate && updateSnapshot.downloadProgress !== null && (
-                  <div className="text-xs text-muted-foreground">{`Progress ${updateSnapshot.downloadProgress}%`}</div>
-                )}
-
-                {canDownloadUpdate && (
-                  <button
-                    type="button"
-                    disabled={updateBusy || isDownloadingUpdate || isCheckingUpdate}
-                    onClick={() => {
-                      void handleDownloadUpdate();
-                    }}
-                    className={cn(
-                      "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                      "border-primary bg-primary text-primary-foreground hover:opacity-90",
-                      (updateBusy || isDownloadingUpdate || isCheckingUpdate) &&
-                        "cursor-not-allowed opacity-60",
-                    )}
-                  >
-                    {isDownloadingUpdate ? "Downloading..." : "Download Update"}
-                  </button>
-                )}
-
-                {canInstallUpdate && (
-                  <button
-                    type="button"
-                    disabled={updateBusy}
-                    onClick={() => {
-                      void handleInstallUpdate();
-                    }}
-                    className={cn(
-                      "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                      "border-primary bg-primary text-primary-foreground hover:opacity-90",
-                      updateBusy && "cursor-not-allowed opacity-60",
-                    )}
-                  >
-                    {updateBusy ? "Installing..." : "Restart to Install"}
-                  </button>
-                )}
-
-                {settings.lastUpdateCheckAt && (
-                  <div className="text-[11px] text-muted-foreground">
-                    {`Last checked at ${formatDateTime(settings.lastUpdateCheckAt)}`}
-                  </div>
-                )}
-
-                {updateError && <div className="text-xs text-destructive">{updateError}</div>}
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-                <div className="text-xs font-medium text-muted-foreground">Project</div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleOpenRepository();
-                  }}
-                  className="inline-flex items-center gap-2 self-start rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent"
-                >
-                  <Github size={14} />
-                  <span>Pinote</span>
-                </button>
-                <div className="truncate text-[11px] text-muted-foreground">{REPOSITORY_URL}</div>
-              </div>
-
-              {aboutError && <div className="text-xs text-destructive">{aboutError}</div>}
-            </div>
-          )}
+          {sectionContent}
         </main>
       </div>
     </div>
