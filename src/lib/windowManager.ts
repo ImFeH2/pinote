@@ -25,6 +25,7 @@ interface OpenAndTrackNoteWindowOptions {
   bounds?: WindowBounds;
   skipTaskbar?: boolean;
   ensureManagedFile?: boolean;
+  centerOnCreate?: boolean;
 }
 
 export async function openAndTrackNoteWindow(options: OpenAndTrackNoteWindowOptions = {}) {
@@ -53,6 +54,7 @@ export async function openAndTrackNoteWindow(options: OpenAndTrackNoteWindowOpti
     scrollTop: options.scrollTop,
     bounds: options.bounds,
     skipTaskbar: options.skipTaskbar,
+    centerOnCreate: options.centerOnCreate,
   });
   const cached = await getWindowStateByNotePath(nextNotePath);
   await upsertWindowState({

@@ -19,6 +19,7 @@ interface OpenNoteWindowOptions {
   scrollTop?: number;
   bounds?: WindowBounds;
   skipTaskbar?: boolean;
+  centerOnCreate?: boolean;
 }
 
 export interface OpenedNoteWindow {

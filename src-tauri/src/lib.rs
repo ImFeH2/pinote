@@ -18,6 +18,8 @@ use winreg::{
 const NOTE_WINDOW_PREFIX: &str = "note-";
 const NOTE_WINDOW_WIDTH: f64 = 400.0;
 const NOTE_WINDOW_HEIGHT: f64 = 500.0;
+const NEW_NOTE_WINDOW_WIDTH: f64 = 360.0;
+const NEW_NOTE_WINDOW_HEIGHT: f64 = 440.0;
 const NOTE_WINDOW_MIN_WIDTH: f64 = 1.0;
 const NOTE_WINDOW_MIN_HEIGHT: f64 = 1.0;
 const EXISTING_WINDOW_SHAKE_OFFSETS: [i32; 8] = [0, 14, -12, 10, -8, 6, -4, 0];
@@ -64,6 +66,7 @@ struct OpenNoteWindowOptions {
     scroll_top: Option<f64>,
     bounds: Option<window_state::WindowBounds>,
     skip_taskbar: Option<bool>,
+    center_on_create: Option<bool>,
 }
 
 fn is_markdown_file_path(path: &Path) -> bool {
@@ -176,6 +179,16 @@ fn hash_fnv1a_utf16(value: &str) -> String {
 fn build_note_window_id(note_path: &str) -> String {
     let normalized = note_path.trim().to_lowercase();
     format!("{NOTE_WINDOW_PREFIX}{}", hash_fnv1a_utf16(&normalized))
+}
+
+fn extract_note_id_from_path(note_path: &str) -> String {
+    Path::new(note_path)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| Uuid::new_v4().to_string())
 }
 
 fn encode_query_component(value: &str) -> String {
@@ -500,7 +513,19 @@ fn open_cli_note_windows(app: &tauri::AppHandle, requests: Vec<CliOpenNoteReques
 
 pub(crate) fn open_new_note_window(app: &tauri::AppHandle) {
     if let Some(note_path) = create_startup_note_file(app) {
-        open_cli_note_windows(app, vec![CliOpenNoteRequest { note_path }]);
+        let _ = open_note_window(
+            app.clone(),
+            extract_note_id_from_path(&note_path),
+            Some(OpenNoteWindowOptions {
+                note_path: Some(note_path),
+                visibility: Some(window_state::WindowVisibility::Visible),
+                focus: Some(true),
+                always_on_top: Some(false),
+                skip_taskbar: Some(load_hide_note_windows_from_taskbar(app)),
+                center_on_create: Some(true),
+                ..OpenNoteWindowOptions::default()
+            }),
+        );
     }
 }
 
@@ -772,6 +797,7 @@ fn open_note_window(
     let read_only = options.read_only.unwrap_or(false);
     let opacity = clamp_note_opacity(options.opacity);
     let scroll_top = clamp_note_scroll_top(options.scroll_top);
+    let center_on_create = options.center_on_create.unwrap_or(false);
     let skip_taskbar = options
         .skip_taskbar
         .unwrap_or_else(|| load_hide_note_windows_from_taskbar(&app));
@@ -831,16 +857,25 @@ fn open_note_window(
         &note_path,
         Some(opacity),
     );
-    let window = WebviewWindowBuilder::new(&app, &window_id, WebviewUrl::App(url.into()))
+    let (initial_width, initial_height) = if center_on_create {
+        (NEW_NOTE_WINDOW_WIDTH, NEW_NOTE_WINDOW_HEIGHT)
+    } else {
+        (NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT)
+    };
+    let mut builder = WebviewWindowBuilder::new(&app, &window_id, WebviewUrl::App(url.into()))
         .title(format!("Pinote - {normalized_note_id}"))
-        .inner_size(NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT)
+        .inner_size(initial_width, initial_height)
         .min_inner_size(NOTE_WINDOW_MIN_WIDTH, NOTE_WINDOW_MIN_HEIGHT)
         .decorations(false)
         .transparent(true)
         .resizable(true)
         .always_on_top(options.always_on_top.unwrap_or(false))
         .skip_taskbar(skip_taskbar)
-        .visible(false)
+        .visible(false);
+    if center_on_create && options.bounds.is_none() {
+        builder = builder.center();
+    }
+    let window = builder
         .build()
         .map_err(|error| format!("Failed to create note window: {error}"))?;
     if let Some(bounds) = options.bounds.as_ref() {

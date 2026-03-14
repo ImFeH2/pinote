@@ -5,7 +5,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type MutableRefObject,
 } from "react";
-import { getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   closeNoteContextMenu,
   listenNoteContextMenuAction,
@@ -16,13 +16,6 @@ import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import { openAndTrackNoteWindow } from "@/lib/windowManager";
 import { openSettingsWindow } from "@/lib/windowApi";
 import { type Settings } from "@/stores/settings";
-
-const NEW_NOTE_POSITION_OFFSET_X = 28;
-const NEW_NOTE_POSITION_OFFSET_Y = 28;
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
 
 interface UseNoteWindowActionsOptions {
   appWindow: ReturnType<typeof getCurrentWindow>;
@@ -66,38 +59,15 @@ export function useNoteWindowActions(options: UseNoteWindowActionsOptions) {
   }, [windowLabel]);
 
   const openNote = useCallback(() => {
-    Promise.all([appWindow.outerPosition(), appWindow.innerSize(), appWindow.isAlwaysOnTop()])
-      .then(async ([position, size, currentAlwaysOnTop]) => {
-        let nextX = position.x + NEW_NOTE_POSITION_OFFSET_X;
-        let nextY = position.y + NEW_NOTE_POSITION_OFFSET_Y;
-        const monitorX = position.x + Math.round(size.width / 2);
-        const monitorY = position.y + Math.round(size.height / 2);
-        const monitor = await monitorFromPoint(monitorX, monitorY).catch(() => null);
-        if (monitor) {
-          const minX = monitor.workArea.position.x;
-          const minY = monitor.workArea.position.y;
-          const maxX = Math.max(
-            minX,
-            monitor.workArea.position.x + monitor.workArea.size.width - size.width,
-          );
-          const maxY = Math.max(
-            minY,
-            monitor.workArea.position.y + monitor.workArea.size.height - size.height,
-          );
-          nextX = clamp(nextX, minX, maxX);
-          nextY = clamp(nextY, minY, maxY);
-        }
+    appWindow
+      .isAlwaysOnTop()
+      .then((currentAlwaysOnTop) => {
         return openAndTrackNoteWindow({
           alwaysOnTop: currentAlwaysOnTop,
           opacity: noteOpacityRef.current,
           skipTaskbar: settings.hideNoteWindowsFromTaskbar,
           ensureManagedFile: true,
-          bounds: {
-            x: nextX,
-            y: nextY,
-            width: size.width,
-            height: size.height,
-          },
+          centerOnCreate: true,
         });
       })
       .catch((error) => {
