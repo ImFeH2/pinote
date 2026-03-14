@@ -7,7 +7,6 @@ import {
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
 } from "react";
-import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { Effect, getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
 import { dirname } from "@tauri-apps/api/path";
 import { readTextFile, watchImmediate } from "@tauri-apps/plugin-fs";
@@ -15,13 +14,13 @@ import { Lock, Pin } from "lucide-react";
 import { Editor } from "@/components/Editor";
 import { useTheme } from "@/hooks/useTheme";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { useNoteWindowMouseInteractions } from "@/hooks/useNoteWindowMouseInteractions";
 import { useNoteWindowState } from "@/hooks/useNoteWindowState";
 import { useWindowControl } from "@/hooks/useWindowControl";
 import { useSettings } from "@/hooks/useSettings";
 import {
   closeNoteContextMenu,
   listenNoteContextMenuAction,
-  openNoteContextMenu,
   type NoteContextMenuAction,
 } from "@/lib/contextMenuApi";
 import { getRuntimePlatform, openSettingsWindow, type RuntimePlatform } from "@/lib/windowApi";
@@ -29,36 +28,15 @@ import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import { openAndTrackNoteWindow } from "@/lib/windowManager";
 import { recordOpenedNote } from "@/lib/noteHistory";
 import { logDebug, logError } from "@/lib/logger";
-import { type WheelResizeModifier, type WindowsGlassEffect } from "@/stores/settings";
+import { type WindowsGlassEffect } from "@/stores/settings";
 import "@/styles/App.css";
 
-const WINDOW_MIN_WIDTH = 1;
-const WINDOW_MIN_HEIGHT = 1;
-const WINDOW_MAX_WIDTH = 1920;
-const WINDOW_MAX_HEIGHT = 2160;
-const WINDOW_RESIZE_WIDTH_STEP = 24;
-const WINDOW_RESIZE_HEIGHT_STEP = 30;
 const NEW_NOTE_POSITION_OFFSET_X = 28;
 const NEW_NOTE_POSITION_OFFSET_Y = 28;
 const NOTE_OPACITY_MIN = 0;
 const NOTE_OPACITY_MAX = 1;
-const NOTE_OPACITY_STEP = 0.05;
 const EXTERNAL_FILE_RELOAD_DEBOUNCE_MS = 120;
 const SELF_FILE_WRITE_IGNORE_MS = 420;
-
-interface MiddleDragState {
-  button: number;
-  allowMove: boolean;
-  pointerStartX: number;
-  pointerStartY: number;
-  pointerCurrentX: number;
-  pointerCurrentY: number;
-  windowStartX: number;
-  windowStartY: number;
-  scaleFactor: number;
-  moved: boolean;
-  ready: boolean;
-}
 
 function resolveEditorFontFamily(value: "system" | "serif" | "mono") {
   if (value === "serif") {
@@ -76,30 +54,6 @@ function clamp(value: number, min: number, max: number) {
 
 function normalizePathForCompare(value: string) {
   return value.trim().replace(/\//g, "\\").toLowerCase();
-}
-
-interface ModifierState {
-  altKey: boolean;
-  ctrlKey: boolean;
-  shiftKey: boolean;
-  metaKey: boolean;
-}
-
-function wheelModifierMatchesEvent(event: ModifierState, modifier: WheelResizeModifier) {
-  if (modifier === "alt") {
-    return event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey;
-  }
-  if (modifier === "ctrl") {
-    return event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey;
-  }
-  if (modifier === "shift") {
-    return event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey;
-  }
-  return event.metaKey && !event.altKey && !event.ctrlKey && !event.shiftKey;
-}
-
-function resolveDragMouseButtonCode(button: "middle" | "right") {
-  return button === "right" ? 2 : 1;
 }
 
 function getWindowsPrimaryEffect(effect: WindowsGlassEffect) {
@@ -132,12 +86,6 @@ function App({
   const initialWindowOpacity = clamp(initialOpacity ?? 1, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX);
   const [initialContent, setInitialContent] = useState<string | null>(null);
   const [noteOpacity, setNoteOpacityState] = useState(initialWindowOpacity);
-  const wheelResizeLock = useRef(false);
-  const middleDragState = useRef<MiddleDragState | null>(null);
-  const middleDragPendingPosition = useRef<{ x: number; y: number } | null>(null);
-  const middleDragLastPosition = useRef<{ x: number; y: number } | null>(null);
-  const middleDragFrame = useRef<number | null>(null);
-  const suppressNextContextMenu = useRef(false);
   const noteOpacityRef = useRef(initialWindowOpacity);
   const noteReadOnlyRef = useRef(false);
   const scrollPersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -147,8 +95,6 @@ function App({
   const pendingExternalContentRef = useRef<string | null>(null);
   const ignoreExternalWatchUntilRef = useRef(0);
   const externalReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const suppressEditorScrollUntilRef = useRef(0);
-  const suppressEditorScrollTopRef = useRef(0);
   const closeRequestState = useRef<"idle" | "persisting" | "ready">("idle");
   const forceHiddenVisibilityRef = useRef(false);
   const hideInProgressRef = useRef(false);
@@ -247,6 +193,20 @@ function App({
     windowLabel,
   });
 
+  const { openContextMenu } = useNoteWindowMouseInteractions({
+    appWindow,
+    dragMouseButton: settings.dragMouseButton,
+    noteId,
+    noteOpacityRef,
+    noteScrollTopRef,
+    persistWindowState,
+    setNoteOpacityState,
+    toggleAlwaysOnTop,
+    wheelOpacityModifier: settings.wheelOpacityModifier,
+    wheelResizeModifier: settings.wheelResizeModifier,
+    windowLabel,
+  });
+
   const handleChange = useCallback(
     (markdown: string) => {
       if (noteReadOnlyRef.current) return;
@@ -270,7 +230,7 @@ function App({
       setInitialContent(content);
       setEditorReloadToken((value) => value + 1);
     },
-    [notePath],
+    [notePath, setInitialEditorScrollTop],
   );
 
   const reloadExternalFileContent = useCallback(() => {
@@ -291,23 +251,6 @@ function App({
     pendingExternalContentRef.current = null;
     setHasExternalFileChange(false);
   }, [notePath]);
-
-  useEffect(() => {
-    const handleScrollCapture = (event: Event) => {
-      if (Date.now() > suppressEditorScrollUntilRef.current) return;
-      const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      if (!target.classList.contains("milkdown-editor")) return;
-      const lockedTop = suppressEditorScrollTopRef.current;
-      if (Math.abs(target.scrollTop - lockedTop) < 0.5) return;
-      target.scrollTop = lockedTop;
-    };
-
-    window.addEventListener("scroll", handleScrollCapture, true);
-    return () => {
-      window.removeEventListener("scroll", handleScrollCapture, true);
-    };
-  }, []);
 
   useEffect(() => {
     if (initialContent === null) return;
@@ -619,314 +562,6 @@ function App({
     [appWindow, windowLabel],
   );
 
-  const closeContextMenu = useCallback(() => {
-    void closeNoteContextMenu(windowLabel);
-  }, [windowLabel]);
-
-  const applyMiddleDragPosition = useCallback(() => {
-    middleDragFrame.current = null;
-    const target = middleDragPendingPosition.current;
-    if (!target) return;
-    const last = middleDragLastPosition.current;
-    if (last && last.x === target.x && last.y === target.y) return;
-    middleDragLastPosition.current = target;
-    appWindow.setPosition(new PhysicalPosition(target.x, target.y)).catch((error) => {
-      logError("note-window", "move_window_by_drag_failed", error, { windowId: windowLabel });
-    });
-  }, [appWindow, windowLabel]);
-
-  const scheduleMiddleDragPosition = useCallback(() => {
-    if (middleDragFrame.current !== null) return;
-    middleDragFrame.current = window.requestAnimationFrame(() => {
-      applyMiddleDragPosition();
-    });
-  }, [applyMiddleDragPosition]);
-
-  useEffect(() => {
-    const dragButton = resolveDragMouseButtonCode(settings.dragMouseButton);
-
-    const handleMiddleAuxClick = (event: MouseEvent) => {
-      if (event.button !== 1) return;
-      event.preventDefault();
-    };
-
-    const handlePointerMouseDown = (event: MouseEvent) => {
-      const isDragButton = event.button === dragButton;
-      const isMiddleToggleButton = event.button === 1;
-      if (!isDragButton && !isMiddleToggleButton) return;
-      event.preventDefault();
-      closeContextMenu();
-      const nextState: MiddleDragState = {
-        button: event.button,
-        allowMove: isDragButton,
-        pointerStartX: event.screenX,
-        pointerStartY: event.screenY,
-        pointerCurrentX: event.screenX,
-        pointerCurrentY: event.screenY,
-        windowStartX: 0,
-        windowStartY: 0,
-        scaleFactor: 1,
-        moved: false,
-        ready: false,
-      };
-      middleDragState.current = nextState;
-      middleDragPendingPosition.current = null;
-      middleDragLastPosition.current = null;
-      Promise.all([appWindow.outerPosition(), appWindow.scaleFactor()])
-        .then(([position, scaleFactor]) => {
-          const state = middleDragState.current;
-          if (!state) return;
-          if (state !== nextState) return;
-          state.windowStartX = position.x;
-          state.windowStartY = position.y;
-          state.scaleFactor = scaleFactor;
-          state.ready = true;
-          if (!state.allowMove) return;
-          const deltaX = state.pointerCurrentX - state.pointerStartX;
-          const deltaY = state.pointerCurrentY - state.pointerStartY;
-          if (deltaX === 0 && deltaY === 0) return;
-          middleDragPendingPosition.current = {
-            x: state.windowStartX + Math.round(deltaX * state.scaleFactor),
-            y: state.windowStartY + Math.round(deltaY * state.scaleFactor),
-          };
-          scheduleMiddleDragPosition();
-        })
-        .catch((error) => {
-          logError("note-window", "prepare_drag_state_failed", error, { windowId: windowLabel });
-        });
-    };
-
-    window.addEventListener("auxclick", handleMiddleAuxClick, true);
-    window.addEventListener("mousedown", handlePointerMouseDown, true);
-    return () => {
-      window.removeEventListener("auxclick", handleMiddleAuxClick, true);
-      window.removeEventListener("mousedown", handlePointerMouseDown, true);
-    };
-  }, [
-    appWindow,
-    closeContextMenu,
-    scheduleMiddleDragPosition,
-    settings.dragMouseButton,
-    windowLabel,
-  ]);
-
-  useEffect(() => {
-    const suppressContextMenuOnce = () => {
-      suppressNextContextMenu.current = true;
-      window.setTimeout(() => {
-        suppressNextContextMenu.current = false;
-      }, 200);
-    };
-
-    const handleMouseMove = (event: MouseEvent) => {
-      const state = middleDragState.current;
-      if (!state) return;
-      state.pointerCurrentX = event.screenX;
-      state.pointerCurrentY = event.screenY;
-      const deltaX = state.pointerCurrentX - state.pointerStartX;
-      const deltaY = state.pointerCurrentY - state.pointerStartY;
-      if (deltaX === 0 && deltaY === 0) return;
-      if (!state.moved && Math.abs(deltaX) + Math.abs(deltaY) >= 3) {
-        state.moved = true;
-      }
-      if (!state.ready) return;
-      if (!state.allowMove) return;
-      middleDragPendingPosition.current = {
-        x: state.windowStartX + Math.round(deltaX * state.scaleFactor),
-        y: state.windowStartY + Math.round(deltaY * state.scaleFactor),
-      };
-      scheduleMiddleDragPosition();
-    };
-
-    const finishMiddleInteraction = (shouldToggleAlwaysOnTop: boolean) => {
-      const state = middleDragState.current;
-      middleDragState.current = null;
-      middleDragPendingPosition.current = null;
-      middleDragLastPosition.current = null;
-      if (middleDragFrame.current !== null) {
-        window.cancelAnimationFrame(middleDragFrame.current);
-        middleDragFrame.current = null;
-      }
-      if (!state) return;
-      if (state.allowMove && state.button === 2) {
-        suppressContextMenuOnce();
-        if (!state.moved) {
-          closeContextMenu();
-          void appWindow
-            .scaleFactor()
-            .then((scaleFactor) => {
-              return openNoteContextMenu({
-                parentWindowLabel: windowLabel,
-                targetWindowLabel: windowLabel,
-                noteId,
-                screenX: state.pointerCurrentX,
-                screenY: state.pointerCurrentY,
-                scaleFactor,
-                noteOpacity: noteOpacityRef.current,
-              });
-            })
-            .catch((error) => {
-              logError("note-window", "open_context_menu_by_right_click_failed", error, {
-                windowId: windowLabel,
-              });
-            });
-        }
-      }
-      if (shouldToggleAlwaysOnTop && state.button === 1 && !state.moved) {
-        toggleAlwaysOnTop();
-      }
-    };
-
-    const handleMouseUp = (event: MouseEvent) => {
-      const state = middleDragState.current;
-      if (!state) return;
-      if (event.button !== state.button) return;
-      finishMiddleInteraction(true);
-    };
-
-    const handleBlur = () => {
-      finishMiddleInteraction(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove, true);
-    window.addEventListener("mouseup", handleMouseUp, true);
-    window.addEventListener("blur", handleBlur);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove, true);
-      window.removeEventListener("mouseup", handleMouseUp, true);
-      window.removeEventListener("blur", handleBlur);
-    };
-  }, [
-    appWindow,
-    closeContextMenu,
-    noteId,
-    scheduleMiddleDragPosition,
-    toggleAlwaysOnTop,
-    windowLabel,
-  ]);
-
-  const resizeWindowByWheel = useCallback(
-    async (deltaY: number, anchorX: number, anchorY: number) => {
-      if (deltaY === 0 || wheelResizeLock.current) return;
-
-      wheelResizeLock.current = true;
-      try {
-        const direction = deltaY < 0 ? 1 : -1;
-        const [size, position] = await Promise.all([
-          appWindow.innerSize(),
-          appWindow.outerPosition(),
-        ]);
-        const width = clamp(
-          size.width + WINDOW_RESIZE_WIDTH_STEP * direction,
-          WINDOW_MIN_WIDTH,
-          WINDOW_MAX_WIDTH,
-        );
-        const height = clamp(
-          size.height + WINDOW_RESIZE_HEIGHT_STEP * direction,
-          WINDOW_MIN_HEIGHT,
-          WINDOW_MAX_HEIGHT,
-        );
-        if (width === size.width && height === size.height) return;
-        const viewportWidth = Math.max(window.innerWidth, 1);
-        const viewportHeight = Math.max(window.innerHeight, 1);
-        const anchorRatioX = clamp(anchorX / viewportWidth, 0, 1);
-        const anchorRatioY = clamp(anchorY / viewportHeight, 0, 1);
-        const nextX = Math.round(position.x + (size.width - width) * anchorRatioX);
-        const nextY = Math.round(position.y + (size.height - height) * anchorRatioY);
-        await appWindow.setSize(new PhysicalSize(width, height));
-        await appWindow.setPosition(new PhysicalPosition(nextX, nextY));
-      } catch (error) {
-        logError("note-window", "resize_window_by_wheel_failed", error, { windowId: windowLabel });
-      } finally {
-        window.setTimeout(() => {
-          wheelResizeLock.current = false;
-        }, 16);
-      }
-    },
-    [appWindow, windowLabel],
-  );
-
-  const adjustOpacityByWheel = useCallback(
-    (deltaY: number) => {
-      if (deltaY === 0) return;
-      const direction = deltaY < 0 ? 1 : -1;
-      const nextOpacity = clamp(
-        noteOpacityRef.current + NOTE_OPACITY_STEP * direction,
-        NOTE_OPACITY_MIN,
-        NOTE_OPACITY_MAX,
-      );
-      if (nextOpacity === noteOpacityRef.current) return;
-      noteOpacityRef.current = nextOpacity;
-      setNoteOpacityState(nextOpacity);
-      void persistWindowState(undefined, false, nextOpacity);
-    },
-    [persistWindowState],
-  );
-
-  useEffect(() => {
-    const handleWindowWheel = (event: WheelEvent) => {
-      const consumeWheelEvent = () => {
-        const editor =
-          event.target instanceof HTMLElement
-            ? event.target.closest<HTMLElement>(".milkdown-editor")
-            : document.querySelector<HTMLElement>(".milkdown-editor");
-        suppressEditorScrollTopRef.current = editor?.scrollTop ?? noteScrollTopRef.current;
-        suppressEditorScrollUntilRef.current = Date.now() + 140;
-        event.preventDefault();
-        event.stopPropagation();
-        if (typeof event.stopImmediatePropagation === "function") {
-          event.stopImmediatePropagation();
-        }
-      };
-
-      if (wheelModifierMatchesEvent(event, settings.wheelOpacityModifier)) {
-        consumeWheelEvent();
-        closeContextMenu();
-        adjustOpacityByWheel(event.deltaY);
-        return;
-      }
-      if (!wheelModifierMatchesEvent(event, settings.wheelResizeModifier)) return;
-      consumeWheelEvent();
-      closeContextMenu();
-      void resizeWindowByWheel(event.deltaY, event.clientX, event.clientY);
-    };
-
-    window.addEventListener("wheel", handleWindowWheel, {
-      capture: true,
-      passive: false,
-    });
-    return () => {
-      window.removeEventListener("wheel", handleWindowWheel, {
-        capture: true,
-      });
-    };
-  }, [
-    adjustOpacityByWheel,
-    closeContextMenu,
-    resizeWindowByWheel,
-    settings.wheelOpacityModifier,
-    settings.wheelResizeModifier,
-  ]);
-
-  useEffect(() => {
-    if (settings.wheelResizeModifier !== "alt" && settings.wheelOpacityModifier !== "alt") {
-      return;
-    }
-
-    const suppressBareAlt = (event: KeyboardEvent) => {
-      if (event.key !== "Alt") return;
-      if (event.ctrlKey || event.shiftKey || event.metaKey) return;
-      event.preventDefault();
-    };
-
-    window.addEventListener("keydown", suppressBareAlt, true);
-    window.addEventListener("keyup", suppressBareAlt, true);
-    return () => {
-      window.removeEventListener("keydown", suppressBareAlt, true);
-      window.removeEventListener("keyup", suppressBareAlt, true);
-    };
-  }, [settings.wheelOpacityModifier, settings.wheelResizeModifier]);
-
   const localShortcutActions = useMemo(
     () => [
       {
@@ -1041,39 +676,6 @@ function App({
     toggleReadOnly,
     windowLabel,
   ]);
-
-  const openContextMenu = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
-      if (suppressNextContextMenu.current) {
-        suppressNextContextMenu.current = false;
-        event.preventDefault();
-        return;
-      }
-      event.preventDefault();
-      const screenX = event.screenX;
-      const screenY = event.screenY;
-      void appWindow
-        .scaleFactor()
-        .then((scaleFactor) => {
-          return openNoteContextMenu({
-            parentWindowLabel: windowLabel,
-            targetWindowLabel: windowLabel,
-            noteId,
-            screenX,
-            screenY,
-            scaleFactor,
-            noteOpacity: noteOpacityRef.current,
-          });
-        })
-        .catch((error) => {
-          logError("note-window", "open_context_menu_window_failed", error, {
-            windowId: windowLabel,
-            noteId,
-          });
-        });
-    },
-    [appWindow, noteId, windowLabel],
-  );
 
   const editorStyle = useMemo(
     () =>
