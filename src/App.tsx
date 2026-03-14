@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Effect, getCurrentWindow } from "@tauri-apps/api/window";
-import { dirname } from "@tauri-apps/api/path";
-import { readTextFile, watchImmediate } from "@tauri-apps/plugin-fs";
 import { Lock, Pin } from "lucide-react";
 import { Editor } from "@/components/Editor";
 import { useNoteWindowActions } from "@/hooks/useNoteWindowActions";
+import { useNoteExternalSync } from "@/hooks/useNoteExternalSync";
 import { useTheme } from "@/hooks/useTheme";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useNoteWindowMouseInteractions } from "@/hooks/useNoteWindowMouseInteractions";
@@ -13,14 +12,12 @@ import { useWindowControl } from "@/hooks/useWindowControl";
 import { useSettings } from "@/hooks/useSettings";
 import { getRuntimePlatform, type RuntimePlatform } from "@/lib/windowApi";
 import { recordOpenedNote } from "@/lib/noteHistory";
-import { logDebug, logError } from "@/lib/logger";
+import { logError } from "@/lib/logger";
 import { type WindowsGlassEffect } from "@/stores/settings";
 import "@/styles/App.css";
 
 const NOTE_OPACITY_MIN = 0;
 const NOTE_OPACITY_MAX = 1;
-const EXTERNAL_FILE_RELOAD_DEBOUNCE_MS = 120;
-const SELF_FILE_WRITE_IGNORE_MS = 420;
 
 function resolveEditorFontFamily(value: "system" | "serif" | "mono") {
   if (value === "serif") {
@@ -34,10 +31,6 @@ function resolveEditorFontFamily(value: "system" | "serif" | "mono") {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
-}
-
-function normalizePathForCompare(value: string) {
-  return value.trim().replace(/\//g, "\\").toLowerCase();
 }
 
 function getWindowsPrimaryEffect(effect: WindowsGlassEffect) {
@@ -75,36 +68,13 @@ function App({
   const scrollPersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteScrollTopRef = useRef(0);
   const latestEditorContentRef = useRef("");
-  const persistedContentRef = useRef("");
-  const pendingExternalContentRef = useRef<string | null>(null);
-  const ignoreExternalWatchUntilRef = useRef(0);
-  const externalReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSavePendingRef = useRef<() => boolean>(() => false);
   const closeRequestState = useRef<"idle" | "persisting" | "ready">("idle");
   const forceHiddenVisibilityRef = useRef(false);
   const hideInProgressRef = useRef(false);
   const [runtimePlatform, setRuntimePlatform] = useState<RuntimePlatform>("other");
-  const [hasExternalFileChange, setHasExternalFileChange] = useState(false);
   const [editorReloadToken, setEditorReloadToken] = useState(0);
   const [noteReadOnly, setNoteReadOnly] = useState(false);
-
-  const handlePersistedContent = useCallback(
-    (content: string, source: "load" | "save") => {
-      logDebug("note-window", "external_watch_persisted", {
-        source,
-        notePath,
-        length: content.length,
-      });
-      persistedContentRef.current = content;
-      if (source === "save") {
-        ignoreExternalWatchUntilRef.current = Date.now() + SELF_FILE_WRITE_IGNORE_MS;
-      }
-    },
-    [notePath],
-  );
-
-  const { save, load, isSavePending } = useAutoSave(notePath, {
-    onPersisted: handlePersistedContent,
-  });
 
   useEffect(() => {
     noteOpacityRef.current = noteOpacity;
@@ -113,16 +83,6 @@ function App({
   useEffect(() => {
     noteReadOnlyRef.current = noteReadOnly;
   }, [noteReadOnly]);
-
-  useEffect(() => {
-    load().then((content) => {
-      latestEditorContentRef.current = content;
-      persistedContentRef.current = content;
-      pendingExternalContentRef.current = null;
-      setHasExternalFileChange(false);
-      setInitialContent(content);
-    });
-  }, [load]);
 
   useEffect(() => {
     void recordOpenedNote({
@@ -177,6 +137,37 @@ function App({
     windowLabel,
   });
 
+  const {
+    applyLoadedContent,
+    dismissExternalFileChange,
+    handlePersistedContent,
+    hasExternalFileChange,
+    reloadExternalFileContent,
+  } = useNoteExternalSync({
+    initialContent,
+    isSavePending: () => isSavePendingRef.current(),
+    latestEditorContentRef,
+    notePath,
+    noteScrollTopRef,
+    setEditorReloadToken,
+    setInitialContent,
+    setInitialEditorScrollTop,
+  });
+
+  const { save, load, isSavePending } = useAutoSave(notePath, {
+    onPersisted: handlePersistedContent,
+  });
+
+  useEffect(() => {
+    isSavePendingRef.current = isSavePending;
+  }, [isSavePending]);
+
+  useEffect(() => {
+    load().then((content) => {
+      applyLoadedContent(content);
+    });
+  }, [applyLoadedContent, load]);
+
   const { openContextMenu } = useNoteWindowMouseInteractions({
     appWindow,
     dragMouseButton: settings.dragMouseButton,
@@ -213,190 +204,6 @@ function App({
     },
     [save],
   );
-
-  const applyExternalFileContent = useCallback(
-    (content: string) => {
-      logDebug("note-window", "external_watch_apply", {
-        notePath,
-        length: content.length,
-      });
-      latestEditorContentRef.current = content;
-      persistedContentRef.current = content;
-      pendingExternalContentRef.current = null;
-      setHasExternalFileChange(false);
-      setInitialEditorScrollTop(Math.max(0, noteScrollTopRef.current));
-      setInitialContent(content);
-      setEditorReloadToken((value) => value + 1);
-    },
-    [notePath, setInitialEditorScrollTop],
-  );
-
-  const reloadExternalFileContent = useCallback(() => {
-    const pending = pendingExternalContentRef.current;
-    if (pending === null) {
-      logDebug("note-window", "external_watch_reload_skipped_no_pending", { notePath });
-      return;
-    }
-    logDebug("note-window", "external_watch_reload_manual", {
-      notePath,
-      length: pending.length,
-    });
-    applyExternalFileContent(pending);
-  }, [applyExternalFileContent, notePath]);
-
-  const dismissExternalFileChange = useCallback(() => {
-    logDebug("note-window", "external_watch_ignore", { notePath });
-    pendingExternalContentRef.current = null;
-    setHasExternalFileChange(false);
-  }, [notePath]);
-
-  useEffect(() => {
-    if (initialContent === null) return;
-    let disposed = false;
-    let unwatch: (() => void) | null = null;
-    const watchedPath = notePath.trim();
-    const normalizedWatchedPath = normalizePathForCompare(watchedPath);
-    logDebug("note-window", "external_watch_setup_begin", {
-      notePath,
-      watchedPath,
-      normalizedWatchedPath,
-    });
-
-    const scheduleReload = () => {
-      logDebug("note-window", "external_watch_schedule_reload", { notePath, watchedPath });
-      if (externalReloadTimerRef.current) {
-        clearTimeout(externalReloadTimerRef.current);
-      }
-      externalReloadTimerRef.current = setTimeout(() => {
-        void (async () => {
-          if (disposed) return;
-          if (Date.now() < ignoreExternalWatchUntilRef.current) {
-            logDebug("note-window", "external_watch_skip_self_write_window", {
-              notePath,
-              watchedPath,
-            });
-            return;
-          }
-          const fileContent = await readTextFile(watchedPath).catch((error) => {
-            logError("note-window", "external_watch_read_file_failed", error, {
-              notePath,
-              watchedPath,
-            });
-            return null;
-          });
-          if (disposed) return;
-          if (fileContent === null) {
-            logDebug("note-window", "external_watch_skip_read_null", { notePath, watchedPath });
-            return;
-          }
-          if (fileContent === latestEditorContentRef.current) {
-            logDebug("note-window", "external_watch_skip_same_as_editor", {
-              notePath,
-              watchedPath,
-              length: fileContent.length,
-            });
-            return;
-          }
-          const hasLocalUnsavedChanges =
-            isSavePending() || latestEditorContentRef.current !== persistedContentRef.current;
-          if (hasLocalUnsavedChanges) {
-            logDebug("note-window", "external_watch_detect_conflict", {
-              notePath,
-              watchedPath,
-              length: fileContent.length,
-            });
-            pendingExternalContentRef.current = fileContent;
-            setHasExternalFileChange(true);
-            return;
-          }
-          logDebug("note-window", "external_watch_apply_auto", {
-            notePath,
-            watchedPath,
-            length: fileContent.length,
-          });
-          applyExternalFileContent(fileContent);
-        })();
-      }, EXTERNAL_FILE_RELOAD_DEBOUNCE_MS);
-    };
-
-    void dirname(watchedPath)
-      .then((watchRootPath) => {
-        logDebug("note-window", "external_watch_root_resolved", {
-          notePath,
-          watchedPath,
-          watchRootPath,
-        });
-        if (disposed) return null;
-        return watchImmediate(
-          watchRootPath,
-          (event) => {
-            if (disposed) return;
-            logDebug("note-window", "external_watch_event", {
-              notePath,
-              watchedPath,
-              watchRootPath,
-              eventKind: event.type,
-              eventPaths: event.paths,
-            });
-            const eventPaths = Array.isArray(event.paths) ? event.paths : [];
-            if (eventPaths.length === 0) {
-              logDebug("note-window", "external_watch_event_no_paths", {
-                notePath,
-                watchedPath,
-                watchRootPath,
-              });
-              scheduleReload();
-              return;
-            }
-            const hasTargetPath = eventPaths.some((path) => {
-              return normalizePathForCompare(path) === normalizedWatchedPath;
-            });
-            if (!hasTargetPath) {
-              logDebug("note-window", "external_watch_event_ignored_other_path", {
-                notePath,
-                watchedPath,
-                watchRootPath,
-                eventPaths,
-              });
-              return;
-            }
-            scheduleReload();
-          },
-          { recursive: false },
-        );
-      })
-      .then((unwatchFn) => {
-        if (!unwatchFn) return;
-        if (disposed) {
-          logDebug("note-window", "external_watch_setup_disposed_before_bind", {
-            notePath,
-            watchedPath,
-          });
-          unwatchFn();
-          return;
-        }
-        logDebug("note-window", "external_watch_setup_bound", { notePath, watchedPath });
-        unwatch = unwatchFn;
-      })
-      .catch((error) => {
-        logError("note-window", "external_watch_setup_failed", error, {
-          notePath,
-          watchedPath,
-        });
-      });
-
-    return () => {
-      logDebug("note-window", "external_watch_cleanup", { notePath, watchedPath });
-      disposed = true;
-      if (externalReloadTimerRef.current) {
-        clearTimeout(externalReloadTimerRef.current);
-        externalReloadTimerRef.current = null;
-      }
-      if (unwatch) {
-        unwatch();
-      }
-    };
-  }, [applyExternalFileContent, initialContent, isSavePending, notePath]);
 
   useEffect(() => {
     const applyEffects = async () => {
