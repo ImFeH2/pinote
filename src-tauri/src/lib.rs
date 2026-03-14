@@ -51,6 +51,21 @@ struct StoredSettings {
     new_note_directory: Option<String>,
 }
 
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct OpenNoteWindowOptions {
+    window_id: Option<String>,
+    note_path: Option<String>,
+    visibility: Option<window_state::WindowVisibility>,
+    focus: Option<bool>,
+    always_on_top: Option<bool>,
+    read_only: Option<bool>,
+    opacity: Option<f64>,
+    scroll_top: Option<f64>,
+    bounds: Option<window_state::WindowBounds>,
+    skip_taskbar: Option<bool>,
+}
+
 fn is_markdown_file_path(path: &Path) -> bool {
     path.extension()
         .and_then(|extension| extension.to_str())
@@ -178,11 +193,21 @@ fn encode_query_component(value: &str) -> String {
     encoded
 }
 
-fn build_note_window_url(window_id: &str, note_path: &str, note_opacity: Option<f64>) -> String {
+fn build_note_window_url(
+    window_id: &str,
+    note_id: Option<&str>,
+    note_path: &str,
+    note_opacity: Option<f64>,
+) -> String {
     let encoded_window_id = encode_query_component(window_id);
     let encoded_note_path = encode_query_component(note_path);
     let mut url =
         format!("index.html?view=note&windowId={encoded_window_id}&notePath={encoded_note_path}");
+    if let Some(note_id) = note_id.map(str::trim).filter(|value| !value.is_empty()) {
+        let encoded_note_id = encode_query_component(note_id);
+        url.push_str("&noteId=");
+        url.push_str(&encoded_note_id);
+    }
     if let Some(opacity) = note_opacity
         && opacity.is_finite()
     {
@@ -192,6 +217,57 @@ fn build_note_window_url(window_id: &str, note_path: &str, note_opacity: Option<
         url.push_str(&encoded_note_opacity);
     }
     url
+}
+
+fn clamp_note_opacity(value: Option<f64>) -> f64 {
+    value.unwrap_or(1.0).clamp(0.0, 1.0)
+}
+
+fn clamp_note_scroll_top(value: Option<f64>) -> f64 {
+    value.unwrap_or(0.0).max(0.0)
+}
+
+fn capture_note_window_state(
+    window: &WebviewWindow,
+    note_id: &str,
+    note_path: &str,
+    read_only: bool,
+    opacity: f64,
+    scroll_top: f64,
+) -> Result<window_state::CachedWindowState, String> {
+    let position = window
+        .outer_position()
+        .map_err(|error| format!("Failed to read window position: {error}"))?;
+    let size = window
+        .inner_size()
+        .map_err(|error| format!("Failed to read window size: {error}"))?;
+    let always_on_top = window
+        .is_always_on_top()
+        .map_err(|error| format!("Failed to read always-on-top state: {error}"))?;
+    let visible = window
+        .is_visible()
+        .map_err(|error| format!("Failed to read window visibility: {error}"))?;
+    Ok(window_state::CachedWindowState {
+        window_id: window.label().to_string(),
+        note_id: note_id.to_string(),
+        note_path: note_path.to_string(),
+        visibility: if visible {
+            window_state::WindowVisibility::Visible
+        } else {
+            window_state::WindowVisibility::Hidden
+        },
+        always_on_top,
+        read_only,
+        opacity,
+        scroll_top,
+        bounds: window_state::WindowBounds {
+            x: position.x,
+            y: position.y,
+            width: f64::from(size.width),
+            height: f64::from(size.height),
+        },
+        updated_at: String::new(),
+    })
 }
 
 fn level_allowed_for_filter(level: Level, minimum: LevelFilter) -> bool {
@@ -296,7 +372,12 @@ fn restore_cached_note_windows(app: &tauri::AppHandle, skip_taskbar: bool) -> us
             continue;
         }
 
-        let url = build_note_window_url(window_id, note_path, Some(cached.opacity));
+        let url = build_note_window_url(
+            window_id,
+            Some(&cached.note_id),
+            note_path,
+            Some(cached.opacity),
+        );
         let window = match WebviewWindowBuilder::new(app, window_id, WebviewUrl::App(url.into()))
             .title("Pinote")
             .inner_size(NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT)
@@ -368,7 +449,7 @@ fn open_cli_note_windows_on_main_thread(app: &tauri::AppHandle, requests: &[CliO
             }
             continue;
         }
-        let url = build_note_window_url(&window_id, note_path, None);
+        let url = build_note_window_url(&window_id, None, note_path, None);
         let window = match WebviewWindowBuilder::new(app, &window_id, WebviewUrl::App(url.into()))
             .title("Pinote")
             .inner_size(NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT)
@@ -654,6 +735,147 @@ fn remove_window_state(app: tauri::AppHandle, window_id: String) -> Result<(), S
 }
 
 #[tauri::command]
+fn show_settings_window(app: tauri::AppHandle) -> Result<(), String> {
+    window::show_settings_window(&app).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn open_note_window(
+    app: tauri::AppHandle,
+    note_id: String,
+    options: Option<OpenNoteWindowOptions>,
+) -> Result<window_state::CachedWindowState, String> {
+    let options = options.unwrap_or_default();
+    let normalized_note_id = note_id.trim().to_string();
+    if normalized_note_id.is_empty() {
+        return Err(String::from("noteId is required"));
+    }
+    let note_path = options
+        .note_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| String::from("notePath is required"))?;
+    let window_id = options
+        .window_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| build_note_window_id(&note_path));
+    let visibility = options
+        .visibility
+        .unwrap_or(window_state::WindowVisibility::Visible);
+    let should_focus =
+        visibility != window_state::WindowVisibility::Hidden && options.focus.unwrap_or(true);
+    let read_only = options.read_only.unwrap_or(false);
+    let opacity = clamp_note_opacity(options.opacity);
+    let scroll_top = clamp_note_scroll_top(options.scroll_top);
+    let skip_taskbar = options
+        .skip_taskbar
+        .unwrap_or_else(|| load_hide_note_windows_from_taskbar(&app));
+
+    if let Some(existing) = app.get_webview_window(&window_id) {
+        if let Some(bounds) = options.bounds.as_ref() {
+            let width = bounds.width.round().max(1.0) as u32;
+            let height = bounds.height.round().max(1.0) as u32;
+            existing
+                .set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
+                    width, height,
+                )))
+                .map_err(|error| format!("Failed to set window size: {error}"))?;
+            existing
+                .set_position(PhysicalPosition::new(bounds.x, bounds.y))
+                .map_err(|error| format!("Failed to set window position: {error}"))?;
+        }
+        if let Some(always_on_top) = options.always_on_top {
+            existing
+                .set_always_on_top(always_on_top)
+                .map_err(|error| format!("Failed to set always-on-top: {error}"))?;
+        }
+        existing
+            .set_skip_taskbar(skip_taskbar)
+            .map_err(|error| format!("Failed to set skip-taskbar: {error}"))?;
+        match visibility {
+            window_state::WindowVisibility::Hidden => {
+                existing
+                    .hide()
+                    .map_err(|error| format!("Failed to hide existing window: {error}"))?;
+            }
+            window_state::WindowVisibility::Visible => {
+                existing
+                    .show()
+                    .map_err(|error| format!("Failed to show existing window: {error}"))?;
+                if should_focus {
+                    existing
+                        .set_focus()
+                        .map_err(|error| format!("Failed to focus existing window: {error}"))?;
+                    shake_existing_window(&existing);
+                }
+            }
+        }
+        return capture_note_window_state(
+            &existing,
+            &normalized_note_id,
+            &note_path,
+            read_only,
+            opacity,
+            scroll_top,
+        );
+    }
+
+    let url = build_note_window_url(
+        &window_id,
+        Some(&normalized_note_id),
+        &note_path,
+        Some(opacity),
+    );
+    let window = WebviewWindowBuilder::new(&app, &window_id, WebviewUrl::App(url.into()))
+        .title(format!("Pinote - {normalized_note_id}"))
+        .inner_size(NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT)
+        .min_inner_size(NOTE_WINDOW_MIN_WIDTH, NOTE_WINDOW_MIN_HEIGHT)
+        .decorations(false)
+        .transparent(true)
+        .resizable(true)
+        .always_on_top(options.always_on_top.unwrap_or(false))
+        .skip_taskbar(skip_taskbar)
+        .visible(false)
+        .build()
+        .map_err(|error| format!("Failed to create note window: {error}"))?;
+    if let Some(bounds) = options.bounds.as_ref() {
+        let width = bounds.width.round().max(1.0) as u32;
+        let height = bounds.height.round().max(1.0) as u32;
+        window
+            .set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
+                width, height,
+            )))
+            .map_err(|error| format!("Failed to set new window size: {error}"))?;
+        window
+            .set_position(PhysicalPosition::new(bounds.x, bounds.y))
+            .map_err(|error| format!("Failed to set new window position: {error}"))?;
+    }
+    if visibility == window_state::WindowVisibility::Visible {
+        window
+            .show()
+            .map_err(|error| format!("Failed to show new window: {error}"))?;
+        if should_focus {
+            window
+                .set_focus()
+                .map_err(|error| format!("Failed to focus new window: {error}"))?;
+        }
+    }
+    capture_note_window_state(
+        &window,
+        &normalized_note_id,
+        &note_path,
+        read_only,
+        opacity,
+        scroll_top,
+    )
+}
+
+#[tauri::command]
 fn get_open_with_pinote_enabled() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
@@ -757,6 +979,8 @@ pub fn run() {
             upsert_window_state,
             set_window_visibility,
             remove_window_state,
+            show_settings_window,
+            open_note_window,
             get_runtime_platform,
             get_open_with_pinote_enabled,
             set_open_with_pinote_enabled,

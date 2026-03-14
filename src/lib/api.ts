@@ -1,38 +1,26 @@
 import { emit, emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
+import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import {
-  buildNoteWindowId,
-  buildNoteWindowUrl,
-  normalizeNoteId,
-  resolveManagedNotePath,
-} from "@/lib/notes";
+import { normalizeNoteId, resolveManagedNotePath } from "@/lib/notes";
 import { recordOpenedNote } from "@/lib/noteHistory";
 import { logError } from "@/lib/logger";
 import type { WindowBounds, WindowVisibility } from "@/lib/windowStateCache";
-import { loadSettings, type Settings } from "@/stores/settings";
+import { type Settings } from "@/stores/settings";
 
 type SettingsEventPayload = {
   settings: Settings;
   source: string;
 };
 
-const SETTINGS_WINDOW_LABEL = "settings";
 const NOTE_CONTEXT_MENU_ACTION_EVENT = "note-context-menu-action";
 const NOTE_CONTEXT_MENU_SYNC_EVENT = "note-context-menu-sync";
-const NOTE_WINDOW_WIDTH = 400;
-const NOTE_WINDOW_HEIGHT = 500;
-const NOTE_WINDOW_MIN_WIDTH = 1;
-const NOTE_WINDOW_MIN_HEIGHT = 1;
 const NOTE_WINDOW_LABEL_PREFIX = "note-";
 const NOTE_CONTEXT_MENU_WINDOW_SUFFIX = "-context-menu";
 const NOTE_CONTEXT_MENU_WIDTH = 224;
 const NOTE_CONTEXT_MENU_HEIGHT = 180;
 const NOTE_CONTEXT_MENU_GAP = 8;
-const EXISTING_NOTE_WINDOW_SHAKE_OFFSETS = [0, 14, -12, 10, -8, 6, -4, 0];
-const EXISTING_NOTE_WINDOW_SHAKE_DELAY_MS = 14;
 
 interface OpenNoteWindowOptions {
   windowId?: string;
@@ -108,127 +96,14 @@ async function waitForWindowCreated(window: WebviewWindow) {
   });
 }
 
-async function createSettingsWindow() {
-  const settingsWindow = new WebviewWindow(SETTINGS_WINDOW_LABEL, {
-    url: "index.html?view=settings",
-    title: "Pinote Settings",
-    width: 920,
-    height: 620,
-    center: true,
-    minWidth: 760,
-    minHeight: 520,
-    decorations: false,
-    resizable: true,
-  });
-
-  await waitForWindowCreated(settingsWindow);
-
-  await settingsWindow.onCloseRequested((event) => {
-    event.preventDefault();
-    void settingsWindow.hide();
-  });
-
-  return settingsWindow;
-}
-
-async function getWindowSnapshot(
-  window: WebviewWindow,
-  noteId: string,
-  notePath: string,
-  readOnly = false,
-  opacity = 1,
-  scrollTop = 0,
-): Promise<OpenedNoteWindow> {
-  const [position, size, alwaysOnTop, visible] = await Promise.all([
-    window.outerPosition(),
-    window.innerSize(),
-    window.isAlwaysOnTop(),
-    window.isVisible(),
-  ]);
-  return {
-    windowId: window.label,
-    noteId,
-    notePath,
-    visibility: visible ? "visible" : "hidden",
-    alwaysOnTop,
-    readOnly,
-    opacity,
-    scrollTop: Math.max(0, scrollTop),
-    bounds: {
-      x: position.x,
-      y: position.y,
-      width: size.width,
-      height: size.height,
-    },
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-async function createNoteWindow(
-  windowId: string,
-  noteId: string,
-  notePath: string,
-  options: OpenNoteWindowOptions,
-) {
-  const noteWindow = new WebviewWindow(windowId, {
-    url: buildNoteWindowUrl({
-      windowId,
-      noteId,
-      notePath,
-      noteOpacity: options.opacity,
-    }),
-    title: `Pinote - ${noteId}`,
-    width: NOTE_WINDOW_WIDTH,
-    height: NOTE_WINDOW_HEIGHT,
-    minWidth: NOTE_WINDOW_MIN_WIDTH,
-    minHeight: NOTE_WINDOW_MIN_HEIGHT,
-    decorations: false,
-    transparent: true,
-    resizable: true,
-    alwaysOnTop: options.alwaysOnTop ?? false,
-    skipTaskbar: options.skipTaskbar ?? true,
-    visible: false,
-  } as ConstructorParameters<typeof WebviewWindow>[1]);
-
-  await waitForWindowCreated(noteWindow);
-  if (options.bounds) {
-    await noteWindow.setSize(new PhysicalSize(options.bounds.width, options.bounds.height));
-    await noteWindow.setPosition(new PhysicalPosition(options.bounds.x, options.bounds.y));
-  }
-
-  return noteWindow;
-}
-
 function isNoteWindowLabel(label: string) {
   return (
     label.startsWith(NOTE_WINDOW_LABEL_PREFIX) && !label.endsWith(NOTE_CONTEXT_MENU_WINDOW_SUFFIX)
   );
 }
 
-async function resolveNoteWindowSkipTaskbar(preferredValue: boolean | undefined) {
-  if (typeof preferredValue === "boolean") return preferredValue;
-  try {
-    const settings = await loadSettings();
-    return settings.hideNoteWindowsFromTaskbar;
-  } catch {
-    return true;
-  }
-}
-
 export async function openSettingsWindow() {
-  const existing = await WebviewWindow.getByLabel(SETTINGS_WINDOW_LABEL);
-  const settingsWindow = existing ?? (await createSettingsWindow());
-  const wasAlwaysOnTop = await settingsWindow.isAlwaysOnTop().catch(() => false);
-  const isMinimized = await settingsWindow.isMinimized().catch(() => false);
-  if (isMinimized) {
-    await settingsWindow.unminimize().catch(() => {});
-  }
-  await settingsWindow.show();
-  await settingsWindow.setFocus();
-  if (!wasAlwaysOnTop) {
-    await settingsWindow.setAlwaysOnTop(true).catch(() => {});
-    await settingsWindow.setAlwaysOnTop(false).catch(() => {});
-  }
+  await invoke("show_settings_window");
 }
 
 export async function getOpenWithPinoteEnabled() {
@@ -276,23 +151,6 @@ function buildNoteContextMenuWindowLabel(parentWindowLabel: string) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
-}
-
-function delay(ms: number) {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
-
-async function shakeExistingNoteWindow(window: WebviewWindow) {
-  const position = await window.outerPosition().catch(() => null);
-  if (!position) return;
-  const baseX = position.x;
-  const baseY = position.y;
-  for (const offset of EXISTING_NOTE_WINDOW_SHAKE_OFFSETS) {
-    await window.setPosition(new PhysicalPosition(baseX + offset, baseY)).catch(() => {});
-    await delay(EXISTING_NOTE_WINDOW_SHAKE_DELAY_MS);
-  }
 }
 
 async function resolveContextMenuPosition(options: OpenNoteContextMenuOptions) {
@@ -492,82 +350,25 @@ export async function listenNoteContextMenuSync(
 export async function openNoteWindow(noteId: string, options: OpenNoteWindowOptions = {}) {
   const normalizedNoteId = normalizeNoteId(noteId);
   const notePath = options.notePath?.trim() || (await resolveManagedNotePath(normalizedNoteId));
-  const windowId = options.windowId?.trim() || buildNoteWindowId(notePath);
-  void recordOpenedNote({
-    notePath,
+  const opened = await invoke<OpenedNoteWindow>("open_note_window", {
     noteId: normalizedNoteId,
-    windowId,
+    options: {
+      ...options,
+      notePath,
+    },
+  });
+  void recordOpenedNote({
+    notePath: opened.notePath,
+    noteId: opened.noteId,
+    windowId: opened.windowId,
   }).catch((error) => {
     logError("api", "record_note_history_failed", error, {
-      notePath,
-      noteId: normalizedNoteId,
-      windowId,
+      notePath: opened.notePath,
+      noteId: opened.noteId,
+      windowId: opened.windowId,
     });
   });
-  const skipTaskbar = await resolveNoteWindowSkipTaskbar(options.skipTaskbar);
-  const existing = await WebviewWindow.getByLabel(windowId);
-  if (existing) {
-    if (options.bounds) {
-      await existing.setSize(new PhysicalSize(options.bounds.width, options.bounds.height));
-      await existing.setPosition(new PhysicalPosition(options.bounds.x, options.bounds.y));
-    }
-    if (typeof options.alwaysOnTop === "boolean") {
-      await existing.setAlwaysOnTop(options.alwaysOnTop);
-    }
-    await existing.setSkipTaskbar(skipTaskbar);
-    if (options.visibility === "hidden") {
-      await existing.hide();
-      return getWindowSnapshot(
-        existing,
-        normalizedNoteId,
-        notePath,
-        options.readOnly ?? false,
-        options.opacity ?? 1,
-        options.scrollTop ?? 0,
-      );
-    }
-    await existing.show();
-    if (options.focus !== false) {
-      await existing.setFocus();
-      await shakeExistingNoteWindow(existing);
-    }
-    return getWindowSnapshot(
-      existing,
-      normalizedNoteId,
-      notePath,
-      options.readOnly ?? false,
-      options.opacity ?? 1,
-      options.scrollTop ?? 0,
-    );
-  }
-
-  const noteWindow = await createNoteWindow(windowId, normalizedNoteId, notePath, {
-    ...options,
-    skipTaskbar,
-  });
-  if (options.visibility === "hidden") {
-    await noteWindow.hide();
-    return getWindowSnapshot(
-      noteWindow,
-      normalizedNoteId,
-      notePath,
-      options.readOnly ?? false,
-      options.opacity ?? 1,
-      options.scrollTop ?? 0,
-    );
-  }
-  await noteWindow.show();
-  if (options.focus !== false) {
-    await noteWindow.setFocus();
-  }
-  return getWindowSnapshot(
-    noteWindow,
-    normalizedNoteId,
-    notePath,
-    options.readOnly ?? false,
-    options.opacity ?? 1,
-    options.scrollTop ?? 0,
-  );
+  return opened;
 }
 
 export async function emitSettingsUpdated(settings: Settings) {
