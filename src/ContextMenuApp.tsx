@@ -14,7 +14,7 @@ import {
   listenNoteContextMenuSync,
   type NoteContextMenuAction,
   type NoteContextMenuContext,
-} from "@/lib/api";
+} from "@/lib/contextMenuApi";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 import { logError } from "@/lib/logger";

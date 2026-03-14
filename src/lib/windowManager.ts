@@ -1,4 +1,4 @@
-import { openNoteWindow } from "@/lib/api";
+import { openNoteWindow } from "@/lib/windowApi";
 import {
   createManagedNoteFile,
   getNoteIdFromPath,

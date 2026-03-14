@@ -19,13 +19,11 @@ import { useWindowControl } from "@/hooks/useWindowControl";
 import { useSettings } from "@/hooks/useSettings";
 import {
   closeNoteContextMenu,
-  getRuntimePlatform,
   listenNoteContextMenuAction,
   openNoteContextMenu,
-  openSettingsWindow,
   type NoteContextMenuAction,
-  type RuntimePlatform,
-} from "@/lib/api";
+} from "@/lib/contextMenuApi";
+import { getRuntimePlatform, openSettingsWindow, type RuntimePlatform } from "@/lib/windowApi";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import { openAndTrackNoteWindow } from "@/lib/windowManager";
 import { recordOpenedNote } from "@/lib/noteHistory";

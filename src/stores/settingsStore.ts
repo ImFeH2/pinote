@@ -1,4 +1,4 @@
-import { emitSettingsUpdated, listenSettingsUpdated } from "@/lib/api";
+import { emitSettingsUpdated, listenSettingsUpdated } from "@/lib/settingsEvents";
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from "@/stores/settings";
 
 export type SettingsPatch = Partial<Omit<Settings, "shortcuts">> & {

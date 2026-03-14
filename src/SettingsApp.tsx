@@ -17,14 +17,14 @@ import {
 } from "@/stores/settings";
 import {
   getRuntimePlatform,
-  type RuntimePlatform,
   getDefaultMarkdownOpenEnabled,
   getOpenWithPinoteEnabled,
   setGlobalShortcuts,
   setNoteWindowsSkipTaskbar,
   setDefaultMarkdownOpenEnabled,
   setOpenWithPinoteEnabled,
-} from "@/lib/api";
+  type RuntimePlatform,
+} from "@/lib/windowApi";
 import { openAndTrackNoteWindow } from "@/lib/windowManager";
 import {
   checkForUpdates,
