@@ -2,12 +2,18 @@ use log::info;
 use std::{sync::Mutex, thread, time::Duration};
 use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder};
 
+use crate::window_state::{self, UpdateWindowStateOptions, WindowVisibility};
+use crate::{
+    NEW_NOTE_WINDOW_HEIGHT, NEW_NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT, NOTE_WINDOW_MIN_HEIGHT,
+    NOTE_WINDOW_MIN_WIDTH, NOTE_WINDOW_WIDTH, OpenNoteWindowOptions, build_note_window_id,
+    build_note_window_url, capture_note_window_state, clamp_note_opacity, clamp_note_scroll_top,
+    load_hide_note_windows_from_taskbar, shake_existing_window,
+};
+
 const NOTE_WINDOW_PREFIX: &str = "note-";
 const NOTE_CONTEXT_MENU_WINDOW_SUFFIX: &str = "-context-menu";
 const EXISTING_WINDOW_SHAKE_OFFSETS: [i32; 8] = [0, 14, -12, 10, -8, 6, -4, 0];
 const EXISTING_WINDOW_SHAKE_DELAY_MS: u64 = 14;
-
-use crate::window_state::{self, UpdateWindowStateOptions, WindowVisibility};
 
 #[derive(Default)]
 pub struct VisibleWindowToggleState(pub Mutex<Vec<String>>);
@@ -220,4 +226,149 @@ pub fn show_settings_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> 
     });
 
     Ok(())
+}
+
+pub fn open_note_window(
+    app: tauri::AppHandle,
+    note_id: String,
+    options: Option<OpenNoteWindowOptions>,
+) -> Result<window_state::CachedWindowState, String> {
+    let options = options.unwrap_or_default();
+    let normalized_note_id = note_id.trim().to_string();
+    if normalized_note_id.is_empty() {
+        return Err(String::from("noteId is required"));
+    }
+    let note_path = options
+        .note_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .ok_or_else(|| String::from("notePath is required"))?;
+    let window_id = options
+        .window_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+        .unwrap_or_else(|| build_note_window_id(&note_path));
+    let visibility = options
+        .visibility
+        .unwrap_or(window_state::WindowVisibility::Visible);
+    let should_focus =
+        visibility != window_state::WindowVisibility::Hidden && options.focus.unwrap_or(true);
+    let read_only = options.read_only.unwrap_or(false);
+    let opacity = clamp_note_opacity(options.opacity);
+    let scroll_top = clamp_note_scroll_top(options.scroll_top);
+    let center_on_create = options.center_on_create.unwrap_or(false);
+    let skip_taskbar = options
+        .skip_taskbar
+        .unwrap_or_else(|| load_hide_note_windows_from_taskbar(&app));
+
+    if let Some(existing) = app.get_webview_window(&window_id) {
+        if let Some(bounds) = options.bounds.as_ref() {
+            let width = bounds.width.round().max(1.0) as u32;
+            let height = bounds.height.round().max(1.0) as u32;
+            existing
+                .set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
+                    width, height,
+                )))
+                .map_err(|error| format!("Failed to set window size: {error}"))?;
+            existing
+                .set_position(PhysicalPosition::new(bounds.x, bounds.y))
+                .map_err(|error| format!("Failed to set window position: {error}"))?;
+        }
+        if let Some(always_on_top) = options.always_on_top {
+            existing
+                .set_always_on_top(always_on_top)
+                .map_err(|error| format!("Failed to set always-on-top: {error}"))?;
+        }
+        existing
+            .set_skip_taskbar(skip_taskbar)
+            .map_err(|error| format!("Failed to set skip-taskbar: {error}"))?;
+        match visibility {
+            window_state::WindowVisibility::Hidden => {
+                existing
+                    .hide()
+                    .map_err(|error| format!("Failed to hide existing window: {error}"))?;
+            }
+            window_state::WindowVisibility::Visible => {
+                existing
+                    .show()
+                    .map_err(|error| format!("Failed to show existing window: {error}"))?;
+                if should_focus {
+                    existing
+                        .set_focus()
+                        .map_err(|error| format!("Failed to focus existing window: {error}"))?;
+                    shake_existing_window(&existing);
+                }
+            }
+        }
+        return capture_note_window_state(
+            &existing,
+            &normalized_note_id,
+            &note_path,
+            read_only,
+            opacity,
+            scroll_top,
+        );
+    }
+
+    let url = build_note_window_url(
+        &window_id,
+        Some(&normalized_note_id),
+        &note_path,
+        Some(opacity),
+    );
+    let (initial_width, initial_height) = if center_on_create {
+        (NEW_NOTE_WINDOW_WIDTH, NEW_NOTE_WINDOW_HEIGHT)
+    } else {
+        (NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT)
+    };
+    let mut builder = WebviewWindowBuilder::new(&app, &window_id, WebviewUrl::App(url.into()))
+        .title(format!("Pinote - {normalized_note_id}"))
+        .inner_size(initial_width, initial_height)
+        .min_inner_size(NOTE_WINDOW_MIN_WIDTH, NOTE_WINDOW_MIN_HEIGHT)
+        .decorations(false)
+        .transparent(true)
+        .resizable(true)
+        .always_on_top(options.always_on_top.unwrap_or(false))
+        .skip_taskbar(skip_taskbar)
+        .visible(false);
+    if center_on_create && options.bounds.is_none() {
+        builder = builder.center();
+    }
+    let window = builder
+        .build()
+        .map_err(|error| format!("Failed to create note window: {error}"))?;
+    if let Some(bounds) = options.bounds.as_ref() {
+        let width = bounds.width.round().max(1.0) as u32;
+        let height = bounds.height.round().max(1.0) as u32;
+        window
+            .set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
+                width, height,
+            )))
+            .map_err(|error| format!("Failed to set new window size: {error}"))?;
+        window
+            .set_position(PhysicalPosition::new(bounds.x, bounds.y))
+            .map_err(|error| format!("Failed to set new window position: {error}"))?;
+    }
+    if visibility == window_state::WindowVisibility::Visible {
+        window
+            .show()
+            .map_err(|error| format!("Failed to show new window: {error}"))?;
+        if should_focus {
+            window
+                .set_focus()
+                .map_err(|error| format!("Failed to focus new window: {error}"))?;
+        }
+    }
+    capture_note_window_state(
+        &window,
+        &normalized_note_id,
+        &note_path,
+        read_only,
+        opacity,
+        scroll_top,
+    )
 }

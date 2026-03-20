@@ -512,21 +512,24 @@ fn open_cli_note_windows(app: &tauri::AppHandle, requests: Vec<CliOpenNoteReques
 }
 
 pub(crate) fn open_new_note_window(app: &tauri::AppHandle) {
-    if let Some(note_path) = create_startup_note_file(app) {
-        let _ = open_note_window(
-            app.clone(),
-            extract_note_id_from_path(&note_path),
-            Some(OpenNoteWindowOptions {
-                note_path: Some(note_path),
-                visibility: Some(window_state::WindowVisibility::Visible),
-                focus: Some(true),
-                always_on_top: Some(false),
-                skip_taskbar: Some(load_hide_note_windows_from_taskbar(app)),
-                center_on_create: Some(true),
-                ..OpenNoteWindowOptions::default()
-            }),
-        );
-    }
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        if let Some(note_path) = create_startup_note_file(&handle) {
+            let _ = window::open_note_window(
+                handle.clone(),
+                extract_note_id_from_path(&note_path),
+                Some(OpenNoteWindowOptions {
+                    note_path: Some(note_path),
+                    visibility: Some(window_state::WindowVisibility::Visible),
+                    focus: Some(true),
+                    always_on_top: Some(false),
+                    skip_taskbar: Some(load_hide_note_windows_from_taskbar(&handle)),
+                    center_on_create: Some(true),
+                    ..OpenNoteWindowOptions::default()
+                }),
+            );
+        }
+    });
 }
 
 #[cfg(target_os = "windows")]
@@ -699,14 +702,14 @@ fn set_default_markdown_open_enabled_windows(enabled: bool) -> Result<(), String
 }
 
 #[tauri::command]
-fn load_window_state_cache(
+async fn load_window_state_cache(
     app: tauri::AppHandle,
 ) -> Result<window_state::WindowStateCache, String> {
     window_state::load_window_state_cache(&app)
 }
 
 #[tauri::command]
-fn get_window_state(
+async fn get_window_state(
     app: tauri::AppHandle,
     window_id: String,
 ) -> Result<Option<window_state::CachedWindowState>, String> {
@@ -714,7 +717,7 @@ fn get_window_state(
 }
 
 #[tauri::command]
-fn get_window_state_by_note_path(
+async fn get_window_state_by_note_path(
     app: tauri::AppHandle,
     note_path: String,
 ) -> Result<Option<window_state::CachedWindowState>, String> {
@@ -722,21 +725,21 @@ fn get_window_state_by_note_path(
 }
 
 #[tauri::command]
-fn get_most_recent_hidden_window_state(
+async fn get_most_recent_hidden_window_state(
     app: tauri::AppHandle,
 ) -> Result<Option<window_state::CachedWindowState>, String> {
     window_state::get_most_recent_hidden_window_state(&app)
 }
 
 #[tauri::command]
-fn list_window_states_in_order(
+async fn list_window_states_in_order(
     app: tauri::AppHandle,
 ) -> Result<Vec<window_state::CachedWindowState>, String> {
     window_state::list_window_states_in_order(&app)
 }
 
 #[tauri::command]
-fn upsert_window_state(
+async fn upsert_window_state(
     app: tauri::AppHandle,
     state: window_state::CachedWindowState,
     options: Option<window_state::UpdateWindowStateOptions>,
@@ -745,7 +748,7 @@ fn upsert_window_state(
 }
 
 #[tauri::command]
-fn set_window_visibility(
+async fn set_window_visibility(
     app: tauri::AppHandle,
     window_id: String,
     visibility: window_state::WindowVisibility,
@@ -755,163 +758,26 @@ fn set_window_visibility(
 }
 
 #[tauri::command]
-fn remove_window_state(app: tauri::AppHandle, window_id: String) -> Result<(), String> {
+async fn remove_window_state(app: tauri::AppHandle, window_id: String) -> Result<(), String> {
     window_state::remove_window_state(&app, &window_id)
 }
 
 #[tauri::command]
-fn show_settings_window(app: tauri::AppHandle) -> Result<(), String> {
+async fn show_settings_window(app: tauri::AppHandle) -> Result<(), String> {
     window::show_settings_window(&app).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
-fn open_note_window(
+async fn open_note_window(
     app: tauri::AppHandle,
     note_id: String,
     options: Option<OpenNoteWindowOptions>,
 ) -> Result<window_state::CachedWindowState, String> {
-    let options = options.unwrap_or_default();
-    let normalized_note_id = note_id.trim().to_string();
-    if normalized_note_id.is_empty() {
-        return Err(String::from("noteId is required"));
-    }
-    let note_path = options
-        .note_path
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(ToOwned::to_owned)
-        .ok_or_else(|| String::from("notePath is required"))?;
-    let window_id = options
-        .window_id
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(ToOwned::to_owned)
-        .unwrap_or_else(|| build_note_window_id(&note_path));
-    let visibility = options
-        .visibility
-        .unwrap_or(window_state::WindowVisibility::Visible);
-    let should_focus =
-        visibility != window_state::WindowVisibility::Hidden && options.focus.unwrap_or(true);
-    let read_only = options.read_only.unwrap_or(false);
-    let opacity = clamp_note_opacity(options.opacity);
-    let scroll_top = clamp_note_scroll_top(options.scroll_top);
-    let center_on_create = options.center_on_create.unwrap_or(false);
-    let skip_taskbar = options
-        .skip_taskbar
-        .unwrap_or_else(|| load_hide_note_windows_from_taskbar(&app));
-
-    if let Some(existing) = app.get_webview_window(&window_id) {
-        if let Some(bounds) = options.bounds.as_ref() {
-            let width = bounds.width.round().max(1.0) as u32;
-            let height = bounds.height.round().max(1.0) as u32;
-            existing
-                .set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
-                    width, height,
-                )))
-                .map_err(|error| format!("Failed to set window size: {error}"))?;
-            existing
-                .set_position(PhysicalPosition::new(bounds.x, bounds.y))
-                .map_err(|error| format!("Failed to set window position: {error}"))?;
-        }
-        if let Some(always_on_top) = options.always_on_top {
-            existing
-                .set_always_on_top(always_on_top)
-                .map_err(|error| format!("Failed to set always-on-top: {error}"))?;
-        }
-        existing
-            .set_skip_taskbar(skip_taskbar)
-            .map_err(|error| format!("Failed to set skip-taskbar: {error}"))?;
-        match visibility {
-            window_state::WindowVisibility::Hidden => {
-                existing
-                    .hide()
-                    .map_err(|error| format!("Failed to hide existing window: {error}"))?;
-            }
-            window_state::WindowVisibility::Visible => {
-                existing
-                    .show()
-                    .map_err(|error| format!("Failed to show existing window: {error}"))?;
-                if should_focus {
-                    existing
-                        .set_focus()
-                        .map_err(|error| format!("Failed to focus existing window: {error}"))?;
-                    shake_existing_window(&existing);
-                }
-            }
-        }
-        return capture_note_window_state(
-            &existing,
-            &normalized_note_id,
-            &note_path,
-            read_only,
-            opacity,
-            scroll_top,
-        );
-    }
-
-    let url = build_note_window_url(
-        &window_id,
-        Some(&normalized_note_id),
-        &note_path,
-        Some(opacity),
-    );
-    let (initial_width, initial_height) = if center_on_create {
-        (NEW_NOTE_WINDOW_WIDTH, NEW_NOTE_WINDOW_HEIGHT)
-    } else {
-        (NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT)
-    };
-    let mut builder = WebviewWindowBuilder::new(&app, &window_id, WebviewUrl::App(url.into()))
-        .title(format!("Pinote - {normalized_note_id}"))
-        .inner_size(initial_width, initial_height)
-        .min_inner_size(NOTE_WINDOW_MIN_WIDTH, NOTE_WINDOW_MIN_HEIGHT)
-        .decorations(false)
-        .transparent(true)
-        .resizable(true)
-        .always_on_top(options.always_on_top.unwrap_or(false))
-        .skip_taskbar(skip_taskbar)
-        .visible(false);
-    if center_on_create && options.bounds.is_none() {
-        builder = builder.center();
-    }
-    let window = builder
-        .build()
-        .map_err(|error| format!("Failed to create note window: {error}"))?;
-    if let Some(bounds) = options.bounds.as_ref() {
-        let width = bounds.width.round().max(1.0) as u32;
-        let height = bounds.height.round().max(1.0) as u32;
-        window
-            .set_size(tauri::Size::Physical(tauri::PhysicalSize::new(
-                width, height,
-            )))
-            .map_err(|error| format!("Failed to set new window size: {error}"))?;
-        window
-            .set_position(PhysicalPosition::new(bounds.x, bounds.y))
-            .map_err(|error| format!("Failed to set new window position: {error}"))?;
-    }
-    if visibility == window_state::WindowVisibility::Visible {
-        window
-            .show()
-            .map_err(|error| format!("Failed to show new window: {error}"))?;
-        if should_focus {
-            window
-                .set_focus()
-                .map_err(|error| format!("Failed to focus new window: {error}"))?;
-        }
-    }
-    capture_note_window_state(
-        &window,
-        &normalized_note_id,
-        &note_path,
-        read_only,
-        opacity,
-        scroll_top,
-    )
+    window::open_note_window(app, note_id, options)
 }
 
 #[tauri::command]
-fn get_open_with_pinote_enabled() -> Result<bool, String> {
+async fn get_open_with_pinote_enabled() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
         return Ok(is_open_with_pinote_enabled());
@@ -923,7 +789,7 @@ fn get_open_with_pinote_enabled() -> Result<bool, String> {
 }
 
 #[tauri::command]
-fn set_open_with_pinote_enabled(enabled: bool) -> Result<bool, String> {
+async fn set_open_with_pinote_enabled(enabled: bool) -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
         set_open_with_pinote_enabled_windows(enabled)?;
@@ -937,7 +803,7 @@ fn set_open_with_pinote_enabled(enabled: bool) -> Result<bool, String> {
 }
 
 #[tauri::command]
-fn get_default_markdown_open_enabled() -> Result<bool, String> {
+async fn get_default_markdown_open_enabled() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
         return Ok(is_default_markdown_open_enabled_windows());
@@ -949,7 +815,7 @@ fn get_default_markdown_open_enabled() -> Result<bool, String> {
 }
 
 #[tauri::command]
-fn set_default_markdown_open_enabled(enabled: bool) -> Result<bool, String> {
+async fn set_default_markdown_open_enabled(enabled: bool) -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
         set_default_markdown_open_enabled_windows(enabled)?;
@@ -979,7 +845,7 @@ fn get_runtime_platform() -> &'static str {
 }
 
 #[tauri::command]
-fn set_global_shortcuts(
+async fn set_global_shortcuts(
     app: tauri::AppHandle,
     shortcuts: shortcut::GlobalShortcutConfig,
 ) -> Result<shortcut::GlobalShortcutRegistrationSnapshot, String> {
