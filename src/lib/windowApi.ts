@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { normalizeNoteId, resolveManagedNotePath } from "@/lib/notes";
 import { recordOpenedNote } from "@/lib/noteHistory";
-import { logError } from "@/lib/logger";
+import { logError, logInfo } from "@/lib/logger";
 import type { WindowBounds, WindowVisibility } from "@/lib/windowStateCache";
 
 const NOTE_WINDOW_LABEL_PREFIX = "note-";
@@ -59,7 +59,14 @@ function isNoteWindowLabel(label: string) {
 }
 
 export async function openSettingsWindow() {
-  await invoke("show_settings_window");
+  logInfo("window-api", "show_settings_window_requested");
+  try {
+    await invoke("show_settings_window");
+    logInfo("window-api", "show_settings_window_finished");
+  } catch (error) {
+    logError("window-api", "show_settings_window_failed", error);
+    throw error;
+  }
 }
 
 export async function getOpenWithPinoteEnabled() {
@@ -95,12 +102,37 @@ export async function setNoteWindowsSkipTaskbar(skipTaskbar: boolean) {
 export async function openNoteWindow(noteId: string, options: OpenNoteWindowOptions = {}) {
   const normalizedNoteId = normalizeNoteId(noteId);
   const notePath = options.notePath?.trim() || (await resolveManagedNotePath(normalizedNoteId));
-  const opened = await invoke<OpenedNoteWindow>("open_note_window", {
+  logInfo("window-api", "open_note_window_requested", {
     noteId: normalizedNoteId,
-    options: {
-      ...options,
+    notePath,
+    windowId: options.windowId,
+    visibility: options.visibility,
+    focus: options.focus,
+    centerOnCreate: options.centerOnCreate,
+    skipTaskbar: options.skipTaskbar,
+  });
+  let opened: OpenedNoteWindow;
+  try {
+    opened = await invoke<OpenedNoteWindow>("open_note_window", {
+      noteId: normalizedNoteId,
+      options: {
+        ...options,
+        notePath,
+      },
+    });
+  } catch (error) {
+    logError("window-api", "open_note_window_failed", error, {
+      noteId: normalizedNoteId,
       notePath,
-    },
+      windowId: options.windowId,
+    });
+    throw error;
+  }
+  logInfo("window-api", "open_note_window_finished", {
+    noteId: opened.noteId,
+    notePath: opened.notePath,
+    windowId: opened.windowId,
+    visibility: opened.visibility,
   });
   void recordOpenedNote({
     notePath: opened.notePath,
