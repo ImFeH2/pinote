@@ -53,11 +53,6 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
 
   const handlePersistedContent = useCallback(
     (content: string, source: PersistSource) => {
-      logDebug("note-window", "external_watch_persisted", {
-        source,
-        notePath,
-        length: content.length,
-      });
       persistedContentRef.current = content;
       if (source === "save") {
         ignoreExternalWatchUntilRef.current = Date.now() + SELF_FILE_WRITE_IGNORE_MS;
@@ -92,10 +87,7 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
 
   const reloadExternalFileContent = useCallback(() => {
     const pending = pendingExternalContentRef.current;
-    if (pending === null) {
-      logDebug("note-window", "external_watch_reload_skipped_no_pending", { notePath });
-      return;
-    }
+    if (pending === null) return;
     logDebug("note-window", "external_watch_reload_manual", {
       notePath,
       length: pending.length,
@@ -104,10 +96,9 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
   }, [applyExternalFileContent, notePath]);
 
   const dismissExternalFileChange = useCallback(() => {
-    logDebug("note-window", "external_watch_ignore", { notePath });
     pendingExternalContentRef.current = null;
     setHasExternalFileChange(false);
-  }, [notePath]);
+  }, []);
 
   useEffect(() => {
     if (initialContent === null) return;
@@ -115,27 +106,15 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
     let unwatch: (() => void) | null = null;
     const watchedPath = notePath.trim();
     const normalizedWatchedPath = normalizePathForCompare(watchedPath);
-    logDebug("note-window", "external_watch_setup_begin", {
-      notePath,
-      watchedPath,
-      normalizedWatchedPath,
-    });
 
     const scheduleReload = () => {
-      logDebug("note-window", "external_watch_schedule_reload", { notePath, watchedPath });
       if (externalReloadTimerRef.current) {
         clearTimeout(externalReloadTimerRef.current);
       }
       externalReloadTimerRef.current = setTimeout(() => {
         void (async () => {
           if (disposed) return;
-          if (Date.now() < ignoreExternalWatchUntilRef.current) {
-            logDebug("note-window", "external_watch_skip_self_write_window", {
-              notePath,
-              watchedPath,
-            });
-            return;
-          }
+          if (Date.now() < ignoreExternalWatchUntilRef.current) return;
           const fileContent = await readTextFile(watchedPath).catch((error) => {
             logError("note-window", "external_watch_read_file_failed", error, {
               notePath,
@@ -144,18 +123,8 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
             return null;
           });
           if (disposed) return;
-          if (fileContent === null) {
-            logDebug("note-window", "external_watch_skip_read_null", { notePath, watchedPath });
-            return;
-          }
-          if (fileContent === latestEditorContentRef.current) {
-            logDebug("note-window", "external_watch_skip_same_as_editor", {
-              notePath,
-              watchedPath,
-              length: fileContent.length,
-            });
-            return;
-          }
+          if (fileContent === null) return;
+          if (fileContent === latestEditorContentRef.current) return;
           const hasLocalUnsavedChanges =
             isSavePending() || latestEditorContentRef.current !== persistedContentRef.current;
           if (hasLocalUnsavedChanges) {
@@ -180,45 +149,20 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
 
     void dirname(watchedPath)
       .then((watchRootPath) => {
-        logDebug("note-window", "external_watch_root_resolved", {
-          notePath,
-          watchedPath,
-          watchRootPath,
-        });
         if (disposed) return null;
         return watchImmediate(
           watchRootPath,
           (event) => {
             if (disposed) return;
-            logDebug("note-window", "external_watch_event", {
-              notePath,
-              watchedPath,
-              watchRootPath,
-              eventKind: event.type,
-              eventPaths: event.paths,
-            });
             const eventPaths = Array.isArray(event.paths) ? event.paths : [];
             if (eventPaths.length === 0) {
-              logDebug("note-window", "external_watch_event_no_paths", {
-                notePath,
-                watchedPath,
-                watchRootPath,
-              });
               scheduleReload();
               return;
             }
             const hasTargetPath = eventPaths.some((path) => {
               return normalizePathForCompare(path) === normalizedWatchedPath;
             });
-            if (!hasTargetPath) {
-              logDebug("note-window", "external_watch_event_ignored_other_path", {
-                notePath,
-                watchedPath,
-                watchRootPath,
-                eventPaths,
-              });
-              return;
-            }
+            if (!hasTargetPath) return;
             scheduleReload();
           },
           { recursive: false },
@@ -227,14 +171,9 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
       .then((unwatchFn) => {
         if (!unwatchFn) return;
         if (disposed) {
-          logDebug("note-window", "external_watch_setup_disposed_before_bind", {
-            notePath,
-            watchedPath,
-          });
           unwatchFn();
           return;
         }
-        logDebug("note-window", "external_watch_setup_bound", { notePath, watchedPath });
         unwatch = unwatchFn;
       })
       .catch((error) => {
@@ -245,7 +184,6 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
       });
 
     return () => {
-      logDebug("note-window", "external_watch_cleanup", { notePath, watchedPath });
       disposed = true;
       if (externalReloadTimerRef.current) {
         clearTimeout(externalReloadTimerRef.current);

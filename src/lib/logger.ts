@@ -7,6 +7,7 @@ import {
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 type LogPayload = Record<string, unknown> | undefined;
+const DEBUG_LOG_ENABLED = import.meta.env.DEV;
 
 function toErrorFields(value: unknown) {
   if (value instanceof Error) {
@@ -39,6 +40,7 @@ function buildMessage(scope: string, event: string, payload?: LogPayload) {
 
 function emit(level: LogLevel, message: string) {
   if (level === "debug") {
+    if (!DEBUG_LOG_ENABLED) return;
     void pluginDebug(message).catch(() => {});
     return;
   }

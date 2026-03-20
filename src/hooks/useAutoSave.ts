@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { readTextFile, writeTextFile, mkdir, exists } from "@tauri-apps/plugin-fs";
 import { dirname } from "@tauri-apps/api/path";
-import { logDebug, logError } from "@/lib/logger";
+import { logError } from "@/lib/logger";
 
 const DEBOUNCE_MS = 500;
 
@@ -33,19 +33,11 @@ export function useAutoSave(notePath: string, options: UseAutoSaveOptions = {}) 
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
-      logDebug("auto-save", "save_scheduled", {
-        notePath,
-        length: content.length,
-      });
       pendingSaveRef.current = true;
       timerRef.current = setTimeout(async () => {
         try {
           await ensureParentDir(notePath);
           await writeTextFile(notePath, content);
-          logDebug("auto-save", "save_persisted", {
-            notePath,
-            length: content.length,
-          });
           onPersistedRef.current?.(content, "save");
         } catch (e) {
           logError("auto-save", "save_failed", e, { notePath });
@@ -59,18 +51,12 @@ export function useAutoSave(notePath: string, options: UseAutoSaveOptions = {}) 
 
   const load = useCallback(async (): Promise<string> => {
     try {
-      logDebug("auto-save", "load_begin", { notePath });
       await ensureParentDir(notePath);
       const fileExists = await exists(notePath);
       if (!fileExists) {
-        logDebug("auto-save", "load_missing_file", { notePath });
         return "";
       }
       const content = await readTextFile(notePath);
-      logDebug("auto-save", "load_success", {
-        notePath,
-        length: content.length,
-      });
       onPersistedRef.current?.(content, "load");
       return content;
     } catch (e) {
