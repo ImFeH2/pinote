@@ -59,6 +59,7 @@ pub struct WindowStateCache {
     pub windows: HashMap<String, CachedWindowState>,
     pub window_order: Vec<String>,
     pub hidden_stack: Vec<String>,
+    pub visible_window_toggle_snapshot: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -82,6 +83,7 @@ fn build_empty_cache() -> WindowStateCache {
         windows: HashMap::new(),
         window_order: Vec::new(),
         hidden_stack: Vec::new(),
+        visible_window_toggle_snapshot: Vec::new(),
     }
 }
 
@@ -223,6 +225,10 @@ fn sanitize_cache(value: Value) -> WindowStateCache {
     }
 
     let existing_ids = windows.keys().cloned().collect::<HashSet<_>>();
+    let existing_window_ids = windows
+        .values()
+        .map(|state| state.window_id.clone())
+        .collect::<HashSet<_>>();
 
     let mut window_order = Vec::new();
     let mut seen_order: HashSet<String> = HashSet::new();
@@ -269,6 +275,29 @@ fn sanitize_cache(value: Value) -> WindowStateCache {
         }
     }
 
+    let mut visible_window_toggle_snapshot = Vec::new();
+    let mut seen_snapshot = HashSet::new();
+    if let Some(snapshot_source) = source
+        .get("visibleWindowToggleSnapshot")
+        .and_then(Value::as_array)
+    {
+        for item in snapshot_source {
+            let label = item
+                .as_str()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(ToOwned::to_owned)
+                .unwrap_or_default();
+            if label.is_empty()
+                || !existing_window_ids.contains(&label)
+                || !seen_snapshot.insert(label.clone())
+            {
+                continue;
+            }
+            visible_window_toggle_snapshot.push(label);
+        }
+    }
+
     let updated_at = {
         let value = as_string(source.get("updatedAt"));
         if value.is_empty() {
@@ -284,6 +313,7 @@ fn sanitize_cache(value: Value) -> WindowStateCache {
         windows,
         window_order,
         hidden_stack,
+        visible_window_toggle_snapshot,
     }
 }
 
@@ -467,6 +497,39 @@ pub fn list_hidden_window_ids(app: &tauri::AppHandle) -> Result<Vec<String>, Str
     Ok(labels)
 }
 
+pub fn list_visible_window_toggle_snapshot(app: &tauri::AppHandle) -> Result<Vec<String>, String> {
+    let cache = read_cache(app)?;
+    Ok(cache.visible_window_toggle_snapshot.clone())
+}
+
+pub fn set_visible_window_toggle_snapshot(
+    app: &tauri::AppHandle,
+    window_labels: &[String],
+) -> Result<(), String> {
+    mutate_cache(app, |cache| {
+        let now = timestamp_now();
+        let mut snapshot = Vec::new();
+        let mut seen = HashSet::new();
+        for window_label in window_labels {
+            let normalized = window_label.trim();
+            if normalized.is_empty() || !seen.insert(normalized.to_string()) {
+                continue;
+            }
+            snapshot.push(normalized.to_string());
+        }
+        cache.visible_window_toggle_snapshot = snapshot;
+        cache.updated_at = now;
+    })
+}
+
+pub fn clear_visible_window_toggle_snapshot(app: &tauri::AppHandle) -> Result<(), String> {
+    mutate_cache(app, |cache| {
+        let now = timestamp_now();
+        cache.visible_window_toggle_snapshot.clear();
+        cache.updated_at = now;
+    })
+}
+
 pub fn upsert_window_state(
     app: &tauri::AppHandle,
     state: CachedWindowState,
@@ -591,9 +654,18 @@ pub fn remove_window_state(app: &tauri::AppHandle, window_id: &str) -> Result<()
             return;
         };
         let now = timestamp_now();
+        let removed_window_id = cache
+            .windows
+            .get(&cache_key)
+            .map(|state| state.window_id.clone());
         cache.windows.remove(&cache_key);
         cache.window_order.retain(|item| item != &cache_key);
         cache.hidden_stack.retain(|item| item != &cache_key);
+        if let Some(window_id) = removed_window_id {
+            cache
+                .visible_window_toggle_snapshot
+                .retain(|item| item != &window_id);
+        }
         cache.updated_at = now;
     })
 }

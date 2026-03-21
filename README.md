@@ -9,10 +9,10 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Markdown Workspace** — WYSIWYG editing with per-file auto-save and multi-note windows
 - **External File Sync** — Detects external file changes in real time and auto-reloads when safe
 - **Single Window per File** — Opening the same path focuses the existing window instead of creating duplicate editors
-- **Window Workflow Shortcuts** — Restore latest hidden window, show all hidden windows, and toggle the current visible window set
+- **Window Workflow Shortcuts** — Restore latest hidden window, show all hidden windows, and toggle the current visible window set with relaunch-safe snapshot recovery
 - **Read-Only Mode** — Toggle per-note read-only mode via shortcut or context menu, with dedicated visual state
 - **Shortcut & Mouse Customization** — Configure keyboard shortcuts, wheel modifiers, and drag button (`Middle` / `Right`) in Settings
-- **Session Restore** — Restores window position, size, visibility, always-on-top, read-only, opacity, and editor scroll position
+- **Session Restore** — Restores window position, size, visibility, always-on-top, read-only, opacity, editor scroll position, and the last toggled visible-window set
 - **Searchable Open History** — Find and reopen previously opened notes by path or content
 - **Appearance & Platform Controls** — Theme, per-note opacity, typography, spacing, taskbar visibility, and optional glass effects
 - **Desktop Integration** — System tray controls, launch-at-startup option, and CLI open for `.md` / `.markdown`

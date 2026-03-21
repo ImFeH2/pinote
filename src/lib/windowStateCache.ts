@@ -28,6 +28,7 @@ export interface WindowStateCache {
   windows: Record<string, CachedWindowState>;
   windowOrder: string[];
   hiddenStack: string[];
+  visibleWindowToggleSnapshot: string[];
 }
 
 interface UpdateWindowStateOptions {

@@ -855,7 +855,6 @@ async fn set_global_shortcuts(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .manage(window::VisibleWindowToggleState::default())
         .manage(window_state::WindowStateStore::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())

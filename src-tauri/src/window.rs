@@ -1,5 +1,5 @@
 use log::{error, info};
-use std::{sync::Mutex, thread, time::Duration};
+use std::{thread, time::Duration};
 use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder};
 
 use crate::window_state::{self, UpdateWindowStateOptions, WindowVisibility};
@@ -14,9 +14,6 @@ const NOTE_WINDOW_PREFIX: &str = "note-";
 const NOTE_CONTEXT_MENU_WINDOW_SUFFIX: &str = "-context-menu";
 const EXISTING_WINDOW_SHAKE_OFFSETS: [i32; 8] = [0, 14, -12, 10, -8, 6, -4, 0];
 const EXISTING_WINDOW_SHAKE_DELAY_MS: u64 = 14;
-
-#[derive(Default)]
-pub struct VisibleWindowToggleState(pub Mutex<Vec<String>>);
 
 fn is_note_window_label(label: &str) -> bool {
     label.starts_with(NOTE_WINDOW_PREFIX) && !label.ends_with(NOTE_CONTEXT_MENU_WINDOW_SUFFIX)
@@ -79,58 +76,95 @@ fn bring_visible_note_windows_to_front(app: &tauri::AppHandle) {
 }
 
 pub fn toggle_visible_note_windows(app: &tauri::AppHandle) {
-    let state = app.state::<VisibleWindowToggleState>();
-    let mut snapshot = match state.0.lock() {
-        Ok(guard) => guard,
-        Err(_) => return,
-    };
     let visible_labels = visible_note_window_labels(app);
     if !visible_labels.is_empty() {
-        *snapshot = visible_labels.clone();
-        drop(snapshot);
-        let _ = window_state::set_window_visibility_by_labels(
+        info!(
+            "toggle_visible_note_windows_hide_requested count={} labels={visible_labels:?}",
+            visible_labels.len()
+        );
+        if let Err(err) = window_state::set_visible_window_toggle_snapshot(app, &visible_labels) {
+            error!("toggle_visible_note_windows_snapshot_store_failed error={err}");
+        }
+        if let Err(err) = window_state::set_window_visibility_by_labels(
             app,
             &visible_labels,
             WindowVisibility::Hidden,
             UpdateWindowStateOptions {
                 push_hidden_to_top: Some(true),
             },
-        );
+        ) {
+            error!("toggle_visible_note_windows_hide_state_failed error={err}");
+        }
         for label in visible_labels {
             let Some(window) = app.get_webview_window(&label) else {
                 continue;
             };
             let _ = window.hide();
         }
+        info!("toggle_visible_note_windows_hide_completed");
         return;
     }
-    if snapshot.is_empty() {
+    let labels_to_restore = match window_state::list_visible_window_toggle_snapshot(app) {
+        Ok(value) => value,
+        Err(err) => {
+            error!("toggle_visible_note_windows_snapshot_load_failed error={err}");
+            Vec::new()
+        }
+    };
+    if labels_to_restore.is_empty() {
+        info!("toggle_visible_note_windows_restore_skipped reason=no_snapshot");
         return;
     }
-    let labels_to_restore = snapshot.clone();
-    snapshot.clear();
-    drop(snapshot);
-    let _ = window_state::set_window_visibility_by_labels(
+    info!(
+        "toggle_visible_note_windows_restore_requested count={} labels={labels_to_restore:?}",
+        labels_to_restore.len()
+    );
+    if let Err(err) = window_state::clear_visible_window_toggle_snapshot(app) {
+        error!("toggle_visible_note_windows_snapshot_clear_failed error={err}");
+    }
+    if let Err(err) = window_state::set_window_visibility_by_labels(
         app,
         &labels_to_restore,
         WindowVisibility::Visible,
         UpdateWindowStateOptions::default(),
-    );
-    let last_index = labels_to_restore.len().saturating_sub(1);
-    for (index, label) in labels_to_restore.into_iter().enumerate() {
+    ) {
+        error!("toggle_visible_note_windows_restore_state_failed error={err}");
+    }
+    let mut restored = 0usize;
+    let mut missing = Vec::new();
+    let mut last_restored_window = None;
+    for label in labels_to_restore {
         let Some(window) = app.get_webview_window(&label) else {
+            missing.push(label);
             continue;
         };
         let _ = window.show();
-        if index == last_index {
-            let _ = window.set_focus();
-        }
+        restored += 1;
+        last_restored_window = Some(window);
+    }
+    if let Some(window) = last_restored_window {
+        let _ = window.set_focus();
+    }
+    info!(
+        "toggle_visible_note_windows_restore_completed restored={restored} missing={}",
+        missing.len()
+    );
+    if !missing.is_empty() {
+        info!("toggle_visible_note_windows_restore_missing labels={missing:?}");
     }
 }
 
 pub fn restore_latest_hidden_window(app: &tauri::AppHandle) -> bool {
     if let Ok(Some(state)) = window_state::get_most_recent_hidden_window_state(app) {
+        info!(
+            "restore_latest_hidden_window_requested window_id={:?}",
+            state.window_id
+        );
         let Some(window) = app.get_webview_window(&state.window_id) else {
+            info!(
+                "restore_latest_hidden_window_missing_window window_id={:?}",
+                state.window_id
+            );
             return false;
         };
         let _ = window_state::set_window_visibility(
@@ -141,6 +175,10 @@ pub fn restore_latest_hidden_window(app: &tauri::AppHandle) -> bool {
         );
         let _ = window.show();
         let _ = window.set_focus();
+        info!(
+            "restore_latest_hidden_window_completed window_id={:?}",
+            state.window_id
+        );
         return true;
     }
     false
@@ -150,6 +188,7 @@ pub fn restore_hidden_window(app: &tauri::AppHandle) {
     if restore_latest_hidden_window(app) {
         return;
     }
+    info!("restore_hidden_window_no_hidden_window");
     bring_visible_note_windows_to_front(app);
     shake_visible_note_windows_simultaneously(app);
 }
@@ -158,30 +197,42 @@ pub fn show_all_hidden_windows(app: &tauri::AppHandle) {
     let labels_to_restore = match window_state::list_hidden_window_ids(app) {
         Ok(value) => value,
         Err(_) => {
+            info!("show_all_hidden_windows_failed_to_load_hidden_stack");
             shake_visible_note_windows_simultaneously(app);
             return;
         }
     };
     if labels_to_restore.is_empty() {
+        info!("show_all_hidden_windows_skipped reason=no_hidden_window");
         shake_visible_note_windows_simultaneously(app);
         return;
     }
-    let _ = window_state::set_window_visibility_by_labels(
+    info!(
+        "show_all_hidden_windows_requested count={} labels={labels_to_restore:?}",
+        labels_to_restore.len()
+    );
+    if let Err(err) = window_state::set_window_visibility_by_labels(
         app,
         &labels_to_restore,
         WindowVisibility::Visible,
         UpdateWindowStateOptions::default(),
-    );
-    let last_index = labels_to_restore.len().saturating_sub(1);
-    for (index, label) in labels_to_restore.into_iter().enumerate() {
+    ) {
+        error!("show_all_hidden_windows_state_failed error={err}");
+    }
+    let mut restored = 0usize;
+    let mut last_restored_window = None;
+    for label in labels_to_restore {
         let Some(window) = app.get_webview_window(&label) else {
             continue;
         };
         let _ = window.show();
-        if index == last_index {
-            let _ = window.set_focus();
-        }
+        restored += 1;
+        last_restored_window = Some(window);
     }
+    if let Some(window) = last_restored_window {
+        let _ = window.set_focus();
+    }
+    info!("show_all_hidden_windows_completed restored={restored}");
 }
 
 pub fn show_settings_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
