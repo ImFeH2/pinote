@@ -52,11 +52,18 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Update pnpm lockfile
-        run: pnpm update --lockfile-only
+        run: pnpm update --no-save --lockfile-only
 
       - name: Update Cargo lockfile
         run: cargo update
         working-directory: src-tauri
+
+      - name: Verify manifests unchanged
+        run: |
+          if ! git diff --exit-code -- package.json src-tauri/Cargo.toml; then
+            echo "::error::Manifest files changed unexpectedly"
+            exit 1
+          fi
 
       - name: Install updated frontend dependencies
         run: pnpm install --frozen-lockfile
@@ -73,7 +80,7 @@ jobs:
       - name: Commit changes
         id: commit
         run: |
-          if git diff --quiet -- package.json pnpm-lock.yaml src-tauri/Cargo.toml src-tauri/Cargo.lock; then
+          if git diff --quiet -- pnpm-lock.yaml src-tauri/Cargo.lock; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
