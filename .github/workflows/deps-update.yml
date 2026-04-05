@@ -2,7 +2,7 @@ name: Dependency Update
 
 on:
   schedule:
-    - cron: "0 3 * * 2"
+    - cron: "0 4 * * *"
   workflow_dispatch:
 
 permissions:
