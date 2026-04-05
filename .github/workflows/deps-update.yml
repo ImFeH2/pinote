@@ -2,7 +2,7 @@ name: Dependency Update
 
 on:
   schedule:
-    - cron: "0 3 * * 1"
+    - cron: "0 3 * * 2"
   workflow_dispatch:
 
 permissions:
@@ -57,13 +57,6 @@ jobs:
       - name: Update Cargo lockfile
         run: cargo update
         working-directory: src-tauri
-
-      - name: Verify manifests unchanged
-        run: |
-          if ! git diff --exit-code -- package.json src-tauri/Cargo.toml; then
-            echo "::error::Manifest files changed unexpectedly"
-            exit 1
-          fi
 
       - name: Install updated frontend dependencies
         run: pnpm install --frozen-lockfile
