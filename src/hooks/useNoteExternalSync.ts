@@ -51,15 +51,12 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
     [latestEditorContentRef, setInitialContent],
   );
 
-  const handlePersistedContent = useCallback(
-    (content: string, source: PersistSource) => {
-      persistedContentRef.current = content;
-      if (source === "save") {
-        ignoreExternalWatchUntilRef.current = Date.now() + SELF_FILE_WRITE_IGNORE_MS;
-      }
-    },
-    [notePath],
-  );
+  const handlePersistedContent = useCallback((content: string, source: PersistSource) => {
+    persistedContentRef.current = content;
+    if (source === "save") {
+      ignoreExternalWatchUntilRef.current = Date.now() + SELF_FILE_WRITE_IGNORE_MS;
+    }
+  }, []);
 
   const applyExternalFileContent = useCallback(
     (content: string) => {

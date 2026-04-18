@@ -44,6 +44,7 @@ function ContextMenuApp({
   useTheme();
   const { settings } = useSettings();
   const menuWindow = useMemo(() => getCurrentWindow(), []);
+  const menuWindowLabel = menuWindow.label;
   const shellRef = useRef<HTMLDivElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const actionsRef = useRef<HTMLDivElement | null>(null);
@@ -78,7 +79,7 @@ function ContextMenuApp({
       emitNoteContextMenuAction(context.targetWindowLabel, action)
         .catch((error) => {
           logError("context-menu", "emit_action_failed", error, {
-            windowId: menuWindow.label,
+            windowId: menuWindowLabel,
             targetWindowLabel: context.targetWindowLabel,
             action,
           });
@@ -87,7 +88,7 @@ function ContextMenuApp({
           closeMenu();
         });
     },
-    [closeMenu, context.targetWindowLabel],
+    [closeMenu, context.targetWindowLabel, menuWindowLabel],
   );
 
   useEffect(() => {
@@ -103,7 +104,7 @@ function ContextMenuApp({
       })
       .catch((error) => {
         logError("context-menu", "subscribe_focus_listener_failed", error, {
-          windowId: menuWindow.label,
+          windowId: menuWindowLabel,
         });
       });
 
@@ -126,7 +127,7 @@ function ContextMenuApp({
         unlistenFocusChanged();
       }
     };
-  }, [closeMenu, menuWindow]);
+  }, [closeMenu, menuWindow, menuWindowLabel]);
 
   useEffect(() => {
     let unlisten: (() => void) | null = null;
@@ -138,7 +139,7 @@ function ContextMenuApp({
       })
       .catch((error) => {
         logError("context-menu", "subscribe_sync_listener_failed", error, {
-          windowId: menuWindow.label,
+          windowId: menuWindowLabel,
         });
       });
     return () => {
@@ -146,7 +147,7 @@ function ContextMenuApp({
         unlisten();
       }
     };
-  }, []);
+  }, [menuWindowLabel]);
 
   const title = context.noteId;
   const titleShouldScroll = titleScrollDistance > 0;

@@ -9,7 +9,6 @@ import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
 import { ShortcutsSection } from "@/components/settings/ShortcutsSection";
 import {
   dragMouseButtonOptions,
-  globalShortcutKeys,
   sections,
   type GlobalShortcutKey,
   type SettingsSection,
@@ -48,6 +47,12 @@ import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 const REPOSITORY_URL = "https://github.com/ImFeH2/pinote";
 const HISTORY_SEARCH_LIMIT = 80;
 const HISTORY_SEARCH_DEBOUNCE_MS = 120;
+const emptyGlobalShortcutRegistration: Record<GlobalShortcutKey, boolean | null> = {
+  newNote: null,
+  restoreWindow: null,
+  showAllHiddenWindows: null,
+  toggleVisibleWindows: null,
+};
 
 function getErrorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -115,14 +120,10 @@ export function SettingsApp() {
   const [historyOpeningPath, setHistoryOpeningPath] = useState<string | null>(null);
   const [historyReloadToken, setHistoryReloadToken] = useState(0);
   const [runtimePlatform, setRuntimePlatform] = useState<RuntimePlatform>("other");
-  const [globalShortcutRegistration, setGlobalShortcutRegistration] = useState<
-    Record<GlobalShortcutKey, boolean | null>
-  >({
-    newNote: null,
-    restoreWindow: null,
-    showAllHiddenWindows: null,
-    toggleVisibleWindows: null,
-  });
+  const [globalShortcutRegistration, setGlobalShortcutRegistration] = useState<{
+    signature: string;
+    values: Record<GlobalShortcutKey, boolean | null>;
+  } | null>(null);
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
   const lineHeightText = settings.editorLineHeight.toFixed(1);
@@ -147,6 +148,17 @@ export function SettingsApp() {
     dragMouseButtonOptions[0];
   const customNotesDirectory = settings.newNoteDirectory.trim();
   const effectiveNotesDirectory = customNotesDirectory || defaultNotesDirectory;
+  const globalShortcutRegistrationSignature = [
+    settings.shortcuts.newNote,
+    settings.shortcuts.restoreWindow,
+    settings.shortcuts.showAllHiddenWindows,
+    settings.shortcuts.toggleVisibleWindows,
+  ].join("\n");
+  const displayedGlobalShortcutRegistration =
+    activeSection !== "shortcuts" ||
+    globalShortcutRegistration?.signature !== globalShortcutRegistrationSignature
+      ? emptyGlobalShortcutRegistration
+      : globalShortcutRegistration.values;
 
   const updateShortcut = useCallback(
     (key: ShortcutKey, value: string) => {
@@ -157,14 +169,6 @@ export function SettingsApp() {
       }
 
       setShortcutError(null);
-      if (globalShortcutKeys.includes(key as GlobalShortcutKey)) {
-        setGlobalShortcutRegistration({
-          newNote: null,
-          restoreWindow: null,
-          showAllHiddenWindows: null,
-          toggleVisibleWindows: null,
-        });
-      }
       updateSettings({
         shortcuts: {
           [key]: normalized,
@@ -177,12 +181,7 @@ export function SettingsApp() {
   useEffect(() => {
     if (activeSection !== "shortcuts") return;
     let cancelled = false;
-    setGlobalShortcutRegistration({
-      newNote: null,
-      restoreWindow: null,
-      showAllHiddenWindows: null,
-      toggleVisibleWindows: null,
-    });
+    const signature = globalShortcutRegistrationSignature;
     const refresh = async () => {
       try {
         const snapshot = await setGlobalShortcuts({
@@ -193,18 +192,19 @@ export function SettingsApp() {
         });
         if (cancelled) return;
         setGlobalShortcutRegistration({
-          newNote: snapshot.newNote,
-          restoreWindow: snapshot.restoreWindow,
-          showAllHiddenWindows: snapshot.showAllHiddenWindows,
-          toggleVisibleWindows: snapshot.toggleVisibleWindows,
+          signature,
+          values: {
+            newNote: snapshot.newNote,
+            restoreWindow: snapshot.restoreWindow,
+            showAllHiddenWindows: snapshot.showAllHiddenWindows,
+            toggleVisibleWindows: snapshot.toggleVisibleWindows,
+          },
         });
       } catch {
         if (cancelled) return;
         setGlobalShortcutRegistration({
-          newNote: null,
-          restoreWindow: null,
-          showAllHiddenWindows: null,
-          toggleVisibleWindows: null,
+          signature,
+          values: emptyGlobalShortcutRegistration,
         });
       }
     };
@@ -214,6 +214,7 @@ export function SettingsApp() {
     };
   }, [
     activeSection,
+    globalShortcutRegistrationSignature,
     settings.shortcuts.newNote,
     settings.shortcuts.restoreWindow,
     settings.shortcuts.showAllHiddenWindows,
@@ -576,7 +577,7 @@ export function SettingsApp() {
       <ShortcutsSection
         settings={settings}
         shortcutError={shortcutError}
-        globalShortcutRegistration={globalShortcutRegistration}
+        globalShortcutRegistration={displayedGlobalShortcutRegistration}
         activeWheelResizeModifier={activeWheelResizeModifier}
         activeWheelOpacityModifier={activeWheelOpacityModifier}
         activeDragMouseButton={activeDragMouseButton}

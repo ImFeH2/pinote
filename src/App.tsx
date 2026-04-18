@@ -65,7 +65,7 @@ function App({
   const [noteOpacity, setNoteOpacityState] = useState(initialWindowOpacity);
   const noteOpacityRef = useRef(initialWindowOpacity);
   const noteReadOnlyRef = useRef(false);
-  const scrollPersistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteScrollTopRef = useRef(0);
   const latestEditorContentRef = useRef("");
   const isSavePendingRef = useRef<() => boolean>(() => false);
@@ -131,7 +131,7 @@ function App({
     notePath,
     noteReadOnlyRef,
     noteScrollTopRef,
-    scrollPersistTimer,
+    scrollPersistTimerRef,
     setNoteOpacityState,
     setNoteReadOnly,
     windowLabel,

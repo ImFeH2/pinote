@@ -23,7 +23,7 @@ interface UseNoteWindowStateOptions {
   noteOpacityRef: MutableRefObject<number>;
   noteReadOnlyRef: MutableRefObject<boolean>;
   noteScrollTopRef: MutableRefObject<number>;
-  scrollPersistTimer: MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  scrollPersistTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   closeRequestState: MutableRefObject<CloseRequestState>;
   forceHiddenVisibilityRef: MutableRefObject<boolean>;
   hideInProgressRef: MutableRefObject<boolean>;
@@ -45,7 +45,7 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
     noteOpacityRef,
     noteReadOnlyRef,
     noteScrollTopRef,
-    scrollPersistTimer,
+    scrollPersistTimerRef,
     closeRequestState,
     forceHiddenVisibilityRef,
     hideInProgressRef,
@@ -53,11 +53,12 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
     setNoteReadOnly,
   } = options;
   const [initialEditorScrollTop, setInitialEditorScrollTop] = useState(0);
-  const [windowStateReady, setWindowStateReady] = useState(false);
+  const [windowStateReadyKey, setWindowStateReadyKey] = useState<string | null>(null);
+  const windowStateKey = `${windowLabel}:${noteId}`;
+  const windowStateReady = windowStateReadyKey === windowStateKey;
 
   useEffect(() => {
     let disposed = false;
-    setWindowStateReady(false);
     getWindowState(windowLabel)
       .then((state) => {
         if (disposed) return;
@@ -72,12 +73,12 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
       .catch(() => {})
       .finally(() => {
         if (disposed) return;
-        setWindowStateReady(true);
+        setWindowStateReadyKey(windowStateKey);
       });
     return () => {
       disposed = true;
     };
-  }, [noteId, noteScrollTopRef, setNoteOpacityState, setNoteReadOnly, windowLabel]);
+  }, [noteId, noteScrollTopRef, setNoteOpacityState, setNoteReadOnly, windowLabel, windowStateKey]);
 
   const persistWindowState = useCallback(
     async (
@@ -155,23 +156,23 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
     (scrollTop: number) => {
       const nextScrollTop = Math.max(0, Number.isFinite(scrollTop) ? scrollTop : 0);
       noteScrollTopRef.current = nextScrollTop;
-      if (scrollPersistTimer.current) {
-        clearTimeout(scrollPersistTimer.current);
+      if (scrollPersistTimerRef.current) {
+        clearTimeout(scrollPersistTimerRef.current);
       }
-      scrollPersistTimer.current = setTimeout(() => {
+      scrollPersistTimerRef.current = setTimeout(() => {
         void persistWindowState(undefined, false, undefined, nextScrollTop);
       }, NOTE_SCROLL_STATE_DEBOUNCE_MS);
     },
-    [noteScrollTopRef, persistWindowState, scrollPersistTimer],
+    [noteScrollTopRef, persistWindowState, scrollPersistTimerRef],
   );
 
   const hideWindow = useCallback(async () => {
     try {
       hideInProgressRef.current = true;
       forceHiddenVisibilityRef.current = true;
-      if (scrollPersistTimer.current) {
-        clearTimeout(scrollPersistTimer.current);
-        scrollPersistTimer.current = null;
+      if (scrollPersistTimerRef.current) {
+        clearTimeout(scrollPersistTimerRef.current);
+        scrollPersistTimerRef.current = null;
       }
       await persistWindowState(
         "hidden",
@@ -193,7 +194,7 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
     noteOpacityRef,
     noteScrollTopRef,
     persistWindowState,
-    scrollPersistTimer,
+    scrollPersistTimerRef,
     windowLabel,
   ]);
 
@@ -274,11 +275,11 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
 
   useEffect(() => {
     return () => {
-      if (scrollPersistTimer.current) {
-        clearTimeout(scrollPersistTimer.current);
+      if (scrollPersistTimerRef.current) {
+        clearTimeout(scrollPersistTimerRef.current);
       }
     };
-  }, [scrollPersistTimer]);
+  }, [scrollPersistTimerRef]);
 
   return {
     hideWindow,
