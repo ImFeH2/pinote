@@ -52,13 +52,6 @@ pnpm tauri dev        # Run in development mode
 pnpm tauri build      # Build for production
 ```
 
-## Automation
-
-- GitHub Actions includes a `Dependency Update` workflow that runs daily at `04:00 UTC` and can also be started manually.
-- It refreshes `pnpm-lock.yaml` and `src-tauri/Cargo.lock`, runs lint, typecheck, and Rust tests, then pushes the result directly to `main`.
-- Configure the repository secret `AUTO_UPDATE_TOKEN` with a token that can push to `main` and bypass branch protection if your rules require it.
-- Use a fine-grained PAT with repository `Contents: Read and write` and `Actions: Read` permissions so the pushed commit can trigger follow-up workflows normally.
-
 ## CLI
 
 ```bash
