@@ -23,6 +23,7 @@ import { normalizeShortcut } from "@/lib/shortcuts";
 import { resolveDefaultNotesDirectory } from "@/lib/notes";
 import { searchNoteHistory, type NoteHistorySearchResult } from "@/lib/noteHistory";
 import {
+  bringNoteWindowsBackOnScreen,
   getRuntimePlatform,
   getDefaultMarkdownOpenEnabled,
   getOpenWithPinoteEnabled,
@@ -113,6 +114,9 @@ export function SettingsApp() {
   const [defaultOpenError, setDefaultOpenError] = useState<string | null>(null);
   const [taskbarBusy, setTaskbarBusy] = useState(false);
   const [taskbarError, setTaskbarError] = useState<string | null>(null);
+  const [bringNotesBackBusy, setBringNotesBackBusy] = useState(false);
+  const [bringNotesBackError, setBringNotesBackError] = useState<string | null>(null);
+  const [bringNotesBackResult, setBringNotesBackResult] = useState<string | null>(null);
   const [historyQuery, setHistoryQuery] = useState("");
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -280,6 +284,24 @@ export function SettingsApp() {
       setTaskbarBusy(false);
     }
   }, [settings.hideNoteWindowsFromTaskbar, updateSettings]);
+
+  const handleBringNotesBack = useCallback(async () => {
+    setBringNotesBackBusy(true);
+    setBringNotesBackError(null);
+    setBringNotesBackResult(null);
+    try {
+      const moved = await bringNoteWindowsBackOnScreen();
+      setBringNotesBackResult(
+        moved > 0
+          ? `Moved ${moved} ${moved === 1 ? "note" : "notes"} back.`
+          : "All notes are already on screen.",
+      );
+    } catch (error) {
+      setBringNotesBackError(getErrorMessage(error));
+    } finally {
+      setBringNotesBackBusy(false);
+    }
+  }, []);
 
   const handleManualUpdateCheck = useCallback(async () => {
     setUpdateBusy(true);
@@ -549,6 +571,9 @@ export function SettingsApp() {
         startupError={startupError}
         taskbarBusy={taskbarBusy}
         taskbarError={taskbarError}
+        bringNotesBackBusy={bringNotesBackBusy}
+        bringNotesBackError={bringNotesBackError}
+        bringNotesBackResult={bringNotesBackResult}
         contextMenuBusy={contextMenuBusy}
         contextMenuError={contextMenuError}
         defaultOpenBusy={defaultOpenBusy}
@@ -559,6 +584,7 @@ export function SettingsApp() {
         onOpenNotesDirectory={handleOpenNotesDirectory}
         onLaunchAtStartup={handleLaunchAtStartup}
         onTaskbarVisibility={handleTaskbarVisibility}
+        onBringNotesBack={handleBringNotesBack}
         onContextMenuIntegration={handleContextMenuIntegration}
         onDefaultOpenIntegration={handleDefaultOpenIntegration}
       />

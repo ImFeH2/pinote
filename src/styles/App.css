@@ -24,6 +24,9 @@
   --color-readonly-badge-border: hsl(24 95% 53% / 0.4);
   --color-readonly-badge-bg: hsl(24 95% 53% / 0.16);
   --color-readonly-badge-text: hsl(24 95% 38%);
+  --color-brought-back-border: hsl(172 76% 36%);
+  --color-brought-back-glow: hsl(172 76% 36% / 0.32);
+  --color-brought-back-shadow: hsl(172 76% 36% / 0.28);
   --color-scrollbar-track: hsl(210 40% 96.1% / 0.28);
   --color-scrollbar-thumb: hsl(215.4 16.3% 46.9% / 0.5);
   --color-scrollbar-thumb-hover: hsl(215.4 16.3% 46.9% / 0.72);
@@ -58,6 +61,9 @@
     --color-readonly-badge-border: hsl(30 100% 65% / 0.48);
     --color-readonly-badge-bg: hsl(30 100% 65% / 0.24);
     --color-readonly-badge-text: hsl(35 100% 88%);
+    --color-brought-back-border: hsl(170 84% 62%);
+    --color-brought-back-glow: hsl(170 84% 62% / 0.38);
+    --color-brought-back-shadow: hsl(170 84% 62% / 0.3);
     --color-scrollbar-track: hsl(217.2 32.6% 17.5% / 0.24);
     --color-scrollbar-thumb: hsl(215 20.2% 65.1% / 0.5);
     --color-scrollbar-thumb-hover: hsl(215 20.2% 65.1% / 0.74);
@@ -183,6 +189,46 @@
         );
   }
 
+  .pinote-window[data-brought-back="true"] {
+    border-color: color-mix(
+      in srgb,
+      var(--color-brought-back-border) var(--pinote-visual-opacity-percent),
+      transparent
+    );
+    box-shadow:
+      0 0 0 1px
+        color-mix(
+          in srgb,
+          var(--color-brought-back-border) var(--pinote-visual-opacity-percent),
+          transparent
+        ),
+      0 18px 40px -18px
+        color-mix(
+          in srgb,
+          var(--color-brought-back-shadow) var(--pinote-visual-opacity-percent),
+          transparent
+        ),
+      0 0 30px 4px
+        color-mix(
+          in srgb,
+          var(--color-brought-back-glow) var(--pinote-visual-opacity-percent),
+          transparent
+        );
+    animation: pinote-window-brought-back 260ms ease-out;
+  }
+
+  @keyframes pinote-window-brought-back {
+    0% {
+      transform: scale(0.992);
+    }
+    55% {
+      transform: scale(1.008);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
   .pinote-pinned-badge {
     border: 1px solid var(--color-pinned-badge-border);
     background: var(--color-pinned-badge-bg);
@@ -226,6 +272,10 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .pinote-window[data-brought-back="true"] {
+      animation: none;
+    }
+
     .pinote-menu-title-text-scroll {
       animation: none;
       transform: translateX(0);

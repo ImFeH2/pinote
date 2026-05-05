@@ -99,6 +99,10 @@ export async function setNoteWindowsSkipTaskbar(skipTaskbar: boolean) {
   await Promise.all(targets.map((window) => window.setSkipTaskbar(skipTaskbar)));
 }
 
+export async function bringNoteWindowsBackOnScreen() {
+  return invoke<number>("bring_note_windows_back_on_screen");
+}
+
 export async function openNoteWindow(noteId: string, options: OpenNoteWindowOptions = {}) {
   const normalizedNoteId = normalizeNoteId(noteId);
   const notePath = options.notePath?.trim() || (await resolveManagedNotePath(normalizedNoteId));

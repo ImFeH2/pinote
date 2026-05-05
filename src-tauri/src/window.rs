@@ -1,6 +1,6 @@
 use log::{error, info};
 use std::{thread, time::Duration};
-use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder};
+use tauri::{Emitter, Manager, PhysicalPosition, PhysicalSize, WebviewUrl, WebviewWindowBuilder};
 
 use crate::window_state::{self, UpdateWindowStateOptions, WindowVisibility};
 use crate::{
@@ -12,11 +12,177 @@ use crate::{
 
 const NOTE_WINDOW_PREFIX: &str = "note-";
 const NOTE_CONTEXT_MENU_WINDOW_SUFFIX: &str = "-context-menu";
+const NOTE_WINDOW_BROUGHT_BACK_EVENT: &str = "note-window-brought-back";
+const NOTE_WINDOW_RECOVERY_MARGIN: i64 = 16;
+const NOTE_WINDOW_RECOVERY_OFFSET: i64 = 28;
 const EXISTING_WINDOW_SHAKE_OFFSETS: [i32; 8] = [0, 14, -12, 10, -8, 6, -4, 0];
 const EXISTING_WINDOW_SHAKE_DELAY_MS: u64 = 14;
 
+#[derive(Clone, Copy)]
+struct ScreenRect {
+    x: i64,
+    y: i64,
+    width: i64,
+    height: i64,
+}
+
+impl ScreenRect {
+    fn right(self) -> i64 {
+        self.x + self.width
+    }
+
+    fn bottom(self) -> i64 {
+        self.y + self.height
+    }
+}
+
 fn is_note_window_label(label: &str) -> bool {
     label.starts_with(NOTE_WINDOW_PREFIX) && !label.ends_with(NOTE_CONTEXT_MENU_WINDOW_SUFFIX)
+}
+
+fn monitor_work_area(monitor: &tauri::Monitor) -> ScreenRect {
+    let area = monitor.work_area();
+    ScreenRect {
+        x: i64::from(area.position.x),
+        y: i64::from(area.position.y),
+        width: i64::from(area.size.width),
+        height: i64::from(area.size.height),
+    }
+}
+
+fn available_work_areas(app: &tauri::AppHandle) -> Result<Vec<ScreenRect>, String> {
+    let mut areas = app
+        .available_monitors()
+        .map_err(|error| format!("Failed to read monitors: {error}"))?
+        .into_iter()
+        .map(|monitor| monitor_work_area(&monitor))
+        .filter(|area| area.width > 0 && area.height > 0)
+        .collect::<Vec<_>>();
+    areas.sort_by_key(|area| (area.x, area.y, area.width, area.height));
+    if areas.is_empty() {
+        return Err(String::from("No available monitor work area"));
+    }
+    Ok(areas)
+}
+
+fn i64_to_i32(value: i64) -> i32 {
+    value.clamp(i64::from(i32::MIN), i64::from(i32::MAX)) as i32
+}
+
+fn window_rect(position: PhysicalPosition<i32>, size: PhysicalSize<u32>) -> ScreenRect {
+    ScreenRect {
+        x: i64::from(position.x),
+        y: i64::from(position.y),
+        width: i64::from(size.width),
+        height: i64::from(size.height),
+    }
+}
+
+fn rects_intersect(left: ScreenRect, right: ScreenRect) -> bool {
+    left.x < right.right()
+        && left.right() > right.x
+        && left.y < right.bottom()
+        && left.bottom() > right.y
+}
+
+fn nearest_work_area(
+    position: PhysicalPosition<i32>,
+    size: PhysicalSize<u32>,
+    areas: &[ScreenRect],
+) -> ScreenRect {
+    let center_x = i64::from(position.x) + i64::from(size.width) / 2;
+    let center_y = i64::from(position.y) + i64::from(size.height) / 2;
+    areas
+        .iter()
+        .copied()
+        .min_by_key(|area| {
+            let area_center_x = area.x + area.width / 2;
+            let area_center_y = area.y + area.height / 2;
+            let dx = center_x - area_center_x;
+            let dy = center_y - area_center_y;
+            dx.saturating_mul(dx) + dy.saturating_mul(dy)
+        })
+        .unwrap_or(areas[0])
+}
+
+fn recovery_position(
+    area: ScreenRect,
+    size: PhysicalSize<u32>,
+    recovery_index: usize,
+) -> PhysicalPosition<i32> {
+    let width = i64::from(size.width);
+    let height = i64::from(size.height);
+    let offset = (recovery_index % 8) as i64 * NOTE_WINDOW_RECOVERY_OFFSET;
+    let min_x = area.x + NOTE_WINDOW_RECOVERY_MARGIN;
+    let max_x = area.right() - width - NOTE_WINDOW_RECOVERY_MARGIN;
+    let min_y = area.y + NOTE_WINDOW_RECOVERY_MARGIN;
+    let max_y = area.bottom() - height - NOTE_WINDOW_RECOVERY_MARGIN;
+    let x = if max_x < min_x {
+        min_x
+    } else {
+        (max_x - offset).clamp(min_x, max_x)
+    };
+    let y = if max_y < min_y {
+        min_y
+    } else {
+        (min_y + offset).clamp(min_y, max_y)
+    };
+    PhysicalPosition::new(i64_to_i32(x), i64_to_i32(y))
+}
+
+pub fn bring_note_windows_back_on_screen(app: &tauri::AppHandle) -> usize {
+    let areas = match available_work_areas(app) {
+        Ok(value) => value,
+        Err(err) => {
+            error!("bring_note_windows_back_failed error={err}");
+            return 0;
+        }
+    };
+    let mut windows = app
+        .webview_windows()
+        .into_iter()
+        .filter(|(label, _)| is_note_window_label(label))
+        .collect::<Vec<_>>();
+    windows.sort_by(|left, right| left.0.cmp(&right.0));
+    let mut moved = 0usize;
+    for (label, window) in windows {
+        let Ok(position) = window.outer_position() else {
+            continue;
+        };
+        let Ok(size) = window.outer_size() else {
+            continue;
+        };
+        let rect = window_rect(position, size);
+        if areas.iter().any(|area| rects_intersect(rect, *area)) {
+            continue;
+        }
+        let target_area = nearest_work_area(position, size, &areas);
+        let next_position = recovery_position(target_area, size, moved);
+        if let Err(err) = window.set_position(next_position) {
+            error!("bring_note_window_back_move_failed window_id={label:?} error={err}");
+            continue;
+        }
+        if let Ok(inner_size) = window.inner_size()
+            && let Err(err) = window_state::set_window_bounds(
+                app,
+                &label,
+                window_state::WindowBounds {
+                    x: next_position.x,
+                    y: next_position.y,
+                    width: f64::from(inner_size.width),
+                    height: f64::from(inner_size.height),
+                },
+            )
+        {
+            error!("bring_note_window_back_state_failed window_id={label:?} error={err}");
+        }
+        let _ = window.emit(NOTE_WINDOW_BROUGHT_BACK_EVENT, ());
+        moved += 1;
+    }
+    if moved > 0 {
+        info!("bring_note_windows_back_completed moved={moved}");
+    }
+    moved
 }
 
 fn visible_note_window_labels(app: &tauri::AppHandle) -> Vec<String> {
@@ -145,6 +311,7 @@ pub fn toggle_visible_note_windows(app: &tauri::AppHandle) {
     if let Some(window) = last_restored_window {
         let _ = window.set_focus();
     }
+    let _ = bring_note_windows_back_on_screen(app);
     info!(
         "toggle_visible_note_windows_restore_completed restored={restored} missing={}",
         missing.len()
@@ -175,6 +342,7 @@ pub fn restore_latest_hidden_window(app: &tauri::AppHandle) -> bool {
         );
         let _ = window.show();
         let _ = window.set_focus();
+        let _ = bring_note_windows_back_on_screen(app);
         info!(
             "restore_latest_hidden_window_completed window_id={:?}",
             state.window_id
@@ -189,8 +357,11 @@ pub fn restore_hidden_window(app: &tauri::AppHandle) {
         return;
     }
     info!("restore_hidden_window_no_hidden_window");
+    let moved = bring_note_windows_back_on_screen(app);
     bring_visible_note_windows_to_front(app);
-    shake_visible_note_windows_simultaneously(app);
+    if moved == 0 {
+        shake_visible_note_windows_simultaneously(app);
+    }
 }
 
 pub fn show_all_hidden_windows(app: &tauri::AppHandle) {
@@ -232,6 +403,7 @@ pub fn show_all_hidden_windows(app: &tauri::AppHandle) {
     if let Some(window) = last_restored_window {
         let _ = window.set_focus();
     }
+    let _ = bring_note_windows_back_on_screen(app);
     info!("show_all_hidden_windows_completed restored={restored}");
 }
 

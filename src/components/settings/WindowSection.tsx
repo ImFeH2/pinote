@@ -1,4 +1,4 @@
-import { FolderOpen, FolderSearch } from "lucide-react";
+import { FolderOpen, FolderSearch, Move } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Settings } from "@/stores/settings";
 import { type SettingsPatch } from "@/stores/settingsStore";
@@ -13,6 +13,9 @@ interface WindowSectionProps {
   startupError: string | null;
   taskbarBusy: boolean;
   taskbarError: string | null;
+  bringNotesBackBusy: boolean;
+  bringNotesBackError: string | null;
+  bringNotesBackResult: string | null;
   contextMenuBusy: boolean;
   contextMenuError: string | null;
   defaultOpenBusy: boolean;
@@ -23,6 +26,7 @@ interface WindowSectionProps {
   onOpenNotesDirectory: () => Promise<void>;
   onLaunchAtStartup: () => Promise<void>;
   onTaskbarVisibility: () => Promise<void>;
+  onBringNotesBack: () => Promise<void>;
   onContextMenuIntegration: () => Promise<void>;
   onDefaultOpenIntegration: () => Promise<void>;
 }
@@ -37,6 +41,9 @@ export function WindowSection({
   startupError,
   taskbarBusy,
   taskbarError,
+  bringNotesBackBusy,
+  bringNotesBackError,
+  bringNotesBackResult,
   contextMenuBusy,
   contextMenuError,
   defaultOpenBusy,
@@ -47,6 +54,7 @@ export function WindowSection({
   onOpenNotesDirectory,
   onLaunchAtStartup,
   onTaskbarVisibility,
+  onBringNotesBack,
   onContextMenuIntegration,
   onDefaultOpenIntegration,
 }: WindowSectionProps) {
@@ -55,6 +63,36 @@ export function WindowSection({
       <div className="rounded-md border border-border bg-background/60 p-3 text-xs text-muted-foreground">
         Always-on-top state is independent per note window. Use middle click or shortcut in each
         note to toggle.
+      </div>
+
+      <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="text-xs font-medium text-muted-foreground">Lost Notes</div>
+          <div className="text-[11px] text-muted-foreground">
+            Move notes that are completely off screen back into view.
+          </div>
+          {bringNotesBackResult && (
+            <div className="text-[11px] text-muted-foreground">{bringNotesBackResult}</div>
+          )}
+          {bringNotesBackError && (
+            <div className="text-[11px] text-destructive">{bringNotesBackError}</div>
+          )}
+        </div>
+        <button
+          type="button"
+          disabled={bringNotesBackBusy}
+          onClick={() => {
+            void onBringNotesBack();
+          }}
+          className={cn(
+            "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors",
+            "border-border bg-background text-muted-foreground hover:bg-accent",
+            bringNotesBackBusy && "cursor-not-allowed opacity-60",
+          )}
+        >
+          <Move className="h-3.5 w-3.5" />
+          {bringNotesBackBusy ? "Moving..." : "Bring Notes Back"}
+        </button>
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">

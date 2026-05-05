@@ -581,6 +581,32 @@ pub fn upsert_window_state(
     })
 }
 
+pub fn set_window_bounds(
+    app: &tauri::AppHandle,
+    window_id: &str,
+    bounds: WindowBounds,
+) -> Result<(), String> {
+    mutate_cache(app, |cache| {
+        let Some(cache_key) = resolve_cache_key_by_window_id(cache, window_id) else {
+            return;
+        };
+        let now = timestamp_now();
+        {
+            let Some(state) = cache.windows.get_mut(&cache_key) else {
+                return;
+            };
+            state.bounds = WindowBounds {
+                x: bounds.x,
+                y: bounds.y,
+                width: bounds.width.round().max(1.0),
+                height: bounds.height.round().max(1.0),
+            };
+            state.updated_at = now.clone();
+        }
+        cache.updated_at = now;
+    })
+}
+
 pub fn set_window_visibility(
     app: &tauri::AppHandle,
     window_id: &str,

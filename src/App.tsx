@@ -10,7 +10,11 @@ import { useNoteWindowMouseInteractions } from "@/hooks/useNoteWindowMouseIntera
 import { useNoteWindowState } from "@/hooks/useNoteWindowState";
 import { useWindowControl } from "@/hooks/useWindowControl";
 import { useSettings } from "@/hooks/useSettings";
-import { getRuntimePlatform, type RuntimePlatform } from "@/lib/windowApi";
+import {
+  bringNoteWindowsBackOnScreen,
+  getRuntimePlatform,
+  type RuntimePlatform,
+} from "@/lib/windowApi";
 import { recordOpenedNote } from "@/lib/noteHistory";
 import { logError } from "@/lib/logger";
 import { type WindowsGlassEffect } from "@/stores/settings";
@@ -18,6 +22,9 @@ import "@/styles/App.css";
 
 const NOTE_OPACITY_MIN = 0;
 const NOTE_OPACITY_MAX = 1;
+const NOTE_WINDOW_BROUGHT_BACK_EVENT = "note-window-brought-back";
+const NOTE_WINDOW_BROUGHT_BACK_FEEDBACK_MS = 260;
+const NOTE_WINDOW_RECOVERY_DELAY_MS = 120;
 
 function resolveEditorFontFamily(value: "system" | "serif" | "mono") {
   if (value === "serif") {
@@ -75,6 +82,7 @@ function App({
   const [runtimePlatform, setRuntimePlatform] = useState<RuntimePlatform>("other");
   const [editorReloadToken, setEditorReloadToken] = useState(0);
   const [noteReadOnly, setNoteReadOnly] = useState(false);
+  const [broughtBackFeedback, setBroughtBackFeedback] = useState(false);
 
   useEffect(() => {
     noteOpacityRef.current = noteOpacity;
@@ -113,6 +121,92 @@ function App({
       disposed = true;
     };
   }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | null = null;
+    let feedbackTimer: ReturnType<typeof setTimeout> | null = null;
+    void appWindow
+      .listen(NOTE_WINDOW_BROUGHT_BACK_EVENT, () => {
+        if (disposed) return;
+        setBroughtBackFeedback(true);
+        if (feedbackTimer) {
+          clearTimeout(feedbackTimer);
+        }
+        feedbackTimer = setTimeout(() => {
+          if (disposed) return;
+          setBroughtBackFeedback(false);
+        }, NOTE_WINDOW_BROUGHT_BACK_FEEDBACK_MS);
+      })
+      .then((handler) => {
+        if (disposed) {
+          handler();
+          return;
+        }
+        unlisten = handler;
+      })
+      .catch((error) => {
+        logError("note-window", "listen_brought_back_event_failed", error, {
+          windowId: windowLabel,
+        });
+      });
+    return () => {
+      disposed = true;
+      if (feedbackTimer) {
+        clearTimeout(feedbackTimer);
+      }
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [appWindow, windowLabel]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlistenScale: (() => void) | null = null;
+    let recoverTimer: ReturnType<typeof setTimeout> | null = null;
+    const recoverNotes = () => {
+      bringNoteWindowsBackOnScreen().catch((error) => {
+        logError("note-window", "bring_notes_back_failed", error, {
+          windowId: windowLabel,
+        });
+      });
+    };
+    recoverTimer = setTimeout(() => {
+      if (disposed) return;
+      recoverNotes();
+    }, NOTE_WINDOW_RECOVERY_DELAY_MS);
+    const handleFocus = () => {
+      recoverNotes();
+    };
+    window.addEventListener("focus", handleFocus);
+    void appWindow
+      .onScaleChanged(() => {
+        recoverNotes();
+      })
+      .then((handler) => {
+        if (disposed) {
+          handler();
+          return;
+        }
+        unlistenScale = handler;
+      })
+      .catch((error) => {
+        logError("note-window", "listen_scale_change_failed", error, {
+          windowId: windowLabel,
+        });
+      });
+    return () => {
+      disposed = true;
+      if (recoverTimer) {
+        clearTimeout(recoverTimer);
+      }
+      window.removeEventListener("focus", handleFocus);
+      if (unlistenScale) {
+        unlistenScale();
+      }
+    };
+  }, [appWindow, windowLabel]);
 
   const {
     hideWindow,
@@ -313,6 +407,7 @@ function App({
     <div
       data-pinned={alwaysOnTop ? "true" : "false"}
       data-read-only={noteReadOnly ? "true" : "false"}
+      data-brought-back={broughtBackFeedback ? "true" : "false"}
       className="pinote-window relative flex h-screen flex-col overflow-hidden rounded-lg"
       style={pinnedVisualStyle}
       onContextMenu={openContextMenu}

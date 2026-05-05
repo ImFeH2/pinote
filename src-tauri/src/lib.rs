@@ -485,6 +485,7 @@ fn open_cli_note_windows_on_main_thread(app: &tauri::AppHandle, requests: &[CliO
             error!("cli_open_new_window_focus_failed window_id={window_id:?} error={err}");
         }
     }
+    let _ = window::bring_note_windows_back_on_screen(app);
 }
 
 fn shake_existing_window(window: &WebviewWindow) {
@@ -777,6 +778,11 @@ async fn open_note_window(
 }
 
 #[tauri::command]
+async fn bring_note_windows_back_on_screen(app: tauri::AppHandle) -> Result<usize, String> {
+    Ok(window::bring_note_windows_back_on_screen(&app))
+}
+
+#[tauri::command]
 async fn get_open_with_pinote_enabled() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
@@ -881,6 +887,7 @@ pub fn run() {
             remove_window_state,
             show_settings_window,
             open_note_window,
+            bring_note_windows_back_on_screen,
             get_runtime_platform,
             get_open_with_pinote_enabled,
             set_open_with_pinote_enabled,
@@ -919,6 +926,7 @@ pub fn run() {
             shortcut::setup_shortcuts(&handle)?;
             let skip_taskbar = load_hide_note_windows_from_taskbar(&handle);
             let restored_count = restore_cached_note_windows(&handle, skip_taskbar);
+            let _ = window::bring_note_windows_back_on_screen(&handle);
             let startup_args = std::env::args().collect::<Vec<_>>();
             let startup_cwd = std::env::current_dir()
                 .ok()
