@@ -66,6 +66,7 @@ pub struct WindowStateCache {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateWindowStateOptions {
     pub push_hidden_to_top: Option<bool>,
+    pub preserve_hidden_visibility: Option<bool>,
 }
 
 fn timestamp_now() -> String {
@@ -530,6 +531,64 @@ pub fn clear_visible_window_toggle_snapshot(app: &tauri::AppHandle) -> Result<()
     })
 }
 
+fn apply_upsert_window_state(
+    cache: &mut WindowStateCache,
+    state: CachedWindowState,
+    options: &UpdateWindowStateOptions,
+    now: &str,
+) {
+    let mut next_state = CachedWindowState {
+        updated_at: if state.updated_at.trim().is_empty() {
+            now.to_string()
+        } else {
+            state.updated_at.trim().to_string()
+        },
+        opacity: state.opacity.clamp(NOTE_OPACITY_MIN, NOTE_OPACITY_MAX),
+        scroll_top: state.scroll_top.max(NOTE_SCROLL_TOP_MIN),
+        bounds: WindowBounds {
+            x: state.bounds.x,
+            y: state.bounds.y,
+            width: state.bounds.width.round().max(1.0),
+            height: state.bounds.height.round().max(1.0),
+        },
+        window_id: state.window_id.trim().to_string(),
+        note_id: state.note_id.trim().to_string(),
+        note_path: state.note_path.trim().to_string(),
+        visibility: state.visibility,
+        always_on_top: state.always_on_top,
+        read_only: state.read_only,
+    };
+    if next_state.window_id.is_empty()
+        || next_state.note_id.is_empty()
+        || next_state.note_path.is_empty()
+        || RESERVED_WINDOW_IDS.contains(&next_state.window_id.as_str())
+    {
+        return;
+    }
+    let cache_key = build_note_cache_key(&next_state.note_path);
+    if options.preserve_hidden_visibility.unwrap_or(false)
+        && next_state.visibility == WindowVisibility::Visible
+        && cache
+            .windows
+            .get(&cache_key)
+            .is_some_and(|existing| existing.visibility == WindowVisibility::Hidden)
+    {
+        next_state.visibility = WindowVisibility::Hidden;
+    }
+    cache.windows.insert(cache_key.clone(), next_state.clone());
+    set_window_order(cache, &cache_key);
+    if next_state.visibility == WindowVisibility::Hidden {
+        set_hidden_stack(
+            cache,
+            &cache_key,
+            options.push_hidden_to_top.unwrap_or(false),
+        );
+    } else {
+        clear_hidden_stack(cache, &cache_key);
+    }
+    cache.updated_at = now.to_string();
+}
+
 pub fn upsert_window_state(
     app: &tauri::AppHandle,
     state: CachedWindowState,
@@ -537,48 +596,88 @@ pub fn upsert_window_state(
 ) -> Result<(), String> {
     mutate_cache(app, |cache| {
         let now = timestamp_now();
-        let next_state = CachedWindowState {
-            updated_at: if state.updated_at.trim().is_empty() {
-                now.clone()
-            } else {
-                state.updated_at.trim().to_string()
-            },
-            opacity: state.opacity.clamp(NOTE_OPACITY_MIN, NOTE_OPACITY_MAX),
-            scroll_top: state.scroll_top.max(NOTE_SCROLL_TOP_MIN),
-            bounds: WindowBounds {
-                x: state.bounds.x,
-                y: state.bounds.y,
-                width: state.bounds.width.round().max(1.0),
-                height: state.bounds.height.round().max(1.0),
-            },
-            window_id: state.window_id.trim().to_string(),
-            note_id: state.note_id.trim().to_string(),
-            note_path: state.note_path.trim().to_string(),
-            visibility: state.visibility,
-            always_on_top: state.always_on_top,
-            read_only: state.read_only,
-        };
-        if next_state.window_id.is_empty()
-            || next_state.note_id.is_empty()
-            || next_state.note_path.is_empty()
-            || RESERVED_WINDOW_IDS.contains(&next_state.window_id.as_str())
-        {
-            return;
-        }
-        let cache_key = build_note_cache_key(&next_state.note_path);
-        cache.windows.insert(cache_key.clone(), next_state.clone());
-        set_window_order(cache, &cache_key);
-        if next_state.visibility == WindowVisibility::Hidden {
-            set_hidden_stack(
-                cache,
-                &cache_key,
-                options.push_hidden_to_top.unwrap_or(false),
-            );
-        } else {
-            clear_hidden_stack(cache, &cache_key);
-        }
-        cache.updated_at = now;
+        apply_upsert_window_state(cache, state, &options, &now);
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_state(visibility: WindowVisibility) -> CachedWindowState {
+        CachedWindowState {
+            window_id: String::from("note-test"),
+            note_id: String::from("test-note"),
+            note_path: String::from("C:\\notes\\test.md"),
+            visibility,
+            always_on_top: false,
+            read_only: false,
+            opacity: 1.0,
+            scroll_top: 0.0,
+            bounds: WindowBounds {
+                x: 10,
+                y: 20,
+                width: 300.0,
+                height: 400.0,
+            },
+            updated_at: String::new(),
+        }
+    }
+
+    #[test]
+    fn implicit_visible_upsert_preserves_existing_hidden_visibility() {
+        let mut cache = build_empty_cache();
+        let cache_key = build_note_cache_key("C:\\notes\\test.md");
+
+        apply_upsert_window_state(
+            &mut cache,
+            test_state(WindowVisibility::Hidden),
+            &UpdateWindowStateOptions {
+                push_hidden_to_top: Some(true),
+                preserve_hidden_visibility: None,
+            },
+            "1",
+        );
+        apply_upsert_window_state(
+            &mut cache,
+            test_state(WindowVisibility::Visible),
+            &UpdateWindowStateOptions {
+                push_hidden_to_top: None,
+                preserve_hidden_visibility: Some(true),
+            },
+            "2",
+        );
+
+        let state = cache.windows.get(&cache_key).expect("state should exist");
+        assert_eq!(state.visibility, WindowVisibility::Hidden);
+        assert_eq!(cache.hidden_stack, vec![cache_key]);
+    }
+
+    #[test]
+    fn explicit_visible_upsert_clears_existing_hidden_visibility() {
+        let mut cache = build_empty_cache();
+        let cache_key = build_note_cache_key("C:\\notes\\test.md");
+
+        apply_upsert_window_state(
+            &mut cache,
+            test_state(WindowVisibility::Hidden),
+            &UpdateWindowStateOptions {
+                push_hidden_to_top: Some(true),
+                preserve_hidden_visibility: None,
+            },
+            "1",
+        );
+        apply_upsert_window_state(
+            &mut cache,
+            test_state(WindowVisibility::Visible),
+            &UpdateWindowStateOptions::default(),
+            "2",
+        );
+
+        let state = cache.windows.get(&cache_key).expect("state should exist");
+        assert_eq!(state.visibility, WindowVisibility::Visible);
+        assert!(cache.hidden_stack.is_empty());
+    }
 }
 
 pub fn set_window_bounds(

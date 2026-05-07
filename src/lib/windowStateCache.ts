@@ -33,6 +33,7 @@ export interface WindowStateCache {
 
 interface UpdateWindowStateOptions {
   pushHiddenToTop?: boolean;
+  preserveHiddenVisibility?: boolean;
 }
 
 export async function loadWindowStateCache() {

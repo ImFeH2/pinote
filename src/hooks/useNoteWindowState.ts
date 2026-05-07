@@ -130,7 +130,7 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
             },
             updatedAt: new Date().toISOString(),
           },
-          { pushHiddenToTop },
+          { pushHiddenToTop, preserveHiddenVisibility: visibility === undefined },
         );
       } catch (error) {
         logError("note-window", "persist_window_state_failed", error, {

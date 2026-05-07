@@ -257,6 +257,7 @@ pub fn toggle_visible_note_windows(app: &tauri::AppHandle) {
             WindowVisibility::Hidden,
             UpdateWindowStateOptions {
                 push_hidden_to_top: Some(true),
+                preserve_hidden_visibility: None,
             },
         ) {
             error!("toggle_visible_note_windows_hide_state_failed error={err}");
