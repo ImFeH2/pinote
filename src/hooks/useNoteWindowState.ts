@@ -87,6 +87,7 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
       opacity?: number,
       scrollTop?: number,
       readOnly?: boolean,
+      preserveHiddenVisibility = visibility === undefined,
     ) => {
       try {
         const [position, size, currentAlwaysOnTop, visible] = await Promise.all([
@@ -130,7 +131,7 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
             },
             updatedAt: new Date().toISOString(),
           },
-          { pushHiddenToTop, preserveHiddenVisibility: visibility === undefined },
+          { pushHiddenToTop, preserveHiddenVisibility },
         );
       } catch (error) {
         logError("note-window", "persist_window_state_failed", error, {
@@ -220,7 +221,7 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
           if (!windowStateReady) return;
           if (!payload) return;
           if (hideInProgressRef.current) return;
-          void persistWindowState("visible");
+          void persistWindowState("visible", false, undefined, undefined, undefined, true);
         }),
         appWindow.onCloseRequested((event) => {
           if (closeRequestState.current === "ready") {
