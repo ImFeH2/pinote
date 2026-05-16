@@ -58,10 +58,14 @@ function isNoteWindowLabel(label: string) {
   );
 }
 
-export async function openSettingsWindow() {
+export async function openSettingsWindow(section?: string) {
   logInfo("window-api", "show_settings_window_requested");
   try {
-    await invoke("show_settings_window");
+    await invoke("show_settings_window", { section });
+    if (section) {
+      const settingsWindow = await WebviewWindow.getByLabel("settings");
+      await settingsWindow?.emit("settings-section-requested", { section });
+    }
     logInfo("window-api", "show_settings_window_finished");
   } catch (error) {
     logError("window-api", "show_settings_window_failed", error);

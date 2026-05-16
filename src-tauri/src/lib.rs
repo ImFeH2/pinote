@@ -764,8 +764,11 @@ async fn remove_window_state(app: tauri::AppHandle, window_id: String) -> Result
 }
 
 #[tauri::command]
-async fn show_settings_window(app: tauri::AppHandle) -> Result<(), String> {
-    window::show_settings_window(&app).map_err(|error| error.to_string())
+async fn show_settings_window(
+    app: tauri::AppHandle,
+    section: Option<String>,
+) -> Result<(), String> {
+    window::show_settings_window(&app, section).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -942,6 +945,7 @@ pub fn run() {
             } else {
                 open_cli_note_windows(&handle, startup_requests);
             }
+            window::open_startup_update_window(&handle);
 
             info!("app_ready");
             Ok(())

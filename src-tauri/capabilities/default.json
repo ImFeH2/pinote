@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for app windows",
-  "windows": ["settings", "note-*"],
+  "windows": ["settings", "note-*", "startup-update"],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",

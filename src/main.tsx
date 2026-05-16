@@ -1,16 +1,23 @@
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import App from "@/App";
 import ContextMenuApp from "@/ContextMenuApp";
 import { SettingsProvider } from "@/hooks/useSettings";
 import { SettingsApp } from "@/SettingsApp";
 import { setupLogging } from "@/lib/logging";
 import { getNoteIdFromPath, normalizeNoteId } from "@/lib/notes";
-import { checkForUpdates } from "@/lib/updater";
+import { checkForUpdates, getUpdateState } from "@/lib/updater";
+import { openSettingsWindow } from "@/lib/windowApi";
+import {
+  ensureSettingsStoreReady,
+  getSettingsSnapshot,
+  updateSettingsStore,
+} from "@/stores/settingsStore";
 
 setupLogging(window.location.href);
 
-let hasScheduledSilentUpdateCheck = false;
+let hasRunStartupUpdateCheck = false;
 
 function getView() {
   const params = new URLSearchParams(window.location.search);
@@ -50,22 +57,64 @@ function getContextMenuContext() {
   };
 }
 
+function StartupUpdateCheck() {
+  useEffect(() => {
+    if (hasRunStartupUpdateCheck) return;
+    hasRunStartupUpdateCheck = true;
+
+    const closeStartupWindow = async () => {
+      try {
+        await getCurrentWindow().destroy();
+      } catch {
+        return;
+      }
+    };
+
+    void ensureSettingsStoreReady()
+      .then(() => checkForUpdates("silent"))
+      .then(async (result) => {
+        const settings = getSettingsSnapshot();
+        const lastCheckedAt = getUpdateState().lastCheckedAt;
+        if (!result.available || !result.latestVersion) {
+          if (lastCheckedAt) {
+            await updateSettingsStore({ lastUpdateCheckAt: lastCheckedAt });
+          }
+          return;
+        }
+        if (settings?.dismissedUpdateVersion === result.latestVersion) {
+          if (lastCheckedAt) {
+            await updateSettingsStore({ lastUpdateCheckAt: lastCheckedAt });
+          }
+          return;
+        }
+        await updateSettingsStore({
+          lastUpdateCheckAt: lastCheckedAt ?? settings?.lastUpdateCheckAt,
+          pendingUpdatePromptVersion: result.latestVersion,
+        });
+        await openSettingsWindow("about");
+      })
+      .catch(() => {
+        const lastCheckedAt = getUpdateState().lastCheckedAt;
+        if (lastCheckedAt) {
+          void updateSettingsStore({ lastUpdateCheckAt: lastCheckedAt });
+        }
+      })
+      .finally(() => {
+        void closeStartupWindow();
+      });
+  }, []);
+
+  return null;
+}
+
 function Root() {
   const view = getView();
 
-  useEffect(() => {
-    if (view !== "note" || hasScheduledSilentUpdateCheck) return;
-    hasScheduledSilentUpdateCheck = true;
-    const timer = window.setTimeout(() => {
-      checkForUpdates("silent").catch(() => {});
-    }, 3000);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [view]);
-
   if (view === "settings") {
     return <SettingsApp />;
+  }
+  if (view === "startup-update") {
+    return <StartupUpdateCheck />;
   }
   const contextMenuContext = getContextMenuContext();
   if (view === "context-menu" && contextMenuContext) {

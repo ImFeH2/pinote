@@ -16,6 +16,7 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 - **Searchable Open History** — Find and reopen previously opened notes by path or content
 - **Appearance & Platform Controls** — Theme, per-note opacity, typography, spacing, taskbar visibility, and optional glass effects
 - **Desktop Integration** — System tray controls, launch-at-startup option, and CLI open for `.md` / `.markdown`
+- **Stable Updates** — Automatically checks for app updates on startup
 
 ## Keyboard Shortcuts
 

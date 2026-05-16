@@ -25,7 +25,7 @@ pub fn setup_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Erro
             "settings" => {
                 let handle = app.clone();
                 std::thread::spawn(move || {
-                    let _ = show_settings_window(&handle);
+                    let _ = show_settings_window(&handle, None);
                 });
             }
             "quit" => {

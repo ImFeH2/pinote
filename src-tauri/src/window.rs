@@ -17,6 +17,7 @@ const NOTE_WINDOW_RECOVERY_MARGIN: i64 = 16;
 const NOTE_WINDOW_RECOVERY_OFFSET: i64 = 28;
 const EXISTING_WINDOW_SHAKE_OFFSETS: [i32; 8] = [0, 14, -12, 10, -8, 6, -4, 0];
 const EXISTING_WINDOW_SHAKE_DELAY_MS: u64 = 14;
+const STARTUP_UPDATE_WINDOW_LABEL: &str = "startup-update";
 
 #[derive(Clone, Copy)]
 struct ScreenRect {
@@ -408,8 +409,15 @@ pub fn show_all_hidden_windows(app: &tauri::AppHandle) {
     info!("show_all_hidden_windows_completed restored={restored}");
 }
 
-pub fn show_settings_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
+pub fn show_settings_window(
+    app: &tauri::AppHandle,
+    section: Option<String>,
+) -> Result<(), tauri::Error> {
     info!("show_settings_window_requested");
+    let url = match section.as_deref() {
+        Some("about") => "index.html?view=settings&section=about",
+        _ => "index.html?view=settings",
+    };
     let result = (|| -> Result<(), tauri::Error> {
         if let Some(window) = app.get_webview_window("settings") {
             info!("show_settings_window_reuse_existing");
@@ -427,18 +435,14 @@ pub fn show_settings_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> 
         }
 
         info!("show_settings_window_create_begin");
-        let window = WebviewWindowBuilder::new(
-            app,
-            "settings",
-            WebviewUrl::App("index.html?view=settings".into()),
-        )
-        .title("Pinote Settings")
-        .inner_size(920.0, 620.0)
-        .center()
-        .decorations(false)
-        .resizable(true)
-        .min_inner_size(760.0, 520.0)
-        .build()?;
+        let window = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App(url.into()))
+            .title("Pinote Settings")
+            .inner_size(920.0, 620.0)
+            .center()
+            .decorations(false)
+            .resizable(true)
+            .min_inner_size(760.0, 520.0)
+            .build()?;
         info!("show_settings_window_create_built");
         let _ = window.show();
         let _ = window.set_focus();
@@ -459,6 +463,29 @@ pub fn show_settings_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> 
         Err(err) => error!("show_settings_window_failed error={err}"),
     }
     result
+}
+
+pub fn open_startup_update_window(app: &tauri::AppHandle) {
+    if app
+        .get_webview_window(STARTUP_UPDATE_WINDOW_LABEL)
+        .is_some()
+    {
+        return;
+    }
+    let result = WebviewWindowBuilder::new(
+        app,
+        STARTUP_UPDATE_WINDOW_LABEL,
+        WebviewUrl::App("index.html?view=startup-update".into()),
+    )
+    .title("Pinote")
+    .inner_size(1.0, 1.0)
+    .visible(false)
+    .skip_taskbar(true)
+    .build();
+    match result {
+        Ok(_) => info!("startup_update_window_created"),
+        Err(err) => error!("startup_update_window_failed error={err}"),
+    }
 }
 
 pub fn open_note_window(

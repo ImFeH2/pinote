@@ -37,6 +37,8 @@ export interface Settings {
   openWithPinoteContextMenu: boolean;
   defaultMarkdownOpenWithPinote: boolean;
   lastUpdateCheckAt?: string;
+  pendingUpdatePromptVersion?: string;
+  dismissedUpdateVersion?: string;
   shortcuts: {
     newNote: string;
     restoreWindow: string;
@@ -68,6 +70,8 @@ export const DEFAULT_SETTINGS: Settings = {
   dragMouseButton: "middle",
   openWithPinoteContextMenu: false,
   defaultMarkdownOpenWithPinote: false,
+  pendingUpdatePromptVersion: "",
+  dismissedUpdateVersion: "",
   shortcuts: {
     newNote: "Alt+C",
     restoreWindow: "Alt+S",

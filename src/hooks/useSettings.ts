@@ -30,7 +30,7 @@ export function useSettings() {
   return {
     settings: settings ?? DEFAULT_SETTINGS,
     updateSettings: (patch: SettingsPatch) => {
-      updateSettingsStore(patch);
+      void updateSettingsStore(patch);
     },
     ready: settings !== null,
   };

@@ -71,11 +71,11 @@ export function getSettingsSnapshot() {
   return settingsSnapshot;
 }
 
-export function updateSettingsStore(patch: SettingsPatch) {
+export async function updateSettingsStore(patch: SettingsPatch) {
   const current = settingsSnapshot;
   if (!current) return;
   const next = mergeSettings(current, patch);
   setSettingsSnapshot(next);
-  void saveSettings(next);
-  void emitSettingsUpdated(next);
+  await saveSettings(next);
+  await emitSettingsUpdated(next);
 }

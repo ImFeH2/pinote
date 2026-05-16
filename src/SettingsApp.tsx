@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { exists, mkdir } from "@tauri-apps/plugin-fs";
 import { getVersion } from "@tauri-apps/api/app";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
@@ -7,6 +8,7 @@ import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { HistorySection } from "@/components/settings/HistorySection";
 import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
 import { ShortcutsSection } from "@/components/settings/ShortcutsSection";
+import { UpdateDialog } from "@/components/settings/UpdateDialog";
 import {
   dragMouseButtonOptions,
   sections,
@@ -48,6 +50,7 @@ import { openPath, openUrl } from "@tauri-apps/plugin-opener";
 const REPOSITORY_URL = "https://github.com/ImFeH2/pinote";
 const HISTORY_SEARCH_LIMIT = 80;
 const HISTORY_SEARCH_DEBOUNCE_MS = 120;
+const settingsSections = new Set<SettingsSection>(sections.map((section) => section.id));
 const emptyGlobalShortcutRegistration: Record<GlobalShortcutKey, boolean | null> = {
   newNote: null,
   restoreWindow: null,
@@ -93,16 +96,30 @@ function getUpdateStatusText(snapshot: UpdateSnapshot) {
   return "Update status is unavailable.";
 }
 
+function getInitialSection(): SettingsSection {
+  const params = new URLSearchParams(window.location.search);
+  const section = params.get("section");
+  if (section && settingsSections.has(section as SettingsSection)) {
+    return section as SettingsSection;
+  }
+  return "appearance";
+}
+
 export function SettingsApp() {
   useTheme();
   const { settings, updateSettings } = useSettings();
-  const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
+  const settingsWindow = useMemo(() => getCurrentWindow(), []);
+  const [activeSection, setActiveSection] = useState<SettingsSection>(() => getInitialSection());
   const [shortcutError, setShortcutError] = useState<string | null>(null);
   const [startupError, setStartupError] = useState<string | null>(null);
   const [startupBusy, setStartupBusy] = useState(false);
   const [updateBusy, setUpdateBusy] = useState(false);
   const [updateActionError, setUpdateActionError] = useState<string | null>(null);
   const [updateSnapshot, setUpdateSnapshot] = useState<UpdateSnapshot>(() => getUpdateState());
+  const [updateDialogDismissedVersion, setUpdateDialogDismissedVersion] = useState<string | null>(
+    null,
+  );
+  const pendingUpdateCheckVersionRef = useRef<string | null>(null);
   const [appVersion, setAppVersion] = useState("loading...");
   const [aboutError, setAboutError] = useState<string | null>(null);
   const [notesDirectoryError, setNotesDirectoryError] = useState<string | null>(null);
@@ -141,6 +158,16 @@ export function SettingsApp() {
   const updateError = updateActionError ?? updateSnapshot.error;
   const isCheckingUpdate = updateSnapshot.state === "checking";
   const isDownloadingUpdate = updateSnapshot.state === "downloading";
+  const shouldShowUpdateDialog =
+    updateSnapshot.available &&
+    updateSnapshot.latestVersion !== undefined &&
+    settings.pendingUpdatePromptVersion === updateSnapshot.latestVersion &&
+    settings.dismissedUpdateVersion !== updateSnapshot.latestVersion &&
+    updateDialogDismissedVersion !== updateSnapshot.latestVersion &&
+    (updateSnapshot.state === "available" ||
+      updateSnapshot.state === "downloading" ||
+      updateSnapshot.state === "readyToRestart" ||
+      updateSnapshot.state === "error");
   const activeWheelResizeModifier =
     wheelResizeModifierOptions.find((item) => item.value === settings.wheelResizeModifier) ??
     wheelResizeModifierOptions[0];
@@ -339,6 +366,17 @@ export function SettingsApp() {
     }
   }, []);
 
+  const handleUpdateLater = useCallback(() => {
+    const latestVersion = updateSnapshot.latestVersion;
+    if (!latestVersion) return;
+    setUpdateDialogDismissedVersion(latestVersion);
+    setUpdateActionError(null);
+    updateSettings({
+      pendingUpdatePromptVersion: "",
+      dismissedUpdateVersion: latestVersion,
+    });
+  }, [updateSettings, updateSnapshot.latestVersion]);
+
   const handleOpenRepository = useCallback(async () => {
     try {
       await openUrl(REPOSITORY_URL);
@@ -507,6 +545,50 @@ export function SettingsApp() {
   }, []);
 
   useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | null = null;
+    void settingsWindow
+      .listen<{ section: string }>("settings-section-requested", (event) => {
+        if (disposed) return;
+        const section = event.payload.section;
+        if (!settingsSections.has(section as SettingsSection)) return;
+        setActiveSection(section as SettingsSection);
+      })
+      .then((handler) => {
+        if (disposed) {
+          handler();
+          return;
+        }
+        unlisten = handler;
+      });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [settingsWindow]);
+
+  useEffect(() => {
+    const pendingVersion = settings.pendingUpdatePromptVersion;
+    if (!pendingVersion) return;
+    if (pendingUpdateCheckVersionRef.current === pendingVersion) return;
+    if (
+      updateSnapshot.state === "checking" ||
+      updateSnapshot.state === "downloading" ||
+      updateSnapshot.state === "readyToRestart"
+    ) {
+      return;
+    }
+    if (updateSnapshot.available && updateSnapshot.latestVersion === pendingVersion) return;
+    pendingUpdateCheckVersionRef.current = pendingVersion;
+    checkForUpdates("silent").catch(() => {});
+  }, [
+    settings.pendingUpdatePromptVersion,
+    updateSnapshot.available,
+    updateSnapshot.latestVersion,
+    updateSnapshot.state,
+  ]);
+
+  useEffect(() => {
     if (!settings.lastUpdateCheckAt && updateSnapshot.state === "idle") {
       checkForUpdates("silent").catch(() => {});
     }
@@ -633,7 +715,7 @@ export function SettingsApp() {
     );
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
+    <div className="relative flex h-screen flex-col bg-background text-foreground">
       <TitleBar title="Settings" showSettings={false} />
 
       <div className="flex min-h-0 flex-1">
@@ -647,6 +729,17 @@ export function SettingsApp() {
           {sectionContent}
         </main>
       </div>
+
+      {shouldShowUpdateDialog ? (
+        <UpdateDialog
+          snapshot={updateSnapshot}
+          busy={updateBusy}
+          error={updateError}
+          onDownload={handleDownloadUpdate}
+          onInstall={handleInstallUpdate}
+          onLater={handleUpdateLater}
+        />
+      ) : null}
     </div>
   );
 }
