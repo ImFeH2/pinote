@@ -71,3 +71,40 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           args: --target ${{ matrix.target }}
+
+  winget:
+    needs: build
+    runs-on: windows-latest
+
+    steps:
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.inputs.tag || github.ref_name }}"
+          $version = $tag.TrimStart("v")
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Download wingetcreate
+        shell: pwsh
+        run: Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+
+      - name: Submit winget package update
+        env:
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          if (-not $env:WINGET_CREATE_GITHUB_TOKEN) {
+            Write-Error "Missing WINGET_CREATE_GITHUB_TOKEN secret"
+            exit 1
+          }
+
+          $version = "${{ steps.version.outputs.version }}"
+          $installerUrl = "https://github.com/ImFeH2/pinote/releases/download/v$version/Pinote_${version}_x64_en-US.msi"
+
+          .\wingetcreate.exe update ImFeH2.Pinote `
+            -u $installerUrl `
+            -v $version `
+            -t $env:WINGET_CREATE_GITHUB_TOKEN `
+            --submit
