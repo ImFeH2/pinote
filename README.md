@@ -4,6 +4,24 @@ A lightweight floating markdown scratchpad app for your desktop. Pinote stays on
 
 ![Pinote Screenshot](./preview/pinote-screenshot.png)
 
+## Installation
+
+Download the latest release from [GitHub Releases](https://github.com/ImFeH2/pinote/releases/latest).
+
+| Platform | Recommended Package |
+| -------- | ------------------- |
+| Windows  | winget or `.msi` installer |
+| macOS    | `.dmg` installer for Apple Silicon or Intel |
+| Linux    | `.AppImage`, `.deb`, or `.rpm` |
+
+For Windows:
+
+```powershell
+winget install ImFeH2.Pinote
+```
+
+Pinote checks for app updates when it starts.
+
 ## Features
 
 - **Markdown Notes** — Edit Markdown in lightweight WYSIWYG windows, with multiple notes open at once.
