@@ -1,6 +1,6 @@
 import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { type Settings } from "@/stores/settings";
+import type { Settings } from "@/stores/settings";
 
 type SettingsEventPayload = {
   settings: Settings;

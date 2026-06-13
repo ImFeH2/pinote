@@ -79,10 +79,7 @@
   body {
     background: transparent;
     color: var(--color-foreground);
-    font-family:
-      system-ui,
-      -apple-system,
-      sans-serif;
+    font-family: system-ui, -apple-system, sans-serif;
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -176,17 +173,17 @@
     );
     box-shadow:
       0 16px 36px -18px
-        color-mix(
-          in srgb,
-          var(--color-pinned-shadow) var(--pinote-visual-opacity-percent),
-          transparent
-        ),
+      color-mix(
+        in srgb,
+        var(--color-pinned-shadow) var(--pinote-visual-opacity-percent),
+        transparent
+      ),
       0 16px 36px -18px
-        color-mix(
-          in srgb,
-          var(--color-readonly-shadow) var(--pinote-visual-opacity-percent),
-          transparent
-        );
+      color-mix(
+        in srgb,
+        var(--color-readonly-shadow) var(--pinote-visual-opacity-percent),
+        transparent
+      );
   }
 
   .pinote-window[data-brought-back="true"] {
@@ -197,23 +194,23 @@
     );
     box-shadow:
       0 0 0 1px
-        color-mix(
-          in srgb,
-          var(--color-brought-back-border) var(--pinote-visual-opacity-percent),
-          transparent
-        ),
+      color-mix(
+        in srgb,
+        var(--color-brought-back-border) var(--pinote-visual-opacity-percent),
+        transparent
+      ),
       0 18px 40px -18px
-        color-mix(
-          in srgb,
-          var(--color-brought-back-shadow) var(--pinote-visual-opacity-percent),
-          transparent
-        ),
+      color-mix(
+        in srgb,
+        var(--color-brought-back-shadow) var(--pinote-visual-opacity-percent),
+        transparent
+      ),
       0 0 30px 4px
-        color-mix(
-          in srgb,
-          var(--color-brought-back-glow) var(--pinote-visual-opacity-percent),
-          transparent
-        );
+      color-mix(
+        in srgb,
+        var(--color-brought-back-glow) var(--pinote-visual-opacity-percent),
+        transparent
+      );
     animation: pinote-window-brought-back 260ms ease-out;
   }
 

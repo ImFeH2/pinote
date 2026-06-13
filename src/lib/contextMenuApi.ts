@@ -1,7 +1,7 @@
-import { emitTo, type UnlistenFn } from "@tauri-apps/api/event";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
-import { getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
+import { emitTo, type UnlistenFn } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
 
 const NOTE_CONTEXT_MENU_ACTION_EVENT = "note-context-menu-action";
 const NOTE_CONTEXT_MENU_SYNC_EVENT = "note-context-menu-sync";

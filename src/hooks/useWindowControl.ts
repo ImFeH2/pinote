@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { logError } from "@/lib/logger";
 
 export function useWindowControl(defaultAlwaysOnTop = false) {

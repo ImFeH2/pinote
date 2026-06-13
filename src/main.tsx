@@ -1,14 +1,14 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import App from "@/App";
 import ContextMenuApp from "@/ContextMenuApp";
 import { SettingsProvider } from "@/hooks/useSettings";
-import { SettingsApp } from "@/SettingsApp";
 import { setupLogging } from "@/lib/logging";
 import { getNoteIdFromPath, normalizeNoteId } from "@/lib/notes";
 import { checkForUpdates, getUpdateState } from "@/lib/updater";
 import { openSettingsWindow } from "@/lib/windowApi";
+import { SettingsApp } from "@/SettingsApp";
 import {
   ensureSettingsStoreReady,
   getSettingsSnapshot,

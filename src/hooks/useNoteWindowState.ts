@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState, type MutableRefObject } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import type { getCurrentWindow } from "@tauri-apps/api/window";
+import { type MutableRefObject, useCallback, useEffect, useState } from "react";
 import { logError } from "@/lib/logger";
 import {
   getWindowState,
   removeWindowState,
-  type WindowVisibility,
   upsertWindowState,
+  type WindowVisibility,
 } from "@/lib/windowStateCache";
 
 const NOTE_OPACITY_MIN = 0;

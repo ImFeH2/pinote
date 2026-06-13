@@ -1,5 +1,5 @@
+import type { NoteHistorySearchResult } from "@/lib/noteHistory";
 import { cn } from "@/lib/utils";
-import { type NoteHistorySearchResult } from "@/lib/noteHistory";
 
 interface HistorySectionProps {
   historyQuery: string;

@@ -1,5 +1,5 @@
+import { type SettingsSection, sections } from "@/components/settings/shared";
 import { cn } from "@/lib/utils";
-import { sections, type SettingsSection } from "@/components/settings/shared";
 
 interface SettingsSidebarProps {
   activeSection: SettingsSection;

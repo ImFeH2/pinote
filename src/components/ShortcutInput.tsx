@@ -1,4 +1,4 @@
-import { useCallback, useState, type KeyboardEvent, type ReactNode } from "react";
+import { type KeyboardEvent, type ReactNode, useCallback, useState } from "react";
 import { eventToShortcut } from "@/lib/shortcuts";
 
 interface ShortcutInputProps {

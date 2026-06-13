@@ -1,12 +1,12 @@
-import { cn } from "@/lib/utils";
-import { type SettingsPatch } from "@/stores/settingsStore";
-import { type Settings } from "@/stores/settings";
-import { type RuntimePlatform } from "@/lib/windowApi";
 import {
   fontFamilyOptions,
   themeOptions,
   windowsGlassEffectOptions,
 } from "@/components/settings/shared";
+import { cn } from "@/lib/utils";
+import type { RuntimePlatform } from "@/lib/windowApi";
+import type { Settings } from "@/stores/settings";
+import type { SettingsPatch } from "@/stores/settingsStore";
 
 interface AppearanceSectionProps {
   settings: Settings;

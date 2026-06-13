@@ -1,5 +1,5 @@
 import { emitSettingsUpdated, listenSettingsUpdated } from "@/lib/settingsEvents";
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from "@/stores/settings";
+import { DEFAULT_SETTINGS, loadSettings, type Settings, saveSettings } from "@/stores/settings";
 
 export type SettingsPatch = Partial<Omit<Settings, "shortcuts">> & {
   shortcuts?: Partial<Settings["shortcuts"]>;

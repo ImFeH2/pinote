@@ -1,6 +1,6 @@
-import { useCallback, type MouseEvent, type WheelEvent } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { FilePlus2, Settings2, Minus, Square, X } from "lucide-react";
+import { FilePlus2, Minus, Settings2, Square, X } from "lucide-react";
+import { type MouseEvent, useCallback, type WheelEvent } from "react";
 import { logError } from "@/lib/logger";
 
 interface TitleBarProps {
@@ -83,6 +83,7 @@ export function TitleBar({
       <div className="flex items-center gap-0.5">
         {showNewNote && (
           <button
+            type="button"
             onClick={onOpenNewNote}
             className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
@@ -92,6 +93,7 @@ export function TitleBar({
 
         {showSettings && (
           <button
+            type="button"
             onClick={onOpenSettings}
             className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
@@ -100,6 +102,7 @@ export function TitleBar({
         )}
 
         <button
+          type="button"
           onClick={handleMinimize}
           className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         >
@@ -107,6 +110,7 @@ export function TitleBar({
         </button>
 
         <button
+          type="button"
           onClick={handleToggleMaximize}
           className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
         >
@@ -114,6 +118,7 @@ export function TitleBar({
         </button>
 
         <button
+          type="button"
           onClick={handleClose}
           className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive hover:text-white"
         >

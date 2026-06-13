@@ -1,15 +1,15 @@
+import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
+import type { getCurrentWindow } from "@tauri-apps/api/window";
 import {
+  type MutableRefObject,
+  type MouseEvent as ReactMouseEvent,
   useCallback,
   useEffect,
   useRef,
-  type MouseEvent as ReactMouseEvent,
-  type MutableRefObject,
 } from "react";
-import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { closeNoteContextMenu, openNoteContextMenu } from "@/lib/contextMenuApi";
 import { logError } from "@/lib/logger";
-import { type DragMouseButton, type WheelResizeModifier } from "@/stores/settings";
+import type { DragMouseButton, WheelResizeModifier } from "@/stores/settings";
 
 const WINDOW_MIN_WIDTH = 1;
 const WINDOW_MIN_HEIGHT = 1;

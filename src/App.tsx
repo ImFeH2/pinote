@@ -1,23 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Effect, getCurrentWindow } from "@tauri-apps/api/window";
 import { Lock, Pin } from "lucide-react";
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Editor } from "@/components/Editor";
-import { useNoteWindowActions } from "@/hooks/useNoteWindowActions";
-import { useNoteExternalSync } from "@/hooks/useNoteExternalSync";
-import { useTheme } from "@/hooks/useTheme";
 import { useAutoSave } from "@/hooks/useAutoSave";
+import { useNoteExternalSync } from "@/hooks/useNoteExternalSync";
+import { useNoteWindowActions } from "@/hooks/useNoteWindowActions";
 import { useNoteWindowMouseInteractions } from "@/hooks/useNoteWindowMouseInteractions";
 import { useNoteWindowState } from "@/hooks/useNoteWindowState";
-import { useWindowControl } from "@/hooks/useWindowControl";
 import { useSettings } from "@/hooks/useSettings";
+import { useTheme } from "@/hooks/useTheme";
+import { useWindowControl } from "@/hooks/useWindowControl";
+import { logError } from "@/lib/logger";
+import { recordOpenedNote } from "@/lib/noteHistory";
 import {
   bringNoteWindowsBackOnScreen,
   getRuntimePlatform,
   type RuntimePlatform,
 } from "@/lib/windowApi";
-import { recordOpenedNote } from "@/lib/noteHistory";
-import { logError } from "@/lib/logger";
-import { type WindowsGlassEffect } from "@/stores/settings";
+import type { WindowsGlassEffect } from "@/stores/settings";
 import "@/styles/App.css";
 
 const NOTE_OPACITY_MIN = 0;

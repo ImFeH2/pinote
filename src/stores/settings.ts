@@ -1,4 +1,4 @@
-import { readTextFile, writeTextFile, exists, BaseDirectory } from "@tauri-apps/plugin-fs";
+import { BaseDirectory, exists, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { logError } from "@/lib/logger";
 
 type Theme = "light" | "dark" | "system";

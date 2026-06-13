@@ -1,7 +1,7 @@
 import { FolderOpen, FolderSearch, Move } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { type Settings } from "@/stores/settings";
-import { type SettingsPatch } from "@/stores/settingsStore";
+import type { Settings } from "@/stores/settings";
+import type { SettingsPatch } from "@/stores/settingsStore";
 
 interface WindowSectionProps {
   settings: Settings;

@@ -1,15 +1,15 @@
-import { openNoteWindow } from "@/lib/windowApi";
 import {
   createManagedNoteFile,
   getNoteIdFromPath,
   normalizeNoteId,
   resolveManagedNotePath,
 } from "@/lib/notes";
+import { openNoteWindow } from "@/lib/windowApi";
 import {
-  type WindowBounds,
-  type WindowVisibility,
   getWindowStateByNotePath,
   upsertWindowState,
+  type WindowBounds,
+  type WindowVisibility,
 } from "@/lib/windowStateCache";
 
 interface OpenAndTrackNoteWindowOptions {

@@ -1,7 +1,7 @@
 import { Github } from "lucide-react";
+import type { UpdateSnapshot } from "@/lib/updater";
 import { cn } from "@/lib/utils";
-import { type UpdateSnapshot } from "@/lib/updater";
-import { type Settings } from "@/stores/settings";
+import type { Settings } from "@/stores/settings";
 
 interface AboutSectionProps {
   appVersion: string;

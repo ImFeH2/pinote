@@ -1,6 +1,6 @@
 import { dirname } from "@tauri-apps/api/path";
 import { readTextFile, watchImmediate } from "@tauri-apps/plugin-fs";
-import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
+import { type MutableRefObject, useCallback, useEffect, useRef, useState } from "react";
 import { logDebug, logError } from "@/lib/logger";
 
 const EXTERNAL_FILE_RELOAD_DEBOUNCE_MS = 120;

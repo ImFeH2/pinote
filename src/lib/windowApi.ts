@@ -1,8 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { normalizeNoteId, resolveManagedNotePath } from "@/lib/notes";
-import { recordOpenedNote } from "@/lib/noteHistory";
 import { logError, logInfo } from "@/lib/logger";
+import { recordOpenedNote } from "@/lib/noteHistory";
+import { normalizeNoteId, resolveManagedNotePath } from "@/lib/notes";
 import type { WindowBounds, WindowVisibility } from "@/lib/windowStateCache";
 
 const NOTE_WINDOW_LABEL_PREFIX = "note-";

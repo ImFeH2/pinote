@@ -1,6 +1,6 @@
 import { Download, RefreshCw, X } from "lucide-react";
+import type { UpdateSnapshot } from "@/lib/updater";
 import { cn } from "@/lib/utils";
-import { type UpdateSnapshot } from "@/lib/updater";
 
 interface UpdateDialogProps {
   snapshot: UpdateSnapshot;

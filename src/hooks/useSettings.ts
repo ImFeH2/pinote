@@ -1,11 +1,11 @@
-import { Fragment, createElement, type ReactNode, useEffect, useSyncExternalStore } from "react";
+import { createElement, Fragment, type ReactNode, useEffect, useSyncExternalStore } from "react";
 import { DEFAULT_SETTINGS } from "@/stores/settings";
 import {
   ensureSettingsStoreReady,
   getSettingsSnapshot,
+  type SettingsPatch,
   subscribeSettingsStore,
   updateSettingsStore,
-  type SettingsPatch,
 } from "@/stores/settingsStore";
 
 export function SettingsProvider({ children }: { children: ReactNode }) {

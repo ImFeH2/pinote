@@ -1,8 +1,4 @@
-import {
-  type DragMouseButton,
-  type WheelResizeModifier,
-  type WindowsGlassEffect,
-} from "@/stores/settings";
+import type { DragMouseButton, WheelResizeModifier, WindowsGlassEffect } from "@/stores/settings";
 
 export const globalShortcutKeys = [
   "newNote",

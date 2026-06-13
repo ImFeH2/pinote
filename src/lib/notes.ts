@@ -1,6 +1,7 @@
 import { appDataDir, dirname, resolve } from "@tauri-apps/api/path";
 import { exists, mkdir, writeTextFile } from "@tauri-apps/plugin-fs";
 import { loadSettings } from "@/stores/settings";
+
 const NOTE_WINDOW_PREFIX = "note-";
 const NOTE_FILE_EXTENSION = ".md";
 const NOTE_DIRECTORY = "notes";

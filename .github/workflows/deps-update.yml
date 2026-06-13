@@ -63,7 +63,7 @@ jobs:
 
       - name: Verify frontend
         run: |
-          pnpm lint
+          pnpm check
           pnpm typecheck
 
       - name: Verify backend

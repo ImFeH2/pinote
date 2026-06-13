@@ -1,22 +1,22 @@
+import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
+import { getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
 import {
+  type CSSProperties,
   useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
 } from "react";
-import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
-import { getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
+import { useSettings } from "@/hooks/useSettings";
+import { useTheme } from "@/hooks/useTheme";
 import {
   emitNoteContextMenuAction,
   listenNoteContextMenuSync,
   type NoteContextMenuAction,
   type NoteContextMenuContext,
 } from "@/lib/contextMenuApi";
-import { useSettings } from "@/hooks/useSettings";
-import { useTheme } from "@/hooks/useTheme";
 import { logError } from "@/lib/logger";
 import { cn } from "@/lib/utils";
 

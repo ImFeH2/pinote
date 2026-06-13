@@ -1,15 +1,15 @@
+import { ShortcutInput } from "@/components/ShortcutInput";
 import {
   dragMouseButtonOptions,
-  globalShortcutKeys,
-  shortcutItems,
   type GlobalShortcutKey,
+  globalShortcutKeys,
   type ShortcutKey,
+  shortcutItems,
   wheelResizeModifierOptions,
 } from "@/components/settings/shared";
-import { ShortcutInput } from "@/components/ShortcutInput";
 import { cn } from "@/lib/utils";
-import { type Settings } from "@/stores/settings";
-import { type SettingsPatch } from "@/stores/settingsStore";
+import type { Settings } from "@/stores/settings";
+import type { SettingsPatch } from "@/stores/settingsStore";
 
 interface ShortcutsSectionProps {
   settings: Settings;

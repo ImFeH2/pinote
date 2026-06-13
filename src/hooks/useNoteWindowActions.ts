@@ -1,11 +1,11 @@
+import type { getCurrentWindow } from "@tauri-apps/api/window";
 import {
+  type MutableRefObject,
+  type MouseEvent as ReactMouseEvent,
   useCallback,
   useEffect,
   useMemo,
-  type MouseEvent as ReactMouseEvent,
-  type MutableRefObject,
 } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   closeNoteContextMenu,
   listenNoteContextMenuAction,
@@ -13,9 +13,9 @@ import {
 } from "@/lib/contextMenuApi";
 import { logError } from "@/lib/logger";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
-import { openAndTrackNoteWindow } from "@/lib/windowManager";
 import { openSettingsWindow } from "@/lib/windowApi";
-import { type Settings } from "@/stores/settings";
+import { openAndTrackNoteWindow } from "@/lib/windowManager";
+import type { Settings } from "@/stores/settings";
 
 interface UseNoteWindowActionsOptions {
   appWindow: ReturnType<typeof getCurrentWindow>;

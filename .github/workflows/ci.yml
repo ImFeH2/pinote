@@ -22,8 +22,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec prettier --check src
-      - run: pnpm lint
+      - run: pnpm check
       - run: pnpm typecheck
 
   backend:

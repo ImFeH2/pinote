@@ -1,41 +1,31 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { exists, mkdir } from "@tauri-apps/plugin-fs";
 import { getVersion } from "@tauri-apps/api/app";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { exists, mkdir } from "@tauri-apps/plugin-fs";
+import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AboutSection } from "@/components/settings/AboutSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { HistorySection } from "@/components/settings/HistorySection";
 import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
 import { ShortcutsSection } from "@/components/settings/ShortcutsSection";
-import { UpdateDialog } from "@/components/settings/UpdateDialog";
 import {
   dragMouseButtonOptions,
-  sections,
   type GlobalShortcutKey,
   type SettingsSection,
   type ShortcutKey,
+  sections,
   wheelResizeModifierOptions,
 } from "@/components/settings/shared";
+import { UpdateDialog } from "@/components/settings/UpdateDialog";
 import { WindowSection } from "@/components/settings/WindowSection";
+import { TitleBar } from "@/components/TitleBar";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
-import { TitleBar } from "@/components/TitleBar";
-import { normalizeShortcut } from "@/lib/shortcuts";
+import { type NoteHistorySearchResult, searchNoteHistory } from "@/lib/noteHistory";
 import { resolveDefaultNotesDirectory } from "@/lib/notes";
-import { searchNoteHistory, type NoteHistorySearchResult } from "@/lib/noteHistory";
-import {
-  bringNoteWindowsBackOnScreen,
-  getRuntimePlatform,
-  getDefaultMarkdownOpenEnabled,
-  getOpenWithPinoteEnabled,
-  setGlobalShortcuts,
-  setNoteWindowsSkipTaskbar,
-  setDefaultMarkdownOpenEnabled,
-  setOpenWithPinoteEnabled,
-  type RuntimePlatform,
-} from "@/lib/windowApi";
-import { openAndTrackNoteWindow } from "@/lib/windowManager";
+import { normalizeShortcut } from "@/lib/shortcuts";
 import {
   checkForUpdates,
   downloadUpdate,
@@ -44,8 +34,18 @@ import {
   subscribeUpdateState,
   type UpdateSnapshot,
 } from "@/lib/updater";
-import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import {
+  bringNoteWindowsBackOnScreen,
+  getDefaultMarkdownOpenEnabled,
+  getOpenWithPinoteEnabled,
+  getRuntimePlatform,
+  type RuntimePlatform,
+  setDefaultMarkdownOpenEnabled,
+  setGlobalShortcuts,
+  setNoteWindowsSkipTaskbar,
+  setOpenWithPinoteEnabled,
+} from "@/lib/windowApi";
+import { openAndTrackNoteWindow } from "@/lib/windowManager";
 
 const REPOSITORY_URL = "https://github.com/ImFeH2/pinote";
 const HISTORY_SEARCH_LIMIT = 80;
