@@ -2854,6 +2854,7 @@ dependencies = [
  "tauri-plugin-updater",
  "uuid",
  "winreg 0.55.0",
+ "zip",
 ]
 
 [[package]]

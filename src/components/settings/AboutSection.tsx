@@ -1,4 +1,4 @@
-import { Github } from "lucide-react";
+import { Download, Github } from "lucide-react";
 import type { UpdateSnapshot } from "@/lib/updater";
 import { cn } from "@/lib/utils";
 import type { Settings } from "@/stores/settings";
@@ -15,12 +15,16 @@ interface AboutSectionProps {
   settings: Settings;
   updateError: string | null;
   aboutError: string | null;
+  diagnosticBusy: boolean;
+  diagnosticMessage: string | null;
+  diagnosticError: string | null;
   repositoryUrl: string;
   formatDateTime: (value: string) => string;
   onManualUpdateCheck: () => Promise<void>;
   onDownloadUpdate: () => Promise<void>;
   onInstallUpdate: () => Promise<void>;
   onOpenRepository: () => Promise<void>;
+  onSaveDiagnosticReport: () => Promise<void>;
 }
 
 export function AboutSection({
@@ -35,12 +39,16 @@ export function AboutSection({
   settings,
   updateError,
   aboutError,
+  diagnosticBusy,
+  diagnosticMessage,
+  diagnosticError,
   repositoryUrl,
   formatDateTime,
   onManualUpdateCheck,
   onDownloadUpdate,
   onInstallUpdate,
   onOpenRepository,
+  onSaveDiagnosticReport,
 }: AboutSectionProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -134,6 +142,32 @@ export function AboutSection({
         )}
 
         {updateError && <div className="text-xs text-destructive">{updateError}</div>}
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+        <div className="text-xs font-medium text-muted-foreground">Troubleshooting</div>
+        <div className="text-xs text-muted-foreground">
+          The report may include recent file paths and app error details.
+        </div>
+        <button
+          type="button"
+          disabled={diagnosticBusy}
+          onClick={() => {
+            void onSaveDiagnosticReport();
+          }}
+          className={cn(
+            "inline-flex items-center gap-2 self-start rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
+            "border-border bg-background text-foreground hover:bg-accent",
+            diagnosticBusy && "cursor-not-allowed opacity-60",
+          )}
+        >
+          <Download size={14} />
+          <span>{diagnosticBusy ? "Saving..." : "Save Report"}</span>
+        </button>
+        {diagnosticMessage && (
+          <div className="text-xs text-muted-foreground">{diagnosticMessage}</div>
+        )}
+        {diagnosticError && <div className="text-xs text-destructive">{diagnosticError}</div>}
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">

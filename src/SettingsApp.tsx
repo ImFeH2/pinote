@@ -23,6 +23,7 @@ import { WindowSection } from "@/components/settings/WindowSection";
 import { TitleBar } from "@/components/TitleBar";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
+import { saveDiagnosticReport } from "@/lib/diagnostics";
 import { type NoteHistorySearchResult, searchNoteHistory } from "@/lib/noteHistory";
 import { resolveDefaultNotesDirectory } from "@/lib/notes";
 import { normalizeShortcut } from "@/lib/shortcuts";
@@ -122,6 +123,9 @@ export function SettingsApp() {
   const pendingUpdateCheckVersionRef = useRef<string | null>(null);
   const [appVersion, setAppVersion] = useState("loading...");
   const [aboutError, setAboutError] = useState<string | null>(null);
+  const [diagnosticBusy, setDiagnosticBusy] = useState(false);
+  const [diagnosticMessage, setDiagnosticMessage] = useState<string | null>(null);
+  const [diagnosticError, setDiagnosticError] = useState<string | null>(null);
   const [notesDirectoryError, setNotesDirectoryError] = useState<string | null>(null);
   const [notesDirectoryBusy, setNotesDirectoryBusy] = useState(false);
   const [defaultNotesDirectory, setDefaultNotesDirectory] = useState("");
@@ -383,6 +387,22 @@ export function SettingsApp() {
       setAboutError(null);
     } catch (error) {
       setAboutError(getErrorMessage(error));
+    }
+  }, []);
+
+  const handleSaveDiagnosticReport = useCallback(async () => {
+    setDiagnosticBusy(true);
+    setDiagnosticMessage(null);
+    setDiagnosticError(null);
+    try {
+      const result = await saveDiagnosticReport();
+      if (!result) return;
+      const fileCountText = result.logFileCount === 1 ? "1 file" : `${result.logFileCount} files`;
+      setDiagnosticMessage(`Report saved with ${fileCountText}.`);
+    } catch (error) {
+      setDiagnosticError(getErrorMessage(error));
+    } finally {
+      setDiagnosticBusy(false);
     }
   }, []);
 
@@ -705,12 +725,16 @@ export function SettingsApp() {
         settings={settings}
         updateError={updateError}
         aboutError={aboutError}
+        diagnosticBusy={diagnosticBusy}
+        diagnosticMessage={diagnosticMessage}
+        diagnosticError={diagnosticError}
         repositoryUrl={REPOSITORY_URL}
         formatDateTime={formatDateTime}
         onManualUpdateCheck={handleManualUpdateCheck}
         onDownloadUpdate={handleDownloadUpdate}
         onInstallUpdate={handleInstallUpdate}
         onOpenRepository={handleOpenRepository}
+        onSaveDiagnosticReport={handleSaveDiagnosticReport}
       />
     );
 

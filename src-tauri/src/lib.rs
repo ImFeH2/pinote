@@ -5,7 +5,14 @@ mod window_state;
 
 use log::{Level, LevelFilter, error, info};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, path::Path, path::PathBuf, thread, time::Duration};
+use std::{
+    collections::HashSet,
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+    thread,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 use tauri::{Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind};
 use uuid::Uuid;
@@ -14,6 +21,7 @@ use winreg::{
     RegKey,
     enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE},
 };
+use zip::{CompressionMethod, ZipWriter, write::SimpleFileOptions};
 
 const NOTE_WINDOW_PREFIX: &str = "note-";
 const NOTE_WINDOW_WIDTH: f64 = 400.0;
@@ -44,6 +52,13 @@ const PINOTE_MARKDOWN_FILE_TYPE: &str = "Pinote Markdown File";
 #[serde(rename_all = "camelCase")]
 struct CliOpenNoteRequest {
     note_path: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DiagnosticReportExport {
+    destination_path: String,
+    log_file_count: usize,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -297,6 +312,122 @@ fn level_allowed_for_filter(level: Level, minimum: LevelFilter) -> bool {
         }
         LevelFilter::Trace => true,
     }
+}
+
+fn current_unix_timestamp_seconds() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or_default()
+}
+
+fn list_diagnostic_log_files(logs_dir: &Path) -> Result<Vec<PathBuf>, String> {
+    if !logs_dir.exists() {
+        return Ok(Vec::new());
+    }
+    let mut log_files = Vec::new();
+    let entries = std::fs::read_dir(logs_dir)
+        .map_err(|error| format!("Could not read diagnostic files: {error}"))?;
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("Could not read diagnostic file: {error}"))?;
+        let file_type = entry
+            .file_type()
+            .map_err(|error| format!("Could not inspect diagnostic file: {error}"))?;
+        if file_type.is_file() {
+            log_files.push(entry.path());
+        }
+    }
+    log_files.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    Ok(log_files)
+}
+
+fn zip_file_name(path: &Path) -> Option<String> {
+    path.file_name()
+        .map(|file_name| format!("logs/{}", file_name.to_string_lossy()))
+}
+
+fn add_bytes_to_diagnostic_zip(
+    zip: &mut ZipWriter<File>,
+    entry_name: &str,
+    bytes: &[u8],
+    options: SimpleFileOptions,
+) -> Result<(), String> {
+    zip.start_file(entry_name, options)
+        .map_err(|error| format!("Could not write diagnostic report entry: {error}"))?;
+    zip.write_all(bytes)
+        .map_err(|error| format!("Could not write diagnostic report entry: {error}"))
+}
+
+fn add_file_to_diagnostic_zip(
+    zip: &mut ZipWriter<File>,
+    source_path: &Path,
+    entry_name: &str,
+    options: SimpleFileOptions,
+) -> Result<(), String> {
+    zip.start_file(entry_name, options)
+        .map_err(|error| format!("Could not write diagnostic report entry: {error}"))?;
+    let mut source = File::open(source_path)
+        .map_err(|error| format!("Could not read diagnostic file: {error}"))?;
+    std::io::copy(&mut source, zip)
+        .map_err(|error| format!("Could not write diagnostic file: {error}"))?;
+    Ok(())
+}
+
+fn export_diagnostic_report_to_path(
+    app: &tauri::AppHandle,
+    destination_path: &Path,
+) -> Result<DiagnosticReportExport, String> {
+    if destination_path.as_os_str().is_empty() {
+        return Err(String::from("Choose where to save the report."));
+    }
+    if let Some(parent) = destination_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)
+            .map_err(|error| format!("Could not prepare the report location: {error}"))?;
+    }
+    let logs_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("Could not locate diagnostic files: {error}"))?
+        .join(LOGS_DIRECTORY_NAME);
+    let log_files = list_diagnostic_log_files(&logs_dir)?;
+    let destination = File::create(destination_path)
+        .map_err(|error| format!("Could not create diagnostic report: {error}"))?;
+    let mut zip = ZipWriter::new(destination);
+    let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+    let metadata = serde_json::json!({
+        "schemaVersion": 1,
+        "appName": "Pinote",
+        "appVersion": app.package_info().version.to_string(),
+        "platform": std::env::consts::OS,
+        "arch": std::env::consts::ARCH,
+        "generatedAtUnixSeconds": current_unix_timestamp_seconds(),
+        "logFileCount": log_files.len(),
+    });
+    let metadata_bytes = serde_json::to_vec_pretty(&metadata)
+        .map_err(|error| format!("Could not prepare diagnostic metadata: {error}"))?;
+    add_bytes_to_diagnostic_zip(&mut zip, "metadata.json", &metadata_bytes, options)?;
+    if log_files.is_empty() {
+        add_bytes_to_diagnostic_zip(
+            &mut zip,
+            "logs/README.txt",
+            b"No log files were found.\n",
+            options,
+        )?;
+    } else {
+        for log_file in &log_files {
+            if let Some(entry_name) = zip_file_name(log_file) {
+                add_file_to_diagnostic_zip(&mut zip, log_file, &entry_name, options)?;
+            }
+        }
+    }
+    zip.finish()
+        .map_err(|error| format!("Could not finish diagnostic report: {error}"))?;
+    Ok(DiagnosticReportExport {
+        destination_path: destination_path.to_string_lossy().into_owned(),
+        log_file_count: log_files.len(),
+    })
 }
 
 fn load_stored_settings(app: &tauri::AppHandle) -> StoredSettings {
@@ -854,6 +985,14 @@ fn get_runtime_platform() -> &'static str {
 }
 
 #[tauri::command]
+async fn export_diagnostic_report(
+    app: tauri::AppHandle,
+    destination_path: String,
+) -> Result<DiagnosticReportExport, String> {
+    export_diagnostic_report_to_path(&app, Path::new(destination_path.trim()))
+}
+
+#[tauri::command]
 async fn set_global_shortcuts(
     app: tauri::AppHandle,
     shortcuts: shortcut::GlobalShortcutConfig,
@@ -892,6 +1031,7 @@ pub fn run() {
             open_note_window,
             bring_note_windows_back_on_screen,
             get_runtime_platform,
+            export_diagnostic_report,
             get_open_with_pinote_enabled,
             set_open_with_pinote_enabled,
             get_default_markdown_open_enabled,
