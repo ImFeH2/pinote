@@ -83,6 +83,14 @@ function resolveDragMouseButtonCode(button: DragMouseButton) {
   return button === "right" ? 2 : 1;
 }
 
+function consumeMouseEvent(event: MouseEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (typeof event.stopImmediatePropagation === "function") {
+    event.stopImmediatePropagation();
+  }
+}
+
 export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseInteractionsOptions) {
   const {
     appWindow,
@@ -151,14 +159,14 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
 
     const handleMiddleAuxClick = (event: MouseEvent) => {
       if (event.button !== 1) return;
-      event.preventDefault();
+      consumeMouseEvent(event);
     };
 
     const handlePointerMouseDown = (event: MouseEvent) => {
       const isDragButton = event.button === dragButton;
       const isMiddleToggleButton = event.button === 1;
       if (!isDragButton && !isMiddleToggleButton) return;
-      event.preventDefault();
+      consumeMouseEvent(event);
       closeContextMenu();
       const nextState: MiddleDragState = {
         button: event.button,
@@ -219,6 +227,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
     const handleMouseMove = (event: MouseEvent) => {
       const state = middleDragState.current;
       if (!state) return;
+      consumeMouseEvent(event);
       state.pointerCurrentX = event.screenX;
       state.pointerCurrentY = event.screenY;
       const deltaX = state.pointerCurrentX - state.pointerStartX;
@@ -279,6 +288,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
       const state = middleDragState.current;
       if (!state) return;
       if (event.button !== state.button) return;
+      consumeMouseEvent(event);
       finishMiddleInteraction(true);
     };
 
