@@ -37,6 +37,14 @@ interface UseNoteWindowActionsOptions {
   toggleTheme: () => void;
 }
 
+function consumeKeyboardEvent(event: KeyboardEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (typeof event.stopImmediatePropagation === "function") {
+    event.stopImmediatePropagation();
+  }
+}
+
 export function useNoteWindowActions(options: UseNoteWindowActionsOptions) {
   const {
     appWindow,
@@ -169,13 +177,13 @@ export function useNoteWindowActions(options: UseNoteWindowActionsOptions) {
     const handleKeyDown = (event: KeyboardEvent) => {
       for (const item of localShortcutActions) {
         if (!shortcutMatchesEvent(item.shortcut, event)) continue;
-        event.preventDefault();
+        consumeKeyboardEvent(event);
         item.action();
         return;
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [localShortcutActions]);
 
   useEffect(() => {
