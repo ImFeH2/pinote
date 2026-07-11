@@ -269,6 +269,7 @@ function App({
     dragMouseButton: settings.dragMouseButton,
     noteId,
     noteOpacityRef,
+    noteReadOnlyRef,
     noteScrollTopRef,
     persistWindowState,
     setNoteOpacityState,

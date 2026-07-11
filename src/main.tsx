@@ -58,6 +58,8 @@ function getContextMenuContext() {
     anchorX: Number.isFinite(rawAnchorX) ? rawAnchorX : 0,
     anchorY: Number.isFinite(rawAnchorY) ? rawAnchorY : 0,
     noteOpacity: Number.isFinite(rawOpacity) ? Math.min(Math.max(rawOpacity, 0), 1) : 1,
+    noteReadOnly: params.get("noteReadOnly") === "true",
+    maximized: params.get("maximized") === "true",
   };
 }
 

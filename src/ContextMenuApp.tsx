@@ -41,6 +41,8 @@ function ContextMenuApp({
   anchorX,
   anchorY,
   noteOpacity,
+  noteReadOnly,
+  maximized,
 }: NoteContextMenuContext) {
   const { t } = useTranslation("contextMenu");
   useTheme();
@@ -60,6 +62,8 @@ function ContextMenuApp({
     anchorX,
     anchorY,
     noteOpacity,
+    noteReadOnly,
+    maximized,
   });
   const menuSurfaceOpacity = settings.contextMenuFollowNoteOpacity
     ? clamp(context.noteOpacity, 0.2, 1)
@@ -374,7 +378,7 @@ function ContextMenuApp({
               }}
               className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              {t("toggleMaximize")}
+              {context.maximized ? t("restoreWindow") : t("maximizeWindow")}
             </button>
             <button
               type="button"
@@ -383,7 +387,7 @@ function ContextMenuApp({
               }}
               className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              {t("toggleReadOnly")}
+              {context.noteReadOnly ? t("disableReadOnly") : t("enableReadOnly")}
             </button>
             <button
               type="button"

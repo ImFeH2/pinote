@@ -25,6 +25,8 @@ export interface NoteContextMenuContext {
   anchorX: number;
   anchorY: number;
   noteOpacity: number;
+  noteReadOnly: boolean;
+  maximized: boolean;
 }
 
 interface OpenNoteContextMenuOptions {
@@ -35,6 +37,7 @@ interface OpenNoteContextMenuOptions {
   screenY: number;
   scaleFactor: number;
   noteOpacity?: number;
+  noteReadOnly: boolean;
 }
 
 interface NoteContextMenuActionPayload {
@@ -118,6 +121,7 @@ async function resolveContextMenuWindowPosition(
 function buildNoteContextMenuUrl(
   options: OpenNoteContextMenuOptions,
   pointer: { x: number; y: number },
+  maximized: boolean,
 ) {
   const noteOpacity = clamp(
     typeof options.noteOpacity === "number" && Number.isFinite(options.noteOpacity)
@@ -133,6 +137,8 @@ function buildNoteContextMenuUrl(
     anchorX: String(pointer.x),
     anchorY: String(pointer.y),
     noteOpacity: noteOpacity.toString(),
+    noteReadOnly: String(options.noteReadOnly),
+    maximized: String(maximized),
   });
   return `index.html?${query.toString()}`;
 }
@@ -140,6 +146,7 @@ function buildNoteContextMenuUrl(
 function buildNoteContextMenuContext(
   options: OpenNoteContextMenuOptions,
   pointer: { x: number; y: number },
+  maximized: boolean,
 ): NoteContextMenuContext {
   const noteOpacity = clamp(
     typeof options.noteOpacity === "number" && Number.isFinite(options.noteOpacity)
@@ -154,6 +161,8 @@ function buildNoteContextMenuContext(
     anchorX: pointer.x,
     anchorY: pointer.y,
     noteOpacity,
+    noteReadOnly: options.noteReadOnly,
+    maximized,
   };
 }
 
@@ -171,11 +180,13 @@ export async function closeNoteContextMenu(parentWindowLabel: string) {
 export async function openNoteContextMenu(options: OpenNoteContextMenuOptions) {
   const label = buildNoteContextMenuWindowLabel(options.parentWindowLabel);
   const pointer = await resolveContextMenuPosition(options);
-  const context = buildNoteContextMenuContext(options, pointer);
+  const targetWindow = await WebviewWindow.getByLabel(options.targetWindowLabel);
+  const maximized = await targetWindow?.isMaximized().catch(() => false);
+  const context = buildNoteContextMenuContext(options, pointer, maximized ?? false);
   let menuWindow = await WebviewWindow.getByLabel(label);
   if (!menuWindow) {
     menuWindow = new WebviewWindow(label, {
-      url: buildNoteContextMenuUrl(options, pointer),
+      url: buildNoteContextMenuUrl(options, pointer, maximized ?? false),
       title: "Pinote Menu",
       width: NOTE_CONTEXT_MENU_WIDTH,
       height: NOTE_CONTEXT_MENU_HEIGHT,
@@ -248,6 +259,8 @@ export async function listenNoteContextMenuSync(
     handler({
       ...payload,
       noteOpacity,
+      noteReadOnly: payload.noteReadOnly === true,
+      maximized: payload.maximized === true,
     });
   });
 }

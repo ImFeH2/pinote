@@ -50,6 +50,7 @@ interface UseNoteWindowMouseInteractionsOptions {
   wheelOpacityModifier: WheelResizeModifier;
   wheelResizeModifier: WheelResizeModifier;
   noteOpacityRef: MutableRefObject<number>;
+  noteReadOnlyRef: MutableRefObject<boolean>;
   noteScrollTopRef: MutableRefObject<number>;
   persistWindowState: (
     visibility?: "visible" | "hidden",
@@ -100,6 +101,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
     wheelOpacityModifier,
     wheelResizeModifier,
     noteOpacityRef,
+    noteReadOnlyRef,
     noteScrollTopRef,
     persistWindowState,
     setNoteOpacityState,
@@ -270,6 +272,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
                 screenY: state.pointerCurrentY,
                 scaleFactor,
                 noteOpacity: noteOpacityRef.current,
+                noteReadOnly: noteReadOnlyRef.current,
               });
             })
             .catch((error) => {
@@ -309,6 +312,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
     closeContextMenu,
     noteId,
     noteOpacityRef,
+    noteReadOnlyRef,
     scheduleMiddleDragPosition,
     toggleAlwaysOnTop,
     windowLabel,
@@ -458,6 +462,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
             screenY,
             scaleFactor,
             noteOpacity: noteOpacityRef.current,
+            noteReadOnly: noteReadOnlyRef.current,
           });
         })
         .catch((error) => {
@@ -467,7 +472,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
           });
         });
     },
-    [appWindow, noteId, noteOpacityRef, windowLabel],
+    [appWindow, noteId, noteOpacityRef, noteReadOnlyRef, windowLabel],
   );
 
   return {
