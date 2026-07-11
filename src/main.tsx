@@ -48,13 +48,15 @@ function getContextMenuContext() {
   const params = new URLSearchParams(window.location.search);
   const targetWindowLabel = params.get("targetWindowLabel")?.trim() ?? "";
   const noteId = params.get("noteId")?.trim() ?? "";
-  if (!targetWindowLabel || !noteId) return null;
+  const notePath = params.get("notePath")?.trim() ?? "";
+  if (!targetWindowLabel || !noteId || !notePath) return null;
   const rawAnchorX = Number.parseInt(params.get("anchorX") ?? "", 10);
   const rawAnchorY = Number.parseInt(params.get("anchorY") ?? "", 10);
   const rawOpacity = Number.parseFloat(params.get("noteOpacity") ?? "");
   return {
     targetWindowLabel,
     noteId,
+    notePath,
     anchorX: Number.isFinite(rawAnchorX) ? rawAnchorX : 0,
     anchorY: Number.isFinite(rawAnchorY) ? rawAnchorY : 0,
     noteOpacity: Number.isFinite(rawOpacity) ? Math.min(Math.max(rawOpacity, 0), 1) : 1,

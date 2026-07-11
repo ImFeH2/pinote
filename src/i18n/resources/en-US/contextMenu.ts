@@ -1,6 +1,7 @@
 const contextMenu = {
   newNote: "Create note",
   openSettings: "Open settings",
+  showInFolder: "Show {{note}} in folder",
   minimizeWindow: "Minimize window",
   maximizeWindow: "Maximize window",
   restoreWindow: "Restore window",

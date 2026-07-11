@@ -45,6 +45,7 @@ interface ModifierState {
 interface UseNoteWindowMouseInteractionsOptions {
   appWindow: ReturnType<typeof getCurrentWindow>;
   noteId: string;
+  notePath: string;
   windowLabel: string;
   dragMouseButton: DragMouseButton;
   wheelOpacityModifier: WheelResizeModifier;
@@ -96,6 +97,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
   const {
     appWindow,
     noteId,
+    notePath,
     windowLabel,
     dragMouseButton,
     wheelOpacityModifier,
@@ -268,6 +270,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
                 parentWindowLabel: windowLabel,
                 targetWindowLabel: windowLabel,
                 noteId,
+                notePath,
                 screenX: state.pointerCurrentX,
                 screenY: state.pointerCurrentY,
                 scaleFactor,
@@ -311,6 +314,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
     appWindow,
     closeContextMenu,
     noteId,
+    notePath,
     noteOpacityRef,
     noteReadOnlyRef,
     scheduleMiddleDragPosition,
@@ -458,6 +462,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
             parentWindowLabel: windowLabel,
             targetWindowLabel: windowLabel,
             noteId,
+            notePath,
             screenX,
             screenY,
             scaleFactor,
@@ -472,7 +477,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
           });
         });
     },
-    [appWindow, noteId, noteOpacityRef, noteReadOnlyRef, windowLabel],
+    [appWindow, noteId, noteOpacityRef, notePath, noteReadOnlyRef, windowLabel],
   );
 
   return {

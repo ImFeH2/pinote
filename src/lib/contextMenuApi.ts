@@ -22,6 +22,7 @@ export type NoteContextMenuAction =
 export interface NoteContextMenuContext {
   targetWindowLabel: string;
   noteId: string;
+  notePath: string;
   anchorX: number;
   anchorY: number;
   noteOpacity: number;
@@ -33,6 +34,7 @@ interface OpenNoteContextMenuOptions {
   parentWindowLabel: string;
   targetWindowLabel: string;
   noteId: string;
+  notePath: string;
   screenX: number;
   screenY: number;
   scaleFactor: number;
@@ -134,6 +136,7 @@ function buildNoteContextMenuUrl(
     view: "context-menu",
     targetWindowLabel: options.targetWindowLabel,
     noteId: options.noteId,
+    notePath: options.notePath,
     anchorX: String(pointer.x),
     anchorY: String(pointer.y),
     noteOpacity: noteOpacity.toString(),
@@ -158,6 +161,7 @@ function buildNoteContextMenuContext(
   return {
     targetWindowLabel: options.targetWindowLabel,
     noteId: options.noteId,
+    notePath: options.notePath,
     anchorX: pointer.x,
     anchorY: pointer.y,
     noteOpacity,
@@ -253,6 +257,7 @@ export async function listenNoteContextMenuSync(
     if (!payload) return;
     if (typeof payload.targetWindowLabel !== "string") return;
     if (typeof payload.noteId !== "string") return;
+    if (typeof payload.notePath !== "string") return;
     if (typeof payload.anchorX !== "number") return;
     if (typeof payload.anchorY !== "number") return;
     const noteOpacity = clamp(Number.isFinite(payload.noteOpacity) ? payload.noteOpacity : 1, 0, 1);

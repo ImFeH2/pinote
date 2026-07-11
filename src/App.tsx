@@ -268,6 +268,7 @@ function App({
     appWindow,
     dragMouseButton: settings.dragMouseButton,
     noteId,
+    notePath,
     noteOpacityRef,
     noteReadOnlyRef,
     noteScrollTopRef,

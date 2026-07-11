@@ -1,5 +1,6 @@
 import { PhysicalPosition, PhysicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow, monitorFromPoint } from "@tauri-apps/api/window";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import {
   type CSSProperties,
   useCallback,
@@ -38,6 +39,7 @@ function parsePx(value: string) {
 function ContextMenuApp({
   targetWindowLabel,
   noteId,
+  notePath,
   anchorX,
   anchorY,
   noteOpacity,
@@ -59,6 +61,7 @@ function ContextMenuApp({
   const [context, setContext] = useState<NoteContextMenuContext>({
     targetWindowLabel,
     noteId,
+    notePath,
     anchorX,
     anchorY,
     noteOpacity,
@@ -157,6 +160,17 @@ function ContextMenuApp({
 
   const title = context.noteId;
   const titleShouldScroll = titleScrollDistance > 0;
+
+  const revealNoteFile = useCallback(() => {
+    revealItemInDir(context.notePath)
+      .catch((error) => {
+        logError("context-menu", "reveal_note_file_failed", error, {
+          windowId: menuWindowLabel,
+          notePath: context.notePath,
+        });
+      })
+      .finally(closeMenu);
+  }, [closeMenu, context.notePath, menuWindowLabel]);
 
   const updateTitleOverflow = useCallback(() => {
     const viewport = titleViewportRef.current;
@@ -328,18 +342,26 @@ function ContextMenuApp({
           className="pointer-events-none absolute inset-0 rounded-[inherit] border border-border bg-background shadow-lg"
         />
         <div className="relative">
-          <div ref={titleViewportRef} title={context.noteId} className="pinote-menu-title-viewport">
-            <div
-              ref={titleTextRef}
-              style={titleStyle}
-              className={cn(
-                "pinote-menu-title-text px-2 py-1 text-[11px] font-medium text-muted-foreground",
-                titleShouldScroll ? "pinote-menu-title-text-scroll" : "truncate",
-              )}
-            >
-              {title}
+          <button
+            type="button"
+            onClick={revealNoteFile}
+            aria-label={t("showInFolder", { note: title })}
+            title={t("showInFolder", { note: title })}
+            className="block w-full rounded text-left transition-colors hover:bg-accent"
+          >
+            <div ref={titleViewportRef} className="pinote-menu-title-viewport">
+              <div
+                ref={titleTextRef}
+                style={titleStyle}
+                className={cn(
+                  "pinote-menu-title-text px-2 py-1 text-[11px] font-medium text-muted-foreground",
+                  titleShouldScroll ? "pinote-menu-title-text-scroll" : "truncate",
+                )}
+              >
+                {title}
+              </div>
             </div>
-          </div>
+          </button>
           <div className="my-1 h-px bg-border" />
           <div ref={actionsRef} className="inline-flex w-max flex-col">
             <button

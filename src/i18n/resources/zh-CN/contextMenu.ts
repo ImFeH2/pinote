@@ -1,6 +1,7 @@
 const contextMenu = {
   newNote: "新建便签",
   openSettings: "打开设置",
+  showInFolder: "在文件夹中显示 {{note}}",
   minimizeWindow: "最小化窗口",
   maximizeWindow: "最大化窗口",
   restoreWindow: "还原窗口",
