@@ -751,7 +751,7 @@ export function SettingsApp() {
     );
 
   return (
-    <div className="relative flex h-screen flex-col bg-background text-foreground">
+    <div className="pinote-settings relative flex h-screen flex-col bg-background text-foreground">
       <div className="flex min-h-0 flex-1">
         <SettingsSidebar
           activeSection={activeSection}

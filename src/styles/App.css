@@ -93,6 +93,20 @@
 }
 
 @layer components {
+  .pinote-settings button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  .pinote-settings button:disabled {
+    cursor: not-allowed;
+  }
+
+  .pinote-settings button:focus-visible,
+  .pinote-settings input:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
   .pinote-window {
     --pinote-visual-opacity: 1;
     --pinote-visual-opacity-percent: 100%;
