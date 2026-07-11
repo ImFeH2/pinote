@@ -1,6 +1,15 @@
+import { AppWindow, History, Info, Keyboard, type LucideIcon, Palette } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { type SettingsSection, sections } from "@/components/settings/shared";
 import { cn } from "@/lib/utils";
+
+const sectionIcons: Record<SettingsSection, LucideIcon> = {
+  appearance: Palette,
+  window: AppWindow,
+  shortcuts: Keyboard,
+  history: History,
+  about: Info,
+};
 
 interface SettingsSidebarProps {
   activeSection: SettingsSection;
@@ -24,21 +33,26 @@ export function SettingsSidebar({ activeSection, appVersion, onSelect }: Setting
           <div className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">{versionText}</div>
         </div>
       </div>
-      {sections.map((section) => (
-        <button
-          key={section.id}
-          type="button"
-          onClick={() => onSelect(section.id)}
-          className={cn(
-            "mb-1 rounded-md px-3 py-2 text-left text-xs font-medium transition-colors",
-            activeSection === section.id
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-          )}
-        >
-          {t(section.labelKey)}
-        </button>
-      ))}
+      {sections.map((section) => {
+        const Icon = sectionIcons[section.id];
+        return (
+          <button
+            key={section.id}
+            type="button"
+            aria-current={activeSection === section.id ? "page" : undefined}
+            onClick={() => onSelect(section.id)}
+            className={cn(
+              "mb-1 flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium transition-colors",
+              activeSection === section.id
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+            )}
+          >
+            <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+            <span>{t(section.labelKey)}</span>
+          </button>
+        );
+      })}
     </aside>
   );
 }
