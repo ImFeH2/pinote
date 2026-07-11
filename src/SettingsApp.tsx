@@ -753,7 +753,11 @@ export function SettingsApp() {
   return (
     <div className="relative flex h-screen flex-col bg-background text-foreground">
       <div className="flex min-h-0 flex-1">
-        <SettingsSidebar activeSection={activeSection} onSelect={setActiveSection} />
+        <SettingsSidebar
+          activeSection={activeSection}
+          appVersion={appVersion}
+          onSelect={setActiveSection}
+        />
 
         <main className="pinote-scrollbar min-w-0 flex-1 overflow-y-auto px-5 py-4">
           <div className="mb-4">
