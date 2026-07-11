@@ -1,5 +1,7 @@
+import { setTheme } from "@tauri-apps/api/app";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useSettings } from "@/hooks/useSettings";
+import { logError } from "@/lib/logger";
 
 type ResolvedTheme = "light" | "dark";
 
@@ -20,7 +22,10 @@ export function useTheme() {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", resolvedTheme);
-  }, [resolvedTheme]);
+    setTheme(settings.theme === "system" ? null : resolvedTheme).catch((error) => {
+      logError("theme", "set_native_theme_failed", error);
+    });
+  }, [resolvedTheme, settings.theme]);
 
   const toggleTheme = useCallback(() => {
     const next = resolvedTheme === "dark" ? "light" : "dark";

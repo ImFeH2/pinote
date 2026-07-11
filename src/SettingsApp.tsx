@@ -22,7 +22,6 @@ import {
 } from "@/components/settings/shared";
 import { UpdateDialog } from "@/components/settings/UpdateDialog";
 import { WindowSection } from "@/components/settings/WindowSection";
-import { TitleBar } from "@/components/TitleBar";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 import { saveDiagnosticReport } from "@/lib/diagnostics";
@@ -753,8 +752,6 @@ export function SettingsApp() {
 
   return (
     <div className="relative flex h-screen flex-col bg-background text-foreground">
-      <TitleBar title={t("title")} showSettings={false} />
-
       <div className="flex min-h-0 flex-1">
         <SettingsSidebar activeSection={activeSection} onSelect={setActiveSection} />
 
