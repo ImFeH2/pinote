@@ -29,7 +29,7 @@ export function SettingsSidebar({ activeSection, appVersion, onSelect }: Setting
         aria-current={activeSection === section.id ? "page" : undefined}
         onClick={() => onSelect(section.id)}
         className={cn(
-          "mb-1 flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium transition-colors",
+          "mb-1 flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium transition-colors",
           activeSection === section.id
             ? "bg-primary text-primary-foreground"
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
