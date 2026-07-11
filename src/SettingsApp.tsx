@@ -154,9 +154,6 @@ export function SettingsApp() {
   } | null>(null);
 
   const activeSectionInfo = sections.find((section) => section.id === activeSection) ?? sections[0];
-  const lineHeightText = settings.editorLineHeight.toFixed(1);
-  const paddingXText = `${settings.editorPaddingX}px`;
-  const paddingYText = `${settings.editorPaddingY}px`;
   const canDownloadUpdate =
     updateSnapshot.state === "available" ||
     (updateSnapshot.available && updateSnapshot.state === "error");
@@ -659,9 +656,6 @@ export function SettingsApp() {
       <AppearanceSection
         settings={settings}
         runtimePlatform={runtimePlatform}
-        lineHeightText={lineHeightText}
-        paddingXText={paddingXText}
-        paddingYText={paddingYText}
         updateSettings={updateSettings}
       />
     ) : activeSection === "window" ? (

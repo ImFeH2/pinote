@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { SettingsNumberInput } from "@/components/settings/SettingsNumberInput";
 import { SettingsSwitch } from "@/components/settings/SettingsSwitch";
 import {
   fontFamilyOptions,
@@ -20,18 +21,12 @@ const languageOptions: Array<{ value: LanguagePreference; labelKey: string }> = 
 interface AppearanceSectionProps {
   settings: Settings;
   runtimePlatform: RuntimePlatform;
-  lineHeightText: string;
-  paddingXText: string;
-  paddingYText: string;
   updateSettings: (patch: SettingsPatch) => void;
 }
 
 export function AppearanceSection({
   settings,
   runtimePlatform,
-  lineHeightText,
-  paddingXText,
-  paddingYText,
   updateSettings,
 }: AppearanceSectionProps) {
   const { t } = useTranslation("settings");
@@ -112,39 +107,31 @@ export function AppearanceSection({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              {t("appearance.typography.fontSize")}
-            </div>
-            <div className="text-xs text-muted-foreground">{`${settings.editorFontSize}px`}</div>
-          </div>
-          <input
-            type="range"
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">{t("appearance.typography.fontSize")}</div>
+          <SettingsNumberInput
+            value={settings.editorFontSize}
             min={12}
             max={24}
             step={1}
-            value={settings.editorFontSize}
-            onChange={(event) => updateSettings({ editorFontSize: Number(event.target.value) })}
-            className="h-1 w-full cursor-pointer accent-primary"
+            suffix="px"
+            label={t("appearance.typography.fontSize")}
+            onValueChange={(editorFontSize) => updateSettings({ editorFontSize })}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              {t("appearance.typography.lineHeight")}
-            </div>
-            <div className="text-xs text-muted-foreground">{lineHeightText}</div>
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">
+            {t("appearance.typography.lineHeight")}
           </div>
-          <input
-            type="range"
+          <SettingsNumberInput
+            value={settings.editorLineHeight}
             min={1.2}
             max={2.2}
             step={0.1}
-            value={settings.editorLineHeight}
-            onChange={(event) => updateSettings({ editorLineHeight: Number(event.target.value) })}
-            className="h-1 w-full cursor-pointer accent-primary"
+            precision={1}
+            label={t("appearance.typography.lineHeight")}
+            onValueChange={(editorLineHeight) => updateSettings({ editorLineHeight })}
           />
         </div>
       </div>
@@ -193,37 +180,29 @@ export function AppearanceSection({
           {t("appearance.spacing.label")}
         </div>
 
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
-              {t("appearance.spacing.horizontal")}
-            </div>
-            <div className="text-xs text-muted-foreground">{paddingXText}</div>
-          </div>
-          <input
-            type="range"
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">{t("appearance.spacing.horizontal")}</div>
+          <SettingsNumberInput
+            value={settings.editorPaddingX}
             min={0}
             max={64}
             step={1}
-            value={settings.editorPaddingX}
-            onChange={(event) => updateSettings({ editorPaddingX: Number(event.target.value) })}
-            className="h-1 w-full cursor-pointer accent-primary"
+            suffix="px"
+            label={t("appearance.spacing.horizontal")}
+            onValueChange={(editorPaddingX) => updateSettings({ editorPaddingX })}
           />
         </div>
 
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">{t("appearance.spacing.vertical")}</div>
-            <div className="text-xs text-muted-foreground">{paddingYText}</div>
-          </div>
-          <input
-            type="range"
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">{t("appearance.spacing.vertical")}</div>
+          <SettingsNumberInput
+            value={settings.editorPaddingY}
             min={0}
             max={64}
             step={1}
-            value={settings.editorPaddingY}
-            onChange={(event) => updateSettings({ editorPaddingY: Number(event.target.value) })}
-            className="h-1 w-full cursor-pointer accent-primary"
+            suffix="px"
+            label={t("appearance.spacing.vertical")}
+            onValueChange={(editorPaddingY) => updateSettings({ editorPaddingY })}
           />
         </div>
       </div>
