@@ -1,5 +1,6 @@
 import { FolderOpen, FolderSearch, Move } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { SettingsSwitch } from "@/components/settings/SettingsSwitch";
 import { cn } from "@/lib/utils";
 import type { Settings } from "@/stores/settings";
 import type { SettingsPatch } from "@/stores/settingsStore";
@@ -60,8 +61,6 @@ export function WindowSection({
   onDefaultOpenIntegration,
 }: WindowSectionProps) {
   const { t } = useTranslation("settings");
-  const toggleText = (enabled: boolean) => t(enabled ? "common.enabled" : "common.disabled");
-
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-md border border-border bg-background/60 p-3 text-xs text-muted-foreground">
@@ -161,22 +160,14 @@ export function WindowSection({
         <div className="text-xs font-medium text-muted-foreground">
           {t("window.launchAtStartup")}
         </div>
-        <button
-          type="button"
+        <SettingsSwitch
+          checked={settings.launchAtStartup}
+          label={t("window.launchAtStartup")}
           disabled={startupBusy}
-          onClick={() => {
+          onCheckedChange={() => {
             void onLaunchAtStartup();
           }}
-          className={cn(
-            "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-            settings.launchAtStartup
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-background text-muted-foreground hover:bg-accent",
-            startupBusy && "cursor-not-allowed opacity-60",
-          )}
-        >
-          {toggleText(settings.launchAtStartup)}
-        </button>
+        />
       </div>
 
       {startupError && <div className="text-xs text-destructive">{startupError}</div>}
@@ -188,22 +179,14 @@ export function WindowSection({
           </div>
           <div className="text-[11px] text-muted-foreground">{t("window.taskbar.description")}</div>
         </div>
-        <button
-          type="button"
+        <SettingsSwitch
+          checked={settings.hideNoteWindowsFromTaskbar}
+          label={t("window.taskbar.label")}
           disabled={taskbarBusy}
-          onClick={() => {
+          onCheckedChange={() => {
             void onTaskbarVisibility();
           }}
-          className={cn(
-            "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-            settings.hideNoteWindowsFromTaskbar
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-background text-muted-foreground hover:bg-accent",
-            taskbarBusy && "cursor-not-allowed opacity-60",
-          )}
-        >
-          {toggleText(settings.hideNoteWindowsFromTaskbar)}
-        </button>
+        />
       </div>
 
       {taskbarError && <div className="text-xs text-destructive">{taskbarError}</div>}
@@ -217,22 +200,11 @@ export function WindowSection({
             {t("window.contextMenuOpacity.description")}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            updateSettings({
-              contextMenuFollowNoteOpacity: !settings.contextMenuFollowNoteOpacity,
-            });
-          }}
-          className={cn(
-            "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-            settings.contextMenuFollowNoteOpacity
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-background text-muted-foreground hover:bg-accent",
-          )}
-        >
-          {toggleText(settings.contextMenuFollowNoteOpacity)}
-        </button>
+        <SettingsSwitch
+          checked={settings.contextMenuFollowNoteOpacity}
+          label={t("window.contextMenuOpacity.label")}
+          onCheckedChange={(checked) => updateSettings({ contextMenuFollowNoteOpacity: checked })}
+        />
       </div>
 
       <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
@@ -244,22 +216,14 @@ export function WindowSection({
             {t("window.explorerMenu.description")}
           </div>
         </div>
-        <button
-          type="button"
+        <SettingsSwitch
+          checked={settings.openWithPinoteContextMenu}
+          label={t("window.explorerMenu.label")}
           disabled={contextMenuBusy}
-          onClick={() => {
+          onCheckedChange={() => {
             void onContextMenuIntegration();
           }}
-          className={cn(
-            "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-            settings.openWithPinoteContextMenu
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-background text-muted-foreground hover:bg-accent",
-            contextMenuBusy && "cursor-not-allowed opacity-60",
-          )}
-        >
-          {toggleText(settings.openWithPinoteContextMenu)}
-        </button>
+        />
       </div>
 
       {contextMenuError && <div className="text-xs text-destructive">{contextMenuError}</div>}
@@ -273,22 +237,14 @@ export function WindowSection({
             {t("window.defaultOpener.description")}
           </div>
         </div>
-        <button
-          type="button"
+        <SettingsSwitch
+          checked={settings.defaultMarkdownOpenWithPinote}
+          label={t("window.defaultOpener.label")}
           disabled={defaultOpenBusy}
-          onClick={() => {
+          onCheckedChange={() => {
             void onDefaultOpenIntegration();
           }}
-          className={cn(
-            "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-            settings.defaultMarkdownOpenWithPinote
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border bg-background text-muted-foreground hover:bg-accent",
-            defaultOpenBusy && "cursor-not-allowed opacity-60",
-          )}
-        >
-          {toggleText(settings.defaultMarkdownOpenWithPinote)}
-        </button>
+        />
       </div>
 
       {defaultOpenError && <div className="text-xs text-destructive">{defaultOpenError}</div>}

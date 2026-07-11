@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { SettingsSwitch } from "@/components/settings/SettingsSwitch";
 import {
   fontFamilyOptions,
   themeOptions,
@@ -177,22 +178,11 @@ export function AppearanceSection({
           ) : (
             <div className="flex items-center justify-between">
               <div className="text-xs text-muted-foreground">{t("appearance.glass.enable")}</div>
-              <button
-                type="button"
-                onClick={() =>
-                  updateSettings({
-                    noteGlassEffectMacos: !settings.noteGlassEffectMacos,
-                  })
-                }
-                className={cn(
-                  "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                  settings.noteGlassEffectMacos
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:bg-accent",
-                )}
-              >
-                {t(settings.noteGlassEffectMacos ? "common.enabled" : "common.disabled")}
-              </button>
+              <SettingsSwitch
+                checked={settings.noteGlassEffectMacos}
+                label={t("appearance.glass.enable")}
+                onCheckedChange={(checked) => updateSettings({ noteGlassEffectMacos: checked })}
+              />
             </div>
           )}
         </div>
