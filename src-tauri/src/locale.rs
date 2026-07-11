@@ -52,25 +52,25 @@ pub struct NativeText {
 }
 
 const EN_US_TEXT: NativeText = NativeText {
-    restore_hidden: "Restore Hidden",
+    restore_hidden: "Show note",
     open_settings: "Settings",
     quit: "Quit",
     settings_window_title: "Pinote Settings",
     #[cfg(target_os = "windows")]
-    open_with_pinote: "Use Pinote to Open",
+    open_with_pinote: "Open with Pinote",
     #[cfg(target_os = "windows")]
     markdown_file_type: "Pinote Markdown File",
 };
 
 const ZH_CN_TEXT: NativeText = NativeText {
-    restore_hidden: "恢复隐藏便签",
-    open_settings: "打开设置",
-    quit: "退出 Pinote",
+    restore_hidden: "显示便签",
+    open_settings: "设置",
+    quit: "退出",
     settings_window_title: "Pinote 设置",
     #[cfg(target_os = "windows")]
     open_with_pinote: "使用 Pinote 打开",
     #[cfg(target_os = "windows")]
-    markdown_file_type: "Pinote Markdown 文件",
+    markdown_file_type: "Pinote Markdown 文档",
 };
 
 fn normalize_system_locale(value: Option<&str>) -> AppLocale {

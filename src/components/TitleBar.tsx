@@ -1,6 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { FilePlus2, Minus, Settings2, Square, X } from "lucide-react";
-import { type MouseEvent, useCallback, type WheelEvent } from "react";
+import { type MouseEvent, useCallback, useEffect, useState, type WheelEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { logError } from "@/lib/logger";
 
@@ -23,6 +23,27 @@ export function TitleBar({
 }: TitleBarProps) {
   const { t } = useTranslation("common");
   const appWindow = getCurrentWindow();
+  const [maximized, setMaximized] = useState(false);
+
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    const refresh = () => {
+      appWindow
+        .isMaximized()
+        .then(setMaximized)
+        .catch(() => {});
+    };
+    refresh();
+    appWindow
+      .onResized(refresh)
+      .then((handler) => {
+        unlisten = handler;
+      })
+      .catch(() => {});
+    return () => {
+      unlisten?.();
+    };
+  }, [appWindow]);
 
   const handleStartDrag = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
@@ -54,9 +75,9 @@ export function TitleBar({
       .isMaximized()
       .then((maximized) => {
         if (maximized) {
-          return appWindow.unmaximize();
+          return appWindow.unmaximize().then(() => setMaximized(false));
         }
-        return appWindow.maximize();
+        return appWindow.maximize().then(() => setMaximized(true));
       })
       .catch((error) => {
         logError("title-bar", "toggle_maximize_failed", error, {
@@ -118,7 +139,7 @@ export function TitleBar({
           type="button"
           onClick={handleToggleMaximize}
           className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-          aria-label={t("window.toggleMaximize")}
+          aria-label={maximized ? t("window.restore") : t("window.maximize")}
         >
           <Square size={12} aria-hidden="true" />
         </button>

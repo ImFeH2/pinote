@@ -9,23 +9,23 @@ export default {
   sections: {
     appearance: {
       label: "Appearance",
-      description: "Choose the language, theme, and visual style.",
+      description: "Language, theme, and visual style.",
     },
     window: {
       label: "Window",
-      description: "Manage note windows and startup behavior.",
+      description: "Window and startup behavior.",
     },
     shortcuts: {
       label: "Shortcuts",
-      description: "Customize keyboard shortcuts and mouse interactions.",
+      description: "Keyboard shortcuts and mouse actions.",
     },
     history: {
       label: "History",
-      description: "Find and reopen notes you used before.",
+      description: "Find and reopen notes.",
     },
     about: {
       label: "About",
-      description: "View the version, updates, and project resources.",
+      description: "Version, updates, and links.",
     },
   },
   appearance: {
@@ -59,7 +59,7 @@ export default {
     glass: {
       label: "Glass effect",
       enable: "Use glass effect",
-      allNotes: "Applies to all note windows.",
+      allNotes: "Applies to all notes.",
       options: {
         mica: "Mica",
         acrylic: "Acrylic",
@@ -76,51 +76,51 @@ export default {
     alwaysOnTopHelp:
       "Always-on-top is set separately for each note. Use middle click or the note shortcut to change it.",
     lostNotes: {
-      label: "Notes outside the screen",
-      description: "Move notes that are completely outside the screen back into view.",
-      action: "Bring notes back",
+      label: "Off-screen notes",
+      description: "Bring off-screen notes back into view.",
+      action: "Bring back",
       moving: "Moving...",
       moved_one: "Moved {{count}} note back.",
       moved_other: "Moved {{count}} notes back.",
       allVisible: "All notes are already on screen.",
     },
     notesDirectory: {
-      label: "New note folder",
+      label: "Note folder",
       loading: "Loading default folder...",
       choose: "Choose folder",
       open: "Open folder",
     },
     launchAtStartup: "Open Pinote at startup",
     taskbar: {
-      label: "Hide note windows from taskbar",
-      description: "Keep note windows out of the system taskbar.",
+      label: "Hide notes from taskbar",
+      description: "Notes won't appear on the taskbar.",
     },
     contextMenuOpacity: {
       label: "Match note opacity in menus",
-      description: "Use the note opacity for its menu background.",
+      description: "Match each note's opacity.",
     },
     explorerMenu: {
-      label: "Open notes from File Explorer",
-      description: 'Add "Use Pinote to Open" for .md and .markdown files.',
+      label: 'Add "Open with Pinote"',
+      description: "Show this action for .md and .markdown files.",
     },
     defaultOpener: {
-      label: "Open Markdown files with Pinote",
-      description: "Use Pinote by default when opening .md and .markdown files.",
+      label: "Default Markdown app",
+      description: "Open .md and .markdown files with Pinote.",
     },
   },
   shortcuts: {
     keyboard: "Keyboard shortcuts",
     pressKeys: "Press keys...",
     items: {
-      newNote: "Create note",
-      restoreWindow: "Restore hidden window",
-      showAllHiddenWindows: "Show all hidden windows",
-      toggleVisibleWindows: "Show or hide visible windows",
-      toggleAlwaysOnTop: "Keep note on top",
-      toggleReadOnly: "Turn read-only on or off",
+      newNote: "New note",
+      restoreWindow: "Restore hidden note",
+      showAllHiddenWindows: "Show all hidden notes",
+      toggleVisibleWindows: "Show or hide notes",
+      toggleAlwaysOnTop: "Toggle always on top",
+      toggleReadOnly: "Toggle read-only",
       toggleTheme: "Switch theme",
-      hideWindow: "Hide window",
-      closeWindow: "Close window",
+      hideWindow: "Hide note",
+      closeWindow: "Close note",
     },
     global: {
       badge: "Global",
@@ -141,15 +141,15 @@ export default {
       right: "Right",
     },
     wheelResize: {
-      label: "Resize modifier",
+      label: "Resize",
       description: "{{modifier}} + Wheel resizes the window around the pointer.",
     },
     wheelOpacity: {
-      label: "Opacity modifier",
+      label: "Opacity",
       description: "{{modifier}} + Wheel adjusts window opacity.",
     },
     dragButton: {
-      label: "Drag button",
+      label: "Move",
       description: "{{button}} drag moves the window.",
     },
     currentInteractions: {
@@ -198,10 +198,10 @@ export default {
     project: "Project",
   },
   updateStatus: {
-    idle: "No update check has been run yet.",
+    idle: "Not checked yet.",
     checking: "Checking for updates...",
     available: "Version {{version}} is available.",
-    upToDate: "You are using the latest stable release.",
+    upToDate: "Up to date.",
     downloading: "Downloading update...",
     downloadingProgress: "Downloading update... {{progress}}%",
     readyToRestart: "Download complete. Restart to install the update.",
@@ -210,25 +210,25 @@ export default {
   },
   updateDialog: {
     title: "Update available",
-    versions: "Pinote {{latestVersion}} is ready. You are using {{currentVersion}}.",
-    readyToDownload: "Download the update when you are ready.",
+    versions: "{{currentVersion}} → {{latestVersion}}",
+    readyToDownload: "Ready to download.",
     downloadingProgress: "Downloading {{progress}}%",
-    restartHelp: "Restart Pinote to finish installing the update.",
+    restartHelp: "Restart to finish installing.",
     later: "Later",
     restart: "Restart",
     downloading: "Downloading",
     download: "Download",
   },
   diagnostics: {
-    saved_one: "Report saved with {{count}} file.",
-    saved_other: "Report saved with {{count}} files.",
+    saved_one: "Saved with {{count}} file.",
+    saved_other: "Saved with {{count}} files.",
     dialog: {
       title: "Save report",
       zipArchive: "Zip archive",
     },
   },
   errors: {
-    unknown: "Something went wrong.",
+    unknown: "Couldn't complete the action.",
     invalidShortcut: "Enter a valid shortcut.",
   },
 };

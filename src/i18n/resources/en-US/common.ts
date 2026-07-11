@@ -1,10 +1,11 @@
 const common = {
   window: {
-    newNote: "Create note",
-    openSettings: "Open settings",
-    minimize: "Minimize window",
-    toggleMaximize: "Maximize or restore window",
-    close: "Close window",
+    newNote: "New note",
+    openSettings: "Settings",
+    minimize: "Minimize",
+    maximize: "Maximize",
+    restore: "Restore",
+    close: "Close",
   },
 } as const;
 

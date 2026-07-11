@@ -1,14 +1,14 @@
 const contextMenu = {
-  newNote: "Create note",
-  openSettings: "Open settings",
-  showInFolder: "Show {{note}} in folder",
-  minimizeWindow: "Minimize window",
-  maximizeWindow: "Maximize window",
-  restoreWindow: "Restore window",
-  enableReadOnly: "Turn on read-only",
-  disableReadOnly: "Turn off read-only",
-  hideWindow: "Hide window",
-  closeWindow: "Close window",
+  newNote: "New note",
+  openSettings: "Settings",
+  showInFolder: "Show in folder",
+  minimizeWindow: "Minimize",
+  maximizeWindow: "Maximize",
+  restoreWindow: "Restore",
+  enableReadOnly: "Enable read-only",
+  disableReadOnly: "Disable read-only",
+  hideWindow: "Hide",
+  closeWindow: "Close",
 } as const;
 
 export default contextMenu;
