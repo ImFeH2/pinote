@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { save as saveDialog } from "@tauri-apps/plugin-dialog";
+import i18n from "@/i18n";
 
 export interface DiagnosticReportExport {
   destinationPath: string;
@@ -17,9 +18,11 @@ function ensureZipExtension(path: string) {
 
 export async function saveDiagnosticReport() {
   const destinationPath = await saveDialog({
-    title: "Save report",
+    title: i18n.t("diagnostics.dialog.title", { ns: "settings" }),
     defaultPath: getDiagnosticReportFileName(),
-    filters: [{ name: "Zip archive", extensions: ["zip"] }],
+    filters: [
+      { name: i18n.t("diagnostics.dialog.zipArchive", { ns: "settings" }), extensions: ["zip"] },
+    ],
   });
   if (!destinationPath) return null;
   return invoke<DiagnosticReportExport>("export_diagnostic_report", {

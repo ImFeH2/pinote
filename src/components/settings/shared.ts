@@ -10,75 +10,81 @@ export const globalShortcutKeys = [
 export type GlobalShortcutKey = (typeof globalShortcutKeys)[number];
 
 export const shortcutItems = [
-  { key: "newNote", label: "New Note" },
-  { key: "restoreWindow", label: "Restore Hidden Window" },
-  { key: "showAllHiddenWindows", label: "Show All Hidden Windows" },
-  { key: "toggleVisibleWindows", label: "Toggle Visible Windows" },
-  { key: "toggleAlwaysOnTop", label: "Toggle Always On Top" },
-  { key: "toggleReadOnly", label: "Toggle Read-Only" },
-  { key: "toggleTheme", label: "Toggle Theme" },
-  { key: "hideWindow", label: "Hide Window" },
-  { key: "closeWindow", label: "Close Window" },
+  { key: "newNote", labelKey: "shortcuts.items.newNote" },
+  { key: "restoreWindow", labelKey: "shortcuts.items.restoreWindow" },
+  { key: "showAllHiddenWindows", labelKey: "shortcuts.items.showAllHiddenWindows" },
+  { key: "toggleVisibleWindows", labelKey: "shortcuts.items.toggleVisibleWindows" },
+  { key: "toggleAlwaysOnTop", labelKey: "shortcuts.items.toggleAlwaysOnTop" },
+  { key: "toggleReadOnly", labelKey: "shortcuts.items.toggleReadOnly" },
+  { key: "toggleTheme", labelKey: "shortcuts.items.toggleTheme" },
+  { key: "hideWindow", labelKey: "shortcuts.items.hideWindow" },
+  { key: "closeWindow", labelKey: "shortcuts.items.closeWindow" },
 ] as const;
 
 export type ShortcutKey = (typeof shortcutItems)[number]["key"];
 
 export const themeOptions = [
-  { value: "system", label: "System" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
+  { value: "system", labelKey: "appearance.theme.options.system" },
+  { value: "light", labelKey: "appearance.theme.options.light" },
+  { value: "dark", labelKey: "appearance.theme.options.dark" },
 ] as const;
 
 export const fontFamilyOptions = [
-  { value: "system", label: "System" },
-  { value: "serif", label: "Serif" },
-  { value: "mono", label: "Monospace" },
+  { value: "system", labelKey: "appearance.typography.fontFamilyOptions.system" },
+  { value: "serif", labelKey: "appearance.typography.fontFamilyOptions.serif" },
+  { value: "mono", labelKey: "appearance.typography.fontFamilyOptions.mono" },
 ] as const;
 
-export const wheelResizeModifierOptions: Array<{ value: WheelResizeModifier; label: string }> = [
-  { value: "alt", label: "Alt" },
-  { value: "ctrl", label: "Ctrl" },
-  { value: "shift", label: "Shift" },
-  { value: "meta", label: "Meta" },
+export const wheelResizeModifierOptions: Array<{
+  value: WheelResizeModifier;
+  labelKey: string;
+}> = [
+  { value: "alt", labelKey: "shortcuts.modifiers.alt" },
+  { value: "ctrl", labelKey: "shortcuts.modifiers.ctrl" },
+  { value: "shift", labelKey: "shortcuts.modifiers.shift" },
+  { value: "meta", labelKey: "shortcuts.modifiers.meta" },
 ];
 
-export const dragMouseButtonOptions: Array<{ value: DragMouseButton; label: string }> = [
-  { value: "middle", label: "Middle" },
-  { value: "right", label: "Right" },
+export const dragMouseButtonOptions: Array<{ value: DragMouseButton; labelKey: string }> = [
+  { value: "middle", labelKey: "shortcuts.mouseButtons.middle" },
+  { value: "right", labelKey: "shortcuts.mouseButtons.right" },
 ];
 
-export const windowsGlassEffectOptions: Array<{ value: WindowsGlassEffect; label: string }> = [
-  { value: "mica", label: "Mica" },
-  { value: "acrylic", label: "Acrylic" },
-  { value: "blur", label: "Blur" },
-  { value: "none", label: "Disabled" },
+export const windowsGlassEffectOptions: Array<{
+  value: WindowsGlassEffect;
+  labelKey: string;
+}> = [
+  { value: "mica", labelKey: "appearance.glass.options.mica" },
+  { value: "acrylic", labelKey: "appearance.glass.options.acrylic" },
+  { value: "blur", labelKey: "appearance.glass.options.blur" },
+  { value: "none", labelKey: "common.disabled" },
 ];
 
 export const sections = [
   {
     id: "appearance",
-    label: "Appearance",
-    description: "Theme and visual style settings.",
+    labelKey: "sections.appearance.label",
+    descriptionKey: "sections.appearance.description",
   },
   {
     id: "window",
-    label: "Window",
-    description: "Window behavior and startup settings.",
+    labelKey: "sections.window.label",
+    descriptionKey: "sections.window.description",
   },
   {
     id: "shortcuts",
-    label: "Shortcuts",
-    description: "Keyboard shortcuts and interaction key customization.",
+    labelKey: "sections.shortcuts.label",
+    descriptionKey: "sections.shortcuts.description",
   },
   {
     id: "history",
-    label: "History",
-    description: "Search and reopen previously opened notes.",
+    labelKey: "sections.history.label",
+    descriptionKey: "sections.history.description",
   },
   {
     id: "about",
-    label: "About",
-    description: "Version, updates, and project resources.",
+    labelKey: "sections.about.label",
+    descriptionKey: "sections.about.description",
   },
 ] as const;
 

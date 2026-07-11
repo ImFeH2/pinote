@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { type SettingsSection, sections } from "@/components/settings/shared";
 import { cn } from "@/lib/utils";
 
@@ -7,6 +8,7 @@ interface SettingsSidebarProps {
 }
 
 export function SettingsSidebar({ activeSection, onSelect }: SettingsSidebarProps) {
+  const { t } = useTranslation("settings");
   return (
     <aside className="flex w-48 shrink-0 flex-col border-r border-border bg-background/60 p-2">
       {sections.map((section) => (
@@ -21,7 +23,7 @@ export function SettingsSidebar({ activeSection, onSelect }: SettingsSidebarProp
               : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
           )}
         >
-          {section.label}
+          {t(section.labelKey)}
         </button>
       ))}
     </aside>

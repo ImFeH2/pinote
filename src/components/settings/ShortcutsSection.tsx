@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ShortcutInput } from "@/components/ShortcutInput";
 import {
   dragMouseButtonOptions,
@@ -32,14 +33,17 @@ export function ShortcutsSection({
   updateShortcut,
   updateSettings,
 }: ShortcutsSectionProps) {
+  const { t } = useTranslation("settings");
+  const modifierLabel = (labelKey: string) => t(labelKey);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Keyboard Shortcuts</div>
+        <div className="text-xs font-medium text-muted-foreground">{t("shortcuts.keyboard")}</div>
         {shortcutItems.map((item) => (
           <ShortcutInput
             key={item.key}
-            label={item.label}
+            label={t(item.labelKey)}
             value={settings.shortcuts[item.key]}
             onChange={(value) => updateShortcut(item.key, value)}
             labelMeta={
@@ -47,10 +51,10 @@ export function ShortcutsSection({
                 <span
                   title={
                     globalShortcutRegistration[item.key as GlobalShortcutKey] === true
-                      ? "Global shortcut registered"
+                      ? t("shortcuts.global.registered")
                       : globalShortcutRegistration[item.key as GlobalShortcutKey] === false
-                        ? "Global shortcut not registered"
-                        : "Checking global shortcut status"
+                        ? t("shortcuts.global.notRegistered")
+                        : t("shortcuts.global.checking")
                   }
                   className={cn(
                     "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium",
@@ -71,22 +75,20 @@ export function ShortcutsSection({
                           : "bg-muted-foreground/50",
                     )}
                   />
-                  Global
+                  {t("shortcuts.global.badge")}
                 </span>
               ) : null
             }
           />
         ))}
-        <div className="text-xs text-muted-foreground">
-          New Note, Restore Hidden Window, Show All Hidden Windows, and Toggle Visible Windows are
-          global. If a global shortcut is already used by another app, it will be skipped. The
-          Global badge indicates whether the shortcut is registered.
-        </div>
+        <div className="text-xs text-muted-foreground">{t("shortcuts.global.description")}</div>
         {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Wheel Resize Modifier</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("shortcuts.wheelResize.label")}
+        </div>
         <div className="flex items-center gap-2">
           {wheelResizeModifierOptions.map((option) => (
             <button
@@ -100,15 +102,21 @@ export function ShortcutsSection({
                   : "border-border bg-background text-muted-foreground hover:bg-accent",
               )}
             >
-              {option.label}
+              {modifierLabel(option.labelKey)}
             </button>
           ))}
         </div>
-        <div className="text-xs text-muted-foreground">{`${activeWheelResizeModifier.label} + Wheel resizes the window around cursor.`}</div>
+        <div className="text-xs text-muted-foreground">
+          {t("shortcuts.wheelResize.description", {
+            modifier: modifierLabel(activeWheelResizeModifier.labelKey),
+          })}
+        </div>
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Wheel Opacity Modifier</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("shortcuts.wheelOpacity.label")}
+        </div>
         <div className="flex items-center gap-2">
           {wheelResizeModifierOptions.map((option) => (
             <button
@@ -122,15 +130,21 @@ export function ShortcutsSection({
                   : "border-border bg-background text-muted-foreground hover:bg-accent",
               )}
             >
-              {option.label}
+              {modifierLabel(option.labelKey)}
             </button>
           ))}
         </div>
-        <div className="text-xs text-muted-foreground">{`${activeWheelOpacityModifier.label} + Wheel adjusts window opacity.`}</div>
+        <div className="text-xs text-muted-foreground">
+          {t("shortcuts.wheelOpacity.description", {
+            modifier: modifierLabel(activeWheelOpacityModifier.labelKey),
+          })}
+        </div>
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Drag Mouse Button</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("shortcuts.dragButton.label")}
+        </div>
         <div className="flex items-center gap-2">
           {dragMouseButtonOptions.map((option) => (
             <button
@@ -144,23 +158,41 @@ export function ShortcutsSection({
                   : "border-border bg-background text-muted-foreground hover:bg-accent",
               )}
             >
-              {option.label}
+              {t(option.labelKey)}
             </button>
           ))}
         </div>
-        <div className="text-xs text-muted-foreground">{`${activeDragMouseButton.label} Drag: Move window`}</div>
+        <div className="text-xs text-muted-foreground">
+          {t("shortcuts.dragButton.description", {
+            button: t(activeDragMouseButton.labelKey),
+          })}
+        </div>
       </div>
 
       <div className="flex flex-col gap-1 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Current Interactions</div>
-        <div className="text-xs text-muted-foreground">{`${activeWheelResizeModifier.label} + Wheel: Resize window around cursor`}</div>
-        <div className="text-xs text-muted-foreground">{`${activeWheelOpacityModifier.label} + Wheel: Adjust window opacity`}</div>
-        <div className="text-xs text-muted-foreground">Middle Click: Toggle Always On Top</div>
-        <div className="text-xs text-muted-foreground">{`${activeDragMouseButton.label} Drag: Move window`}</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("shortcuts.currentInteractions.label")}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {t("shortcuts.currentInteractions.resize", {
+            modifier: modifierLabel(activeWheelResizeModifier.labelKey),
+          })}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {t("shortcuts.currentInteractions.opacity", {
+            modifier: modifierLabel(activeWheelOpacityModifier.labelKey),
+          })}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {t("shortcuts.currentInteractions.alwaysOnTop")}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {t("shortcuts.currentInteractions.move", { button: t(activeDragMouseButton.labelKey) })}
+        </div>
         <div className="text-xs text-muted-foreground">
           {activeDragMouseButton.value === "right"
-            ? "Right Click: Open context menu (click) / Drag window (drag)"
-            : "Right Click: Open context menu"}
+            ? t("shortcuts.currentInteractions.rightClickWithDrag")
+            : t("shortcuts.currentInteractions.rightClick")}
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+mod locale;
 mod shortcut;
 mod tray;
 mod window;
@@ -40,13 +41,9 @@ const LOG_FILE_NAME: &str = "pinote";
 #[cfg(target_os = "windows")]
 const OPEN_WITH_PINOTE_MENU_KEY: &str = "OpenWithPinote";
 #[cfg(target_os = "windows")]
-const OPEN_WITH_PINOTE_MENU_TITLE: &str = "Use Pinote to Open";
-#[cfg(target_os = "windows")]
 const OPEN_WITH_PINOTE_EXTENSIONS: [&str; 2] = [".md", ".markdown"];
 #[cfg(target_os = "windows")]
 const PINOTE_MARKDOWN_PROG_ID: &str = "Pinote.Markdown";
-#[cfg(target_os = "windows")]
-const PINOTE_MARKDOWN_FILE_TYPE: &str = "Pinote Markdown File";
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,6 +61,7 @@ struct DiagnosticReportExport {
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct StoredSettings {
+    language: Option<String>,
     hide_note_windows_from_taskbar: Option<bool>,
     new_note_directory: Option<String>,
 }
@@ -693,7 +691,10 @@ fn is_open_with_pinote_enabled() -> bool {
 }
 
 #[cfg(target_os = "windows")]
-fn set_open_with_pinote_enabled_windows(enabled: bool) -> Result<(), String> {
+fn set_open_with_pinote_enabled_windows(
+    app: &tauri::AppHandle,
+    enabled: bool,
+) -> Result<(), String> {
     let classes = RegKey::predef(HKEY_CURRENT_USER);
     if !enabled {
         for extension in OPEN_WITH_PINOTE_EXTENSIONS {
@@ -708,13 +709,14 @@ fn set_open_with_pinote_enabled_windows(enabled: bool) -> Result<(), String> {
         .map_err(|error| format!("Failed to resolve executable path: {error}"))?;
     let command = open_with_pinote_command(&executable_path);
     let icon = open_with_pinote_icon(&executable_path);
+    let menu_title = locale::current_text(app).open_with_pinote;
     for extension in OPEN_WITH_PINOTE_EXTENSIONS {
         let path = open_with_pinote_shell_key_path(extension);
         let (shell_key, _) = classes
             .create_subkey(&path)
             .map_err(|error| format!("Failed to create registry key `{path}`: {error}"))?;
         shell_key
-            .set_value("", &OPEN_WITH_PINOTE_MENU_TITLE)
+            .set_value("", &menu_title)
             .map_err(|error| format!("Failed to write registry value for `{path}`: {error}"))?;
         shell_key
             .set_value("Icon", &icon)
@@ -758,7 +760,10 @@ fn is_default_markdown_open_enabled_windows() -> bool {
 }
 
 #[cfg(target_os = "windows")]
-fn set_default_markdown_open_enabled_windows(enabled: bool) -> Result<(), String> {
+fn set_default_markdown_open_enabled_windows(
+    app: &tauri::AppHandle,
+    enabled: bool,
+) -> Result<(), String> {
     let classes = RegKey::predef(HKEY_CURRENT_USER);
     let prog_id_path = markdown_default_prog_id_key_path();
     if !enabled {
@@ -787,12 +792,13 @@ fn set_default_markdown_open_enabled_windows(enabled: bool) -> Result<(), String
         .map_err(|error| format!("Failed to resolve executable path: {error}"))?;
     let command = open_with_pinote_command(&executable_path);
     let icon = open_with_pinote_icon(&executable_path);
+    let file_type = locale::current_text(app).markdown_file_type;
 
     let (prog_id_key, _) = classes
         .create_subkey(&prog_id_path)
         .map_err(|error| format!("Failed to create registry key `{prog_id_path}`: {error}"))?;
     prog_id_key
-        .set_value("", &PINOTE_MARKDOWN_FILE_TYPE)
+        .set_value("", &file_type)
         .map_err(|error| format!("Failed to write registry value for `{prog_id_path}`: {error}"))?;
     let (icon_key, _) = prog_id_key
         .create_subkey("DefaultIcon")
@@ -830,6 +836,17 @@ fn set_default_markdown_open_enabled_windows(enabled: bool) -> Result<(), String
             })?;
     }
     info!("default_markdown_open_enabled");
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn sync_windows_shell_locale(app: &tauri::AppHandle) -> Result<(), String> {
+    if is_open_with_pinote_enabled() {
+        set_open_with_pinote_enabled_windows(app, true)?;
+    }
+    if is_default_markdown_open_enabled_windows() {
+        set_default_markdown_open_enabled_windows(app, true)?;
+    }
     Ok(())
 }
 
@@ -929,14 +946,18 @@ async fn get_open_with_pinote_enabled() -> Result<bool, String> {
 }
 
 #[tauri::command]
-async fn set_open_with_pinote_enabled(enabled: bool) -> Result<bool, String> {
+async fn set_open_with_pinote_enabled(
+    app: tauri::AppHandle,
+    enabled: bool,
+) -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
-        set_open_with_pinote_enabled_windows(enabled)?;
+        set_open_with_pinote_enabled_windows(&app, enabled)?;
         return Ok(is_open_with_pinote_enabled());
     }
     #[cfg(not(target_os = "windows"))]
     {
+        let _ = app;
         let _ = enabled;
         Err(String::from("Only supported on Windows"))
     }
@@ -955,14 +976,18 @@ async fn get_default_markdown_open_enabled() -> Result<bool, String> {
 }
 
 #[tauri::command]
-async fn set_default_markdown_open_enabled(enabled: bool) -> Result<bool, String> {
+async fn set_default_markdown_open_enabled(
+    app: tauri::AppHandle,
+    enabled: bool,
+) -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
-        set_default_markdown_open_enabled_windows(enabled)?;
+        set_default_markdown_open_enabled_windows(&app, enabled)?;
         return Ok(is_default_markdown_open_enabled_windows());
     }
     #[cfg(not(target_os = "windows"))]
     {
+        let _ = app;
         let _ = enabled;
         Err(String::from("Only supported on Windows"))
     }
@@ -1000,9 +1025,24 @@ async fn set_global_shortcuts(
     Ok(shortcut::apply_global_shortcuts(&app, &shortcuts))
 }
 
+#[tauri::command]
+async fn sync_native_locale(
+    app: tauri::AppHandle,
+    preference: locale::LanguagePreference,
+) -> Result<(), String> {
+    let resolved = locale::resolve_preference(preference);
+    locale::set(&app, resolved);
+    tray::sync_locale(&app).map_err(|error| error.to_string())?;
+    window::sync_locale(&app).map_err(|error| error.to_string())?;
+    #[cfg(target_os = "windows")]
+    sync_windows_shell_locale(&app)?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_os::init())
         .manage(window_state::WindowStateStore::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -1036,7 +1076,8 @@ pub fn run() {
             set_open_with_pinote_enabled,
             get_default_markdown_open_enabled,
             set_default_markdown_open_enabled,
-            set_global_shortcuts
+            set_global_shortcuts,
+            sync_native_locale
         ])
         .setup(|app| {
             let handle = app.handle().clone();
@@ -1065,7 +1106,15 @@ pub fn run() {
                 ])
                 .build();
             handle.plugin(log_plugin)?;
+            let stored_settings = load_stored_settings(&handle);
+            let language = locale::parse_stored_preference(stored_settings.language.as_deref());
+            let native_locale = locale::resolve_preference(language);
+            handle.manage(locale::NativeLocaleState::new(native_locale));
             tray::setup_tray(&handle)?;
+            #[cfg(target_os = "windows")]
+            if let Err(err) = sync_windows_shell_locale(&handle) {
+                error!("sync_windows_shell_locale_failed error={err}");
+            }
             shortcut::setup_shortcuts(&handle)?;
             let skip_taskbar = load_hide_note_windows_from_taskbar(&handle);
             let restored_count = restore_cached_note_windows(&handle, skip_taskbar);

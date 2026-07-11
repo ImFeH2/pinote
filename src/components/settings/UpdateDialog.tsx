@@ -1,4 +1,5 @@
 import { Download, RefreshCw, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { UpdateSnapshot } from "@/lib/updater";
 import { cn } from "@/lib/utils";
 
@@ -19,15 +20,16 @@ export function UpdateDialog({
   onInstall,
   onLater,
 }: UpdateDialogProps) {
-  const latestVersion = snapshot.latestVersion ?? "unknown";
-  const currentVersion = snapshot.currentVersion || "unknown";
+  const { t } = useTranslation("settings");
+  const latestVersion = snapshot.latestVersion ?? t("common.unknown");
+  const currentVersion = snapshot.currentVersion || t("common.unknown");
   const isDownloading = snapshot.state === "downloading";
   const isReady = snapshot.state === "readyToRestart";
   const actionDisabled = busy || snapshot.state === "checking";
   const progressText =
     isDownloading && snapshot.downloadProgress !== null
-      ? `Downloading ${snapshot.downloadProgress}%`
-      : "Download the update when you are ready.";
+      ? t("updateDialog.downloadingProgress", { progress: snapshot.downloadProgress })
+      : t("updateDialog.readyToDownload");
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/72 p-5 backdrop-blur-sm">
@@ -37,14 +39,14 @@ export function UpdateDialog({
             <Download size={17} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-foreground">Update available</div>
+            <div className="text-sm font-semibold text-foreground">{t("updateDialog.title")}</div>
             <div className="mt-1 text-xs text-muted-foreground">
-              {`Pinote ${latestVersion} is ready. You are using ${currentVersion}.`}
+              {t("updateDialog.versions", { latestVersion, currentVersion })}
             </div>
           </div>
           <button
             type="button"
-            aria-label="Later"
+            aria-label={t("updateDialog.later")}
             disabled={busy || isDownloading}
             onClick={onLater}
             className={cn(
@@ -57,7 +59,7 @@ export function UpdateDialog({
         </div>
 
         <div className="mb-4 text-xs text-muted-foreground">
-          {error ?? (isReady ? "Restart Pinote to finish installing the update." : progressText)}
+          {error ?? (isReady ? t("updateDialog.restartHelp") : progressText)}
         </div>
 
         <div className="flex items-center justify-end gap-2">
@@ -70,7 +72,7 @@ export function UpdateDialog({
               (busy || isDownloading) && "cursor-not-allowed opacity-60",
             )}
           >
-            Later
+            {t("updateDialog.later")}
           </button>
           <button
             type="button"
@@ -84,7 +86,13 @@ export function UpdateDialog({
             )}
           >
             {isReady ? <RefreshCw size={14} /> : <Download size={14} />}
-            <span>{isReady ? "Restart" : isDownloading ? "Downloading" : "Download"}</span>
+            <span>
+              {isReady
+                ? t("updateDialog.restart")
+                : isDownloading
+                  ? t("updateDialog.downloading")
+                  : t("updateDialog.download")}
+            </span>
           </button>
         </div>
       </div>

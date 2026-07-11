@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 import {
@@ -41,6 +42,7 @@ function ContextMenuApp({
   anchorY,
   noteOpacity,
 }: NoteContextMenuContext) {
+  const { t } = useTranslation("contextMenu");
   useTheme();
   const { settings } = useSettings();
   const menuWindow = useMemo(() => getCurrentWindow(), []);
@@ -343,7 +345,7 @@ function ContextMenuApp({
               }}
               className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              New Note
+              {t("newNote")}
             </button>
             <button
               type="button"
@@ -352,7 +354,7 @@ function ContextMenuApp({
               }}
               className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              Open Settings
+              {t("openSettings")}
             </button>
             {!settings.hideNoteWindowsFromTaskbar && (
               <button
@@ -362,7 +364,7 @@ function ContextMenuApp({
                 }}
                 className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
-                Minimize Window
+                {t("minimizeWindow")}
               </button>
             )}
             <button
@@ -372,7 +374,7 @@ function ContextMenuApp({
               }}
               className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              Toggle Maximize
+              {t("toggleMaximize")}
             </button>
             <button
               type="button"
@@ -381,7 +383,7 @@ function ContextMenuApp({
               }}
               className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              Toggle Read-Only
+              {t("toggleReadOnly")}
             </button>
             <button
               type="button"
@@ -390,7 +392,7 @@ function ContextMenuApp({
               }}
               className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              Hide Window
+              {t("hideWindow")}
             </button>
             <button
               type="button"
@@ -399,7 +401,7 @@ function ContextMenuApp({
               }}
               className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              Close Window
+              {t("closeWindow")}
             </button>
           </div>
         </div>

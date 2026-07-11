@@ -1,12 +1,20 @@
+import { useTranslation } from "react-i18next";
 import {
   fontFamilyOptions,
   themeOptions,
   windowsGlassEffectOptions,
 } from "@/components/settings/shared";
+import type { LanguagePreference } from "@/i18n/locale";
 import { cn } from "@/lib/utils";
 import type { RuntimePlatform } from "@/lib/windowApi";
 import type { Settings } from "@/stores/settings";
 import type { SettingsPatch } from "@/stores/settingsStore";
+
+const languageOptions: Array<{ value: LanguagePreference; labelKey: string }> = [
+  { value: "system", labelKey: "appearance.language.options.system" },
+  { value: "en-US", labelKey: "appearance.language.options.enUS" },
+  { value: "zh-CN", labelKey: "appearance.language.options.zhCN" },
+];
 
 interface AppearanceSectionProps {
   settings: Settings;
@@ -25,10 +33,37 @@ export function AppearanceSection({
   paddingYText,
   updateSettings,
 }: AppearanceSectionProps) {
+  const { t } = useTranslation("settings");
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Theme</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("appearance.language.label")}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {languageOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => updateSettings({ language: option.value })}
+              className={cn(
+                "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                settings.language === option.value
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background text-muted-foreground hover:bg-accent",
+              )}
+            >
+              {t(option.labelKey)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("appearance.theme.label")}
+        </div>
         <div className="flex items-center gap-2">
           {themeOptions.map((option) => (
             <button
@@ -42,17 +77,21 @@ export function AppearanceSection({
                   : "border-border bg-background text-muted-foreground hover:bg-accent",
               )}
             >
-              {option.label}
+              {t(option.labelKey)}
             </button>
           ))}
         </div>
       </div>
 
       <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Typography</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("appearance.typography.label")}
+        </div>
 
         <div className="flex flex-col gap-2">
-          <div className="text-xs text-muted-foreground">Font Family</div>
+          <div className="text-xs text-muted-foreground">
+            {t("appearance.typography.fontFamily")}
+          </div>
           <div className="flex items-center gap-2">
             {fontFamilyOptions.map((option) => (
               <button
@@ -66,7 +105,7 @@ export function AppearanceSection({
                     : "border-border bg-background text-muted-foreground hover:bg-accent",
                 )}
               >
-                {option.label}
+                {t(option.labelKey)}
               </button>
             ))}
           </div>
@@ -74,7 +113,9 @@ export function AppearanceSection({
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">Font Size</div>
+            <div className="text-xs text-muted-foreground">
+              {t("appearance.typography.fontSize")}
+            </div>
             <div className="text-xs text-muted-foreground">{`${settings.editorFontSize}px`}</div>
           </div>
           <input
@@ -90,7 +131,9 @@ export function AppearanceSection({
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">Line Height</div>
+            <div className="text-xs text-muted-foreground">
+              {t("appearance.typography.lineHeight")}
+            </div>
             <div className="text-xs text-muted-foreground">{lineHeightText}</div>
           </div>
           <input
@@ -107,7 +150,9 @@ export function AppearanceSection({
 
       {runtimePlatform !== "other" && (
         <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
-          <div className="text-xs font-medium text-muted-foreground">Glass Effect</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            {t("appearance.glass.label")}
+          </div>
           {runtimePlatform === "windows" ? (
             <div className="flex flex-col gap-2">
               <div className="grid grid-cols-2 gap-2">
@@ -123,15 +168,15 @@ export function AppearanceSection({
                         : "border-border bg-background text-muted-foreground hover:bg-accent",
                     )}
                   >
-                    {option.label}
+                    {t(option.labelKey)}
                   </button>
                 ))}
               </div>
-              <div className="text-xs text-muted-foreground">Applies to all note windows.</div>
+              <div className="text-xs text-muted-foreground">{t("appearance.glass.allNotes")}</div>
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <div className="text-xs text-muted-foreground">Enable Glass Effect</div>
+              <div className="text-xs text-muted-foreground">{t("appearance.glass.enable")}</div>
               <button
                 type="button"
                 onClick={() =>
@@ -146,7 +191,7 @@ export function AppearanceSection({
                     : "border-border bg-background text-muted-foreground hover:bg-accent",
                 )}
               >
-                {settings.noteGlassEffectMacos ? "Enabled" : "Disabled"}
+                {t(settings.noteGlassEffectMacos ? "common.enabled" : "common.disabled")}
               </button>
             </div>
           )}
@@ -154,11 +199,15 @@ export function AppearanceSection({
       )}
 
       <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Page Spacing</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("appearance.spacing.label")}
+        </div>
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">Horizontal Margin</div>
+            <div className="text-xs text-muted-foreground">
+              {t("appearance.spacing.horizontal")}
+            </div>
             <div className="text-xs text-muted-foreground">{paddingXText}</div>
           </div>
           <input
@@ -174,7 +223,7 @@ export function AppearanceSection({
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">Vertical Margin</div>
+            <div className="text-xs text-muted-foreground">{t("appearance.spacing.vertical")}</div>
             <div className="text-xs text-muted-foreground">{paddingYText}</div>
           </div>
           <input

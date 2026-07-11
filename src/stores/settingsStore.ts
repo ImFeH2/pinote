@@ -10,6 +10,7 @@ type SettingsListener = () => void;
 let settingsSnapshot: Settings | null = null;
 let loadPromise: Promise<void> | null = null;
 let syncPromise: Promise<void> | null = null;
+let updatePromise = Promise.resolve();
 const listeners = new Set<SettingsListener>();
 
 function notifySettingsListeners() {
@@ -48,15 +49,14 @@ function ensureSettingsSync() {
 
 export function ensureSettingsStoreReady() {
   if (!loadPromise) {
-    loadPromise = loadSettings()
-      .then((settings) => {
-        setSettingsSnapshot(settings);
+    loadPromise = Promise.all([loadSettings(), ensureSettingsSync()])
+      .then(([settings]) => {
+        if (!settingsSnapshot) setSettingsSnapshot(settings);
       })
       .catch(() => {
-        setSettingsSnapshot({ ...DEFAULT_SETTINGS });
+        if (!settingsSnapshot) setSettingsSnapshot({ ...DEFAULT_SETTINGS });
       });
   }
-  void ensureSettingsSync();
   return loadPromise;
 }
 
@@ -76,6 +76,11 @@ export async function updateSettingsStore(patch: SettingsPatch) {
   if (!current) return;
   const next = mergeSettings(current, patch);
   setSettingsSnapshot(next);
-  await saveSettings(next);
-  await emitSettingsUpdated(next);
+  updatePromise = updatePromise
+    .catch(() => {})
+    .then(async () => {
+      await saveSettings(next);
+      await emitSettingsUpdated(next);
+    });
+  await updatePromise;
 }

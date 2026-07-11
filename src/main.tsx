@@ -4,6 +4,10 @@ import ReactDOM from "react-dom/client";
 import App from "@/App";
 import ContextMenuApp from "@/ContextMenuApp";
 import { SettingsProvider } from "@/hooks/useSettings";
+import { initializeI18n } from "@/i18n";
+import { LocaleSync } from "@/i18n/LocaleSync";
+import { resolveAppLocale } from "@/i18n/locale";
+import { logError } from "@/lib/logger";
 import { setupLogging } from "@/lib/logging";
 import { getNoteIdFromPath, normalizeNoteId } from "@/lib/notes";
 import { checkForUpdates, getUpdateState } from "@/lib/updater";
@@ -135,10 +139,21 @@ function Root() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <SettingsProvider>
-      <Root />
-    </SettingsProvider>
-  </React.StrictMode>,
-);
+async function bootstrap() {
+  await ensureSettingsStoreReady();
+  const locale = await resolveAppLocale(getSettingsSnapshot()?.language ?? "system");
+  await initializeI18n(locale);
+  document.documentElement.lang = locale;
+  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+    <React.StrictMode>
+      <SettingsProvider>
+        <LocaleSync />
+        <Root />
+      </SettingsProvider>
+    </React.StrictMode>,
+  );
+}
+
+void bootstrap().catch((error) => {
+  logError("frontend", "bootstrap_failed", error);
+});

@@ -4,7 +4,9 @@ import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { exists, mkdir } from "@tauri-apps/plugin-fs";
 import { openPath, openUrl } from "@tauri-apps/plugin-opener";
+import type { TFunction } from "i18next";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AboutSection } from "@/components/settings/AboutSection";
 import { AppearanceSection } from "@/components/settings/AppearanceSection";
 import { HistorySection } from "@/components/settings/HistorySection";
@@ -59,16 +61,15 @@ const emptyGlobalShortcutRegistration: Record<GlobalShortcutKey, boolean | null>
   toggleVisibleWindows: null,
 };
 
-function getErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  return "Unknown error";
+function getErrorMessage(error: unknown, t: TFunction<"settings">) {
+  void error;
+  return t("errors.unknown");
 }
 
-function formatDateTime(value: string) {
+function formatDateTime(value: string, locale: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -77,24 +78,26 @@ function formatDateTime(value: string) {
   }).format(date);
 }
 
-function getUpdateStatusText(snapshot: UpdateSnapshot) {
-  if (snapshot.state === "idle") return "No update check has been run yet.";
-  if (snapshot.state === "checking") return "Checking for updates...";
+function getUpdateStatusText(snapshot: UpdateSnapshot, t: TFunction<"settings">) {
+  if (snapshot.state === "idle") return t("updateStatus.idle");
+  if (snapshot.state === "checking") return t("updateStatus.checking");
   if (snapshot.state === "available") {
-    return `Update ${snapshot.latestVersion ?? "unknown"} is available.`;
+    return t("updateStatus.available", {
+      version: snapshot.latestVersion ?? t("common.unknown"),
+    });
   }
-  if (snapshot.state === "upToDate") return "You are using the latest stable release.";
+  if (snapshot.state === "upToDate") return t("updateStatus.upToDate");
   if (snapshot.state === "downloading") {
     if (snapshot.downloadProgress !== null) {
-      return `Downloading update... ${snapshot.downloadProgress}%`;
+      return t("updateStatus.downloadingProgress", { progress: snapshot.downloadProgress });
     }
-    return "Downloading update...";
+    return t("updateStatus.downloading");
   }
   if (snapshot.state === "readyToRestart") {
-    return "Download complete. Restart to install the update.";
+    return t("updateStatus.readyToRestart");
   }
-  if (snapshot.state === "error") return snapshot.error ?? "Update failed.";
-  return "Update status is unavailable.";
+  if (snapshot.state === "error") return t("updateStatus.failed");
+  return t("updateStatus.unavailable");
 }
 
 function getInitialSection(): SettingsSection {
@@ -108,10 +111,11 @@ function getInitialSection(): SettingsSection {
 
 export function SettingsApp() {
   useTheme();
+  const { t, i18n } = useTranslation("settings");
   const { settings, updateSettings } = useSettings();
   const settingsWindow = useMemo(() => getCurrentWindow(), []);
   const [activeSection, setActiveSection] = useState<SettingsSection>(() => getInitialSection());
-  const [shortcutError, setShortcutError] = useState<string | null>(null);
+  const [shortcutInvalid, setShortcutInvalid] = useState(false);
   const [startupError, setStartupError] = useState<string | null>(null);
   const [startupBusy, setStartupBusy] = useState(false);
   const [updateBusy, setUpdateBusy] = useState(false);
@@ -121,10 +125,10 @@ export function SettingsApp() {
     null,
   );
   const pendingUpdateCheckVersionRef = useRef<string | null>(null);
-  const [appVersion, setAppVersion] = useState("loading...");
+  const [appVersion, setAppVersion] = useState<string | null>(null);
   const [aboutError, setAboutError] = useState<string | null>(null);
   const [diagnosticBusy, setDiagnosticBusy] = useState(false);
-  const [diagnosticMessage, setDiagnosticMessage] = useState<string | null>(null);
+  const [diagnosticFileCount, setDiagnosticFileCount] = useState<number | null>(null);
   const [diagnosticError, setDiagnosticError] = useState<string | null>(null);
   const [notesDirectoryError, setNotesDirectoryError] = useState<string | null>(null);
   const [notesDirectoryBusy, setNotesDirectoryBusy] = useState(false);
@@ -137,7 +141,7 @@ export function SettingsApp() {
   const [taskbarError, setTaskbarError] = useState<string | null>(null);
   const [bringNotesBackBusy, setBringNotesBackBusy] = useState(false);
   const [bringNotesBackError, setBringNotesBackError] = useState<string | null>(null);
-  const [bringNotesBackResult, setBringNotesBackResult] = useState<string | null>(null);
+  const [bringNotesBackCount, setBringNotesBackCount] = useState<number | null>(null);
   const [historyQuery, setHistoryQuery] = useState("");
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -158,8 +162,8 @@ export function SettingsApp() {
     updateSnapshot.state === "available" ||
     (updateSnapshot.available && updateSnapshot.state === "error");
   const canInstallUpdate = updateSnapshot.state === "readyToRestart";
-  const updateStatusText = getUpdateStatusText(updateSnapshot);
-  const updateError = updateActionError ?? updateSnapshot.error;
+  const updateStatusText = getUpdateStatusText(updateSnapshot, t);
+  const updateError = updateActionError || updateSnapshot.error ? t("updateStatus.failed") : null;
   const isCheckingUpdate = updateSnapshot.state === "checking";
   const isDownloadingUpdate = updateSnapshot.state === "downloading";
   const shouldShowUpdateDialog =
@@ -199,11 +203,11 @@ export function SettingsApp() {
     (key: ShortcutKey, value: string) => {
       const normalized = normalizeShortcut(value);
       if (!normalized) {
-        setShortcutError("Invalid shortcut.");
+        setShortcutInvalid(true);
         return;
       }
 
-      setShortcutError(null);
+      setShortcutInvalid(false);
       updateSettings({
         shortcuts: {
           [key]: normalized,
@@ -268,11 +272,11 @@ export function SettingsApp() {
       setStartupError(null);
       updateSettings({ launchAtStartup: next });
     } catch (error) {
-      setStartupError(getErrorMessage(error));
+      setStartupError(getErrorMessage(error, t));
     } finally {
       setStartupBusy(false);
     }
-  }, [settings.launchAtStartup, updateSettings]);
+  }, [settings.launchAtStartup, t, updateSettings]);
 
   const handleContextMenuIntegration = useCallback(async () => {
     const next = !settings.openWithPinoteContextMenu;
@@ -282,11 +286,11 @@ export function SettingsApp() {
       updateSettings({ openWithPinoteContextMenu: enabled });
       setContextMenuError(null);
     } catch (error) {
-      setContextMenuError(getErrorMessage(error));
+      setContextMenuError(getErrorMessage(error, t));
     } finally {
       setContextMenuBusy(false);
     }
-  }, [settings.openWithPinoteContextMenu, updateSettings]);
+  }, [settings.openWithPinoteContextMenu, t, updateSettings]);
 
   const handleDefaultOpenIntegration = useCallback(async () => {
     const next = !settings.defaultMarkdownOpenWithPinote;
@@ -296,11 +300,11 @@ export function SettingsApp() {
       updateSettings({ defaultMarkdownOpenWithPinote: enabled });
       setDefaultOpenError(null);
     } catch (error) {
-      setDefaultOpenError(getErrorMessage(error));
+      setDefaultOpenError(getErrorMessage(error, t));
     } finally {
       setDefaultOpenBusy(false);
     }
-  }, [settings.defaultMarkdownOpenWithPinote, updateSettings]);
+  }, [settings.defaultMarkdownOpenWithPinote, t, updateSettings]);
 
   const handleTaskbarVisibility = useCallback(async () => {
     const next = !settings.hideNoteWindowsFromTaskbar;
@@ -310,29 +314,25 @@ export function SettingsApp() {
       updateSettings({ hideNoteWindowsFromTaskbar: next });
       setTaskbarError(null);
     } catch (error) {
-      setTaskbarError(getErrorMessage(error));
+      setTaskbarError(getErrorMessage(error, t));
     } finally {
       setTaskbarBusy(false);
     }
-  }, [settings.hideNoteWindowsFromTaskbar, updateSettings]);
+  }, [settings.hideNoteWindowsFromTaskbar, t, updateSettings]);
 
   const handleBringNotesBack = useCallback(async () => {
     setBringNotesBackBusy(true);
     setBringNotesBackError(null);
-    setBringNotesBackResult(null);
+    setBringNotesBackCount(null);
     try {
       const moved = await bringNoteWindowsBackOnScreen();
-      setBringNotesBackResult(
-        moved > 0
-          ? `Moved ${moved} ${moved === 1 ? "note" : "notes"} back.`
-          : "All notes are already on screen.",
-      );
+      setBringNotesBackCount(moved);
     } catch (error) {
-      setBringNotesBackError(getErrorMessage(error));
+      setBringNotesBackError(getErrorMessage(error, t));
     } finally {
       setBringNotesBackBusy(false);
     }
-  }, []);
+  }, [t]);
 
   const handleManualUpdateCheck = useCallback(async () => {
     setUpdateBusy(true);
@@ -340,11 +340,11 @@ export function SettingsApp() {
     try {
       await checkForUpdates("manual");
     } catch (error) {
-      setUpdateActionError(getErrorMessage(error));
+      setUpdateActionError(getErrorMessage(error, t));
     } finally {
       setUpdateBusy(false);
     }
-  }, []);
+  }, [t]);
 
   const handleDownloadUpdate = useCallback(async () => {
     setUpdateBusy(true);
@@ -352,11 +352,11 @@ export function SettingsApp() {
     try {
       await downloadUpdate();
     } catch (error) {
-      setUpdateActionError(getErrorMessage(error));
+      setUpdateActionError(getErrorMessage(error, t));
     } finally {
       setUpdateBusy(false);
     }
-  }, []);
+  }, [t]);
 
   const handleInstallUpdate = useCallback(async () => {
     setUpdateBusy(true);
@@ -364,11 +364,11 @@ export function SettingsApp() {
     try {
       await installUpdate();
     } catch (error) {
-      setUpdateActionError(getErrorMessage(error));
+      setUpdateActionError(getErrorMessage(error, t));
     } finally {
       setUpdateBusy(false);
     }
-  }, []);
+  }, [t]);
 
   const handleUpdateLater = useCallback(() => {
     const latestVersion = updateSnapshot.latestVersion;
@@ -386,25 +386,24 @@ export function SettingsApp() {
       await openUrl(REPOSITORY_URL);
       setAboutError(null);
     } catch (error) {
-      setAboutError(getErrorMessage(error));
+      setAboutError(getErrorMessage(error, t));
     }
-  }, []);
+  }, [t]);
 
   const handleSaveDiagnosticReport = useCallback(async () => {
     setDiagnosticBusy(true);
-    setDiagnosticMessage(null);
+    setDiagnosticFileCount(null);
     setDiagnosticError(null);
     try {
       const result = await saveDiagnosticReport();
       if (!result) return;
-      const fileCountText = result.logFileCount === 1 ? "1 file" : `${result.logFileCount} files`;
-      setDiagnosticMessage(`Report saved with ${fileCountText}.`);
+      setDiagnosticFileCount(result.logFileCount);
     } catch (error) {
-      setDiagnosticError(getErrorMessage(error));
+      setDiagnosticError(getErrorMessage(error, t));
     } finally {
       setDiagnosticBusy(false);
     }
-  }, []);
+  }, [t]);
 
   const handleChooseNotesDirectory = useCallback(async () => {
     setNotesDirectoryBusy(true);
@@ -419,11 +418,11 @@ export function SettingsApp() {
       updateSettings({ newNoteDirectory: selectedPath.trim() });
       setNotesDirectoryError(null);
     } catch (error) {
-      setNotesDirectoryError(getErrorMessage(error));
+      setNotesDirectoryError(getErrorMessage(error, t));
     } finally {
       setNotesDirectoryBusy(false);
     }
-  }, [effectiveNotesDirectory, updateSettings]);
+  }, [effectiveNotesDirectory, t, updateSettings]);
 
   const handleOpenNotesDirectory = useCallback(async () => {
     const targetDirectory = effectiveNotesDirectory.trim();
@@ -439,32 +438,35 @@ export function SettingsApp() {
       await openPath(targetDirectory);
       setNotesDirectoryError(null);
     } catch (error) {
-      setNotesDirectoryError(getErrorMessage(error));
+      setNotesDirectoryError(getErrorMessage(error, t));
     } finally {
       setNotesDirectoryBusy(false);
     }
-  }, [customNotesDirectory, effectiveNotesDirectory]);
+  }, [customNotesDirectory, effectiveNotesDirectory, t]);
 
-  const handleOpenHistoryItem = useCallback(async (item: NoteHistorySearchResult) => {
-    const notePath = item.notePath.trim();
-    if (!notePath) return;
-    setHistoryOpeningPath(notePath);
-    try {
-      await openAndTrackNoteWindow({
-        noteId: item.noteId,
-        notePath,
-        windowId: item.windowId.trim() || undefined,
-        visibility: "visible",
-        focus: true,
-      });
-      setHistoryError(null);
-      setHistoryReloadToken((value) => value + 1);
-    } catch (error) {
-      setHistoryError(getErrorMessage(error));
-    } finally {
-      setHistoryOpeningPath(null);
-    }
-  }, []);
+  const handleOpenHistoryItem = useCallback(
+    async (item: NoteHistorySearchResult) => {
+      const notePath = item.notePath.trim();
+      if (!notePath) return;
+      setHistoryOpeningPath(notePath);
+      try {
+        await openAndTrackNoteWindow({
+          noteId: item.noteId,
+          notePath,
+          windowId: item.windowId.trim() || undefined,
+          visibility: "visible",
+          focus: true,
+        });
+        setHistoryError(null);
+        setHistoryReloadToken((value) => value + 1);
+      } catch (error) {
+        setHistoryError(getErrorMessage(error, t));
+      } finally {
+        setHistoryOpeningPath(null);
+      }
+    },
+    [t],
+  );
 
   useEffect(() => {
     let active = true;
@@ -475,12 +477,12 @@ export function SettingsApp() {
       })
       .catch((error) => {
         if (!active) return;
-        setStartupError(getErrorMessage(error));
+        setStartupError(getErrorMessage(error, t));
       });
     return () => {
       active = false;
     };
-  }, [updateSettings]);
+  }, [t, updateSettings]);
 
   useEffect(() => {
     let active = true;
@@ -492,12 +494,12 @@ export function SettingsApp() {
       })
       .catch((error) => {
         if (!active) return;
-        setContextMenuError(getErrorMessage(error));
+        setContextMenuError(getErrorMessage(error, t));
       });
     return () => {
       active = false;
     };
-  }, [settings.openWithPinoteContextMenu, updateSettings]);
+  }, [settings.openWithPinoteContextMenu, t, updateSettings]);
 
   useEffect(() => {
     let active = true;
@@ -509,12 +511,12 @@ export function SettingsApp() {
       })
       .catch((error) => {
         if (!active) return;
-        setDefaultOpenError(getErrorMessage(error));
+        setDefaultOpenError(getErrorMessage(error, t));
       });
     return () => {
       active = false;
     };
-  }, [settings.defaultMarkdownOpenWithPinote, updateSettings]);
+  }, [settings.defaultMarkdownOpenWithPinote, t, updateSettings]);
 
   useEffect(() => {
     let active = true;
@@ -525,27 +527,28 @@ export function SettingsApp() {
       })
       .catch((error) => {
         if (!active) return;
-        setNotesDirectoryError(getErrorMessage(error));
+        setNotesDirectoryError(getErrorMessage(error, t));
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (activeSection !== "history") return;
     let active = true;
+    const requestVersion = historyReloadToken;
     const timer = window.setTimeout(() => {
       setHistoryLoading(true);
       searchNoteHistory(historyQuery, { limit: HISTORY_SEARCH_LIMIT })
         .then((results) => {
-          if (!active) return;
+          if (!active || requestVersion !== historyReloadToken) return;
           setHistoryResults(results);
           setHistoryError(null);
         })
         .catch((error) => {
           if (!active) return;
-          setHistoryError(getErrorMessage(error));
+          setHistoryError(getErrorMessage(error, t));
         })
         .finally(() => {
           if (!active) return;
@@ -556,7 +559,7 @@ export function SettingsApp() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [activeSection, historyQuery, historyReloadToken]);
+  }, [activeSection, historyQuery, historyReloadToken, t]);
 
   useEffect(() => {
     return subscribeUpdateState((next) => {
@@ -629,7 +632,7 @@ export function SettingsApp() {
       })
       .catch(() => {
         if (!active) return;
-        setAppVersion("unknown");
+        setAppVersion("");
       });
     return () => {
       active = false;
@@ -675,7 +678,13 @@ export function SettingsApp() {
         taskbarError={taskbarError}
         bringNotesBackBusy={bringNotesBackBusy}
         bringNotesBackError={bringNotesBackError}
-        bringNotesBackResult={bringNotesBackResult}
+        bringNotesBackResult={
+          bringNotesBackCount === null
+            ? null
+            : bringNotesBackCount > 0
+              ? t("window.lostNotes.moved", { count: bringNotesBackCount })
+              : t("window.lostNotes.allVisible")
+        }
         contextMenuBusy={contextMenuBusy}
         contextMenuError={contextMenuError}
         defaultOpenBusy={defaultOpenBusy}
@@ -699,12 +708,12 @@ export function SettingsApp() {
         historyError={historyError}
         setHistoryQuery={setHistoryQuery}
         onOpenHistoryItem={handleOpenHistoryItem}
-        formatDateTime={formatDateTime}
+        formatDateTime={(value) => formatDateTime(value, i18n.resolvedLanguage ?? "en-US")}
       />
     ) : activeSection === "shortcuts" ? (
       <ShortcutsSection
         settings={settings}
-        shortcutError={shortcutError}
+        shortcutError={shortcutInvalid ? t("errors.invalidShortcut") : null}
         globalShortcutRegistration={displayedGlobalShortcutRegistration}
         activeWheelResizeModifier={activeWheelResizeModifier}
         activeWheelOpacityModifier={activeWheelOpacityModifier}
@@ -714,7 +723,7 @@ export function SettingsApp() {
       />
     ) : (
       <AboutSection
-        appVersion={appVersion}
+        appVersion={appVersion === null ? t("common.loading") : appVersion || t("common.unknown")}
         updateBusy={updateBusy}
         isCheckingUpdate={isCheckingUpdate}
         isDownloadingUpdate={isDownloadingUpdate}
@@ -726,10 +735,14 @@ export function SettingsApp() {
         updateError={updateError}
         aboutError={aboutError}
         diagnosticBusy={diagnosticBusy}
-        diagnosticMessage={diagnosticMessage}
+        diagnosticMessage={
+          diagnosticFileCount === null
+            ? null
+            : t("diagnostics.saved", { count: diagnosticFileCount })
+        }
         diagnosticError={diagnosticError}
         repositoryUrl={REPOSITORY_URL}
-        formatDateTime={formatDateTime}
+        formatDateTime={(value) => formatDateTime(value, i18n.resolvedLanguage ?? "en-US")}
         onManualUpdateCheck={handleManualUpdateCheck}
         onDownloadUpdate={handleDownloadUpdate}
         onInstallUpdate={handleInstallUpdate}
@@ -740,15 +753,19 @@ export function SettingsApp() {
 
   return (
     <div className="relative flex h-screen flex-col bg-background text-foreground">
-      <TitleBar title="Settings" showSettings={false} />
+      <TitleBar title={t("title")} showSettings={false} />
 
       <div className="flex min-h-0 flex-1">
         <SettingsSidebar activeSection={activeSection} onSelect={setActiveSection} />
 
         <main className="pinote-scrollbar min-w-0 flex-1 overflow-y-auto px-5 py-4">
           <div className="mb-4">
-            <div className="text-sm font-semibold text-foreground">{activeSectionInfo.label}</div>
-            <div className="text-xs text-muted-foreground">{activeSectionInfo.description}</div>
+            <div className="text-sm font-semibold text-foreground">
+              {t(activeSectionInfo.labelKey)}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t(activeSectionInfo.descriptionKey)}
+            </div>
           </div>
           {sectionContent}
         </main>

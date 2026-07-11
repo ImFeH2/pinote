@@ -1,4 +1,5 @@
 import { type KeyboardEvent, type ReactNode, useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { eventToShortcut } from "@/lib/shortcuts";
 
 interface ShortcutInputProps {
@@ -9,6 +10,7 @@ interface ShortcutInputProps {
 }
 
 export function ShortcutInput({ label, value, onChange, labelMeta }: ShortcutInputProps) {
+  const { t } = useTranslation("settings");
   const [isRecording, setIsRecording] = useState(false);
 
   const handleKeyDown = useCallback(
@@ -31,7 +33,7 @@ export function ShortcutInput({ label, value, onChange, labelMeta }: ShortcutInp
       <input
         type="text"
         readOnly
-        value={isRecording ? "Press keys..." : value}
+        value={isRecording ? t("shortcuts.pressKeys") : value}
         onFocus={() => setIsRecording(true)}
         onBlur={() => setIsRecording(false)}
         onKeyDown={handleKeyDown}

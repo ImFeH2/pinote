@@ -1,6 +1,7 @@
 import { Effect, getCurrentWindow } from "@tauri-apps/api/window";
 import { Lock, Pin } from "lucide-react";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Editor } from "@/components/Editor";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useNoteExternalSync } from "@/hooks/useNoteExternalSync";
@@ -62,6 +63,7 @@ function App({
   notePath: string;
   initialOpacity?: number;
 }) {
+  const { t } = useTranslation("note");
   const { toggleTheme } = useTheme();
   const { alwaysOnTop, toggleAlwaysOnTop } = useWindowControl();
   const { settings } = useSettings();
@@ -398,7 +400,9 @@ function App({
   if (initialContent === null) {
     return (
       <div className="flex h-screen items-center justify-center rounded-lg bg-background">
-        <div className="text-sm text-muted-foreground">Loading...</div>
+        <div className="text-sm text-muted-foreground" role="status" aria-live="polite">
+          {t("loading")}
+        </div>
       </div>
     );
   }
@@ -418,21 +422,24 @@ function App({
         className="absolute left-0 right-0 top-0 z-20 h-1.5 cursor-grab"
       />
       {hasExternalFileChange ? (
-        <div className="absolute left-2 right-2 top-2 z-40 flex items-center gap-2 rounded-md border border-amber-400/50 bg-amber-300/20 px-2.5 py-1.5 text-xs text-amber-950 shadow-sm dark:border-amber-300/45 dark:bg-amber-200/12 dark:text-amber-100">
-          <span className="min-w-0 flex-1 truncate">File changed externally.</span>
+        <div
+          className="absolute left-2 right-2 top-2 z-40 flex items-center gap-2 rounded-md border border-amber-400/50 bg-amber-300/20 px-2.5 py-1.5 text-xs text-amber-950 shadow-sm dark:border-amber-300/45 dark:bg-amber-200/12 dark:text-amber-100"
+          role="alert"
+        >
+          <span className="min-w-0 flex-1 truncate">{t("externalChange.message")}</span>
           <button
             type="button"
             onClick={reloadExternalFileContent}
             className="rounded px-1.5 py-0.5 font-medium text-amber-950 hover:bg-amber-300/40 dark:text-amber-100 dark:hover:bg-amber-200/20"
           >
-            Reload
+            {t("externalChange.reload")}
           </button>
           <button
             type="button"
             onClick={dismissExternalFileChange}
             className="rounded px-1.5 py-0.5 text-amber-900/90 hover:bg-amber-300/28 dark:text-amber-100/90 dark:hover:bg-amber-200/16"
           >
-            Ignore
+            {t("externalChange.ignore")}
           </button>
         </div>
       ) : null}
@@ -441,16 +448,20 @@ function App({
           <div
             className="pinote-readonly-badge flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200"
             style={{ opacity: noteOpacity }}
+            role="img"
+            aria-label={t("status.readOnly")}
           >
-            <Lock size={11} />
+            <Lock size={11} aria-hidden="true" />
           </div>
         ) : null}
         {alwaysOnTop ? (
           <div
             className="pinote-pinned-badge flex h-5 w-5 items-center justify-center rounded-full transition-all duration-200"
             style={{ opacity: noteOpacity }}
+            role="img"
+            aria-label={t("status.alwaysOnTop")}
           >
-            <Pin size={11} />
+            <Pin size={11} aria-hidden="true" />
           </div>
         ) : null}
       </div>

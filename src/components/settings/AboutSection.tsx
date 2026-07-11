@@ -1,4 +1,5 @@
 import { Download, Github } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { UpdateSnapshot } from "@/lib/updater";
 import { cn } from "@/lib/utils";
 import type { Settings } from "@/stores/settings";
@@ -50,27 +51,37 @@ export function AboutSection({
   onOpenRepository,
   onSaveDiagnosticReport,
 }: AboutSectionProps) {
+  const { t } = useTranslation("settings");
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Application</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("about.application.label")}
+        </div>
         <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">Name</div>
+          <div className="text-xs text-muted-foreground">{t("about.application.name")}</div>
           <div className="text-xs font-medium text-foreground">Pinote</div>
         </div>
         <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">Current Version</div>
+          <div className="text-xs text-muted-foreground">
+            {t("about.application.currentVersion")}
+          </div>
           <div className="text-xs font-medium text-foreground">{appVersion}</div>
         </div>
         <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">Release Channel</div>
-          <div className="text-xs font-medium text-foreground">Stable</div>
+          <div className="text-xs text-muted-foreground">
+            {t("about.application.releaseChannel")}
+          </div>
+          <div className="text-xs font-medium text-foreground">{t("about.application.stable")}</div>
         </div>
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-medium text-muted-foreground">Updates</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            {t("about.updates.label")}
+          </div>
           <button
             type="button"
             disabled={updateBusy || isCheckingUpdate || isDownloadingUpdate}
@@ -84,7 +95,7 @@ export function AboutSection({
                 "cursor-not-allowed opacity-60",
             )}
           >
-            {isCheckingUpdate ? "Checking..." : "Check Updates"}
+            {isCheckingUpdate ? t("about.updates.checking") : t("about.updates.check")}
           </button>
         </div>
 
@@ -92,12 +103,17 @@ export function AboutSection({
 
         {updateSnapshot.latestVersion && (
           <div className="text-xs text-muted-foreground">
-            {`Current ${updateSnapshot.currentVersion || "unknown"} -> Latest ${updateSnapshot.latestVersion}`}
+            {t("about.updates.versions", {
+              currentVersion: updateSnapshot.currentVersion || t("common.unknown"),
+              latestVersion: updateSnapshot.latestVersion,
+            })}
           </div>
         )}
 
         {isDownloadingUpdate && updateSnapshot.downloadProgress !== null && (
-          <div className="text-xs text-muted-foreground">{`Progress ${updateSnapshot.downloadProgress}%`}</div>
+          <div className="text-xs text-muted-foreground">
+            {t("about.updates.progress", { progress: updateSnapshot.downloadProgress })}
+          </div>
         )}
 
         {canDownloadUpdate && (
@@ -114,7 +130,7 @@ export function AboutSection({
                 "cursor-not-allowed opacity-60",
             )}
           >
-            {isDownloadingUpdate ? "Downloading..." : "Download Update"}
+            {isDownloadingUpdate ? t("about.updates.downloading") : t("about.updates.download")}
           </button>
         )}
 
@@ -131,13 +147,15 @@ export function AboutSection({
               updateBusy && "cursor-not-allowed opacity-60",
             )}
           >
-            {updateBusy ? "Installing..." : "Restart to Install"}
+            {updateBusy ? t("about.updates.installing") : t("about.updates.restart")}
           </button>
         )}
 
         {settings.lastUpdateCheckAt && (
           <div className="text-[11px] text-muted-foreground">
-            {`Last checked at ${formatDateTime(settings.lastUpdateCheckAt)}`}
+            {t("about.updates.lastChecked", {
+              date: formatDateTime(settings.lastUpdateCheckAt),
+            })}
           </div>
         )}
 
@@ -145,9 +163,11 @@ export function AboutSection({
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Troubleshooting</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("about.troubleshooting.label")}
+        </div>
         <div className="text-xs text-muted-foreground">
-          The report may include recent file paths and app error details.
+          {t("about.troubleshooting.description")}
         </div>
         <button
           type="button"
@@ -162,7 +182,9 @@ export function AboutSection({
           )}
         >
           <Download size={14} />
-          <span>{diagnosticBusy ? "Saving..." : "Save Report"}</span>
+          <span>
+            {diagnosticBusy ? t("about.troubleshooting.saving") : t("about.troubleshooting.save")}
+          </span>
         </button>
         {diagnosticMessage && (
           <div className="text-xs text-muted-foreground">{diagnosticMessage}</div>
@@ -171,7 +193,7 @@ export function AboutSection({
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Project</div>
+        <div className="text-xs font-medium text-muted-foreground">{t("about.project")}</div>
         <button
           type="button"
           onClick={() => {

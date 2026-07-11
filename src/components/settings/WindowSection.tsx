@@ -1,4 +1,5 @@
 import { FolderOpen, FolderSearch, Move } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { Settings } from "@/stores/settings";
 import type { SettingsPatch } from "@/stores/settingsStore";
@@ -58,18 +59,22 @@ export function WindowSection({
   onContextMenuIntegration,
   onDefaultOpenIntegration,
 }: WindowSectionProps) {
+  const { t } = useTranslation("settings");
+  const toggleText = (enabled: boolean) => t(enabled ? "common.enabled" : "common.disabled");
+
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-md border border-border bg-background/60 p-3 text-xs text-muted-foreground">
-        Always-on-top state is independent per note window. Use middle click or shortcut in each
-        note to toggle.
+        {t("window.alwaysOnTopHelp")}
       </div>
 
       <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
         <div className="flex min-w-0 flex-col gap-1">
-          <div className="text-xs font-medium text-muted-foreground">Lost Notes</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            {t("window.lostNotes.label")}
+          </div>
           <div className="text-[11px] text-muted-foreground">
-            Move notes that are completely off screen back into view.
+            {t("window.lostNotes.description")}
           </div>
           {bringNotesBackResult && (
             <div className="text-[11px] text-muted-foreground">{bringNotesBackResult}</div>
@@ -91,12 +96,14 @@ export function WindowSection({
           )}
         >
           <Move className="h-3.5 w-3.5" />
-          {bringNotesBackBusy ? "Moving..." : "Bring Notes Back"}
+          {bringNotesBackBusy ? t("window.lostNotes.moving") : t("window.lostNotes.action")}
         </button>
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">New Note Directory</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("window.notesDirectory.label")}
+        </div>
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -105,7 +112,7 @@ export function WindowSection({
               updateSettings({ newNoteDirectory: event.target.value });
               setNotesDirectoryError(null);
             }}
-            placeholder={defaultNotesDirectory || "Loading default directory..."}
+            placeholder={defaultNotesDirectory || t("window.notesDirectory.loading")}
             disabled={notesDirectoryBusy}
             className={cn(
               "h-8 flex-1 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none transition-colors focus:border-primary",
@@ -123,8 +130,8 @@ export function WindowSection({
               "border-border bg-background text-muted-foreground hover:bg-accent",
               notesDirectoryBusy && "cursor-not-allowed opacity-60",
             )}
-            aria-label="Choose directory"
-            title="Choose directory"
+            aria-label={t("window.notesDirectory.choose")}
+            title={t("window.notesDirectory.choose")}
           >
             <FolderSearch className="h-4 w-4" />
           </button>
@@ -139,8 +146,8 @@ export function WindowSection({
               "border-border bg-background text-muted-foreground hover:bg-accent",
               (notesDirectoryBusy || !effectiveNotesDirectory) && "cursor-not-allowed opacity-60",
             )}
-            aria-label="Open directory"
-            title="Open directory"
+            aria-label={t("window.notesDirectory.open")}
+            title={t("window.notesDirectory.open")}
           >
             <FolderOpen className="h-4 w-4" />
           </button>
@@ -151,7 +158,9 @@ export function WindowSection({
       </div>
 
       <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Launch At Startup</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("window.launchAtStartup")}
+        </div>
         <button
           type="button"
           disabled={startupBusy}
@@ -166,7 +175,7 @@ export function WindowSection({
             startupBusy && "cursor-not-allowed opacity-60",
           )}
         >
-          {settings.launchAtStartup ? "Enabled" : "Disabled"}
+          {toggleText(settings.launchAtStartup)}
         </button>
       </div>
 
@@ -175,11 +184,9 @@ export function WindowSection({
       <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
         <div className="flex flex-col gap-1">
           <div className="text-xs font-medium text-muted-foreground">
-            Hide Note Windows From Taskbar
+            {t("window.taskbar.label")}
           </div>
-          <div className="text-[11px] text-muted-foreground">
-            Control whether note windows are hidden from the system taskbar.
-          </div>
+          <div className="text-[11px] text-muted-foreground">{t("window.taskbar.description")}</div>
         </div>
         <button
           type="button"
@@ -195,7 +202,7 @@ export function WindowSection({
             taskbarBusy && "cursor-not-allowed opacity-60",
           )}
         >
-          {settings.hideNoteWindowsFromTaskbar ? "Enabled" : "Disabled"}
+          {toggleText(settings.hideNoteWindowsFromTaskbar)}
         </button>
       </div>
 
@@ -204,10 +211,10 @@ export function WindowSection({
       <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
         <div className="flex flex-col gap-1">
           <div className="text-xs font-medium text-muted-foreground">
-            Context Menu Follows Note Opacity
+            {t("window.contextMenuOpacity.label")}
           </div>
           <div className="text-[11px] text-muted-foreground">
-            Use note opacity for the context menu background.
+            {t("window.contextMenuOpacity.description")}
           </div>
         </div>
         <button
@@ -224,15 +231,17 @@ export function WindowSection({
               : "border-border bg-background text-muted-foreground hover:bg-accent",
           )}
         >
-          {settings.contextMenuFollowNoteOpacity ? "Enabled" : "Disabled"}
+          {toggleText(settings.contextMenuFollowNoteOpacity)}
         </button>
       </div>
 
       <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
         <div className="flex flex-col gap-1">
-          <div className="text-xs font-medium text-muted-foreground">Explorer Context Menu</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            {t("window.explorerMenu.label")}
+          </div>
           <div className="text-[11px] text-muted-foreground">
-            Adds "Use Pinote to Open" for .md and .markdown files.
+            {t("window.explorerMenu.description")}
           </div>
         </div>
         <button
@@ -249,7 +258,7 @@ export function WindowSection({
             contextMenuBusy && "cursor-not-allowed opacity-60",
           )}
         >
-          {settings.openWithPinoteContextMenu ? "Enabled" : "Disabled"}
+          {toggleText(settings.openWithPinoteContextMenu)}
         </button>
       </div>
 
@@ -257,9 +266,11 @@ export function WindowSection({
 
       <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
         <div className="flex flex-col gap-1">
-          <div className="text-xs font-medium text-muted-foreground">Default Markdown Opener</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            {t("window.defaultOpener.label")}
+          </div>
           <div className="text-[11px] text-muted-foreground">
-            Set Pinote as default opener for .md and .markdown files.
+            {t("window.defaultOpener.description")}
           </div>
         </div>
         <button
@@ -276,7 +287,7 @@ export function WindowSection({
             defaultOpenBusy && "cursor-not-allowed opacity-60",
           )}
         >
-          {settings.defaultMarkdownOpenWithPinote ? "Enabled" : "Disabled"}
+          {toggleText(settings.defaultMarkdownOpenWithPinote)}
         </button>
       </div>
 

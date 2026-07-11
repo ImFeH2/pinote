@@ -2,7 +2,11 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for app windows",
-  "windows": ["settings", "note-*", "startup-update"],
+  "windows": [
+    "settings",
+    "note-*",
+    "startup-update"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",
@@ -28,7 +32,11 @@
     "opener:default",
     {
       "identifier": "opener:allow-open-path",
-      "allow": [{ "path": "**" }]
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
     },
     "fs:default",
     "fs:allow-appdata-read-recursive",
@@ -40,7 +48,11 @@
     "fs:write-all",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "**" }]
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
     },
     "log:default",
     "autostart:default",
@@ -48,6 +60,7 @@
     "updater:default",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
-    "global-shortcut:allow-is-registered"
+    "global-shortcut:allow-is-registered",
+    "os:default"
   ]
 }

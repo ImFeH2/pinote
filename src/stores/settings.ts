@@ -1,4 +1,5 @@
 import { BaseDirectory, exists, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import type { LanguagePreference } from "@/i18n/locale";
 import { logError } from "@/lib/logger";
 
 type Theme = "light" | "dark" | "system";
@@ -19,6 +20,7 @@ const LEGACY_DEFAULT_SHORTCUTS = {
 } as const;
 
 export interface Settings {
+  language: LanguagePreference;
   theme: Theme;
   newNoteDirectory: string;
   noteGlassEffectWindows: WindowsGlassEffect;
@@ -53,6 +55,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  language: "system",
   theme: "system",
   newNoteDirectory: "",
   noteGlassEffectWindows: "mica",
@@ -122,6 +125,11 @@ function sanitizeBoolean(value: unknown, fallback: boolean) {
   return fallback;
 }
 
+function sanitizeLanguage(value: unknown): LanguagePreference {
+  if (value === "system" || value === "en-US" || value === "zh-CN") return value;
+  return DEFAULT_SETTINGS.language;
+}
+
 function stripExtraFields(stored: StoredSettings): Partial<Omit<Settings, "shortcuts">> {
   const copy = { ...stored } as Record<string, unknown>;
   delete copy.shortcuts;
@@ -139,6 +147,7 @@ function mergeSettings(stored: StoredSettings): Settings {
   return {
     ...DEFAULT_SETTINGS,
     ...rest,
+    language: sanitizeLanguage(rest.language),
     newNoteDirectory: sanitizeNewNoteDirectory(rest.newNoteDirectory),
     noteGlassEffectWindows: sanitizeWindowsGlassEffect(rest.noteGlassEffectWindows),
     noteGlassEffectMacos: sanitizeBoolean(
