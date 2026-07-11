@@ -44,7 +44,6 @@ pub struct NativeText {
     pub restore_hidden: &'static str,
     pub open_settings: &'static str,
     pub quit: &'static str,
-    pub settings_window_title: &'static str,
     #[cfg(target_os = "windows")]
     pub open_with_pinote: &'static str,
     #[cfg(target_os = "windows")]
@@ -55,7 +54,6 @@ const EN_US_TEXT: NativeText = NativeText {
     restore_hidden: "Show note",
     open_settings: "Settings",
     quit: "Quit",
-    settings_window_title: "Pinote Settings",
     #[cfg(target_os = "windows")]
     open_with_pinote: "Open with Pinote",
     #[cfg(target_os = "windows")]
@@ -66,7 +64,6 @@ const ZH_CN_TEXT: NativeText = NativeText {
     restore_hidden: "显示便签",
     open_settings: "设置",
     quit: "退出",
-    settings_window_title: "Pinote 设置",
     #[cfg(target_os = "windows")]
     open_with_pinote: "使用 Pinote 打开",
     #[cfg(target_os = "windows")]

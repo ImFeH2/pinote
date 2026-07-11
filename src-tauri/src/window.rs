@@ -7,7 +7,7 @@ use crate::{
     NEW_NOTE_WINDOW_HEIGHT, NEW_NOTE_WINDOW_WIDTH, NOTE_WINDOW_HEIGHT, NOTE_WINDOW_MIN_HEIGHT,
     NOTE_WINDOW_MIN_WIDTH, NOTE_WINDOW_WIDTH, OpenNoteWindowOptions, build_note_window_id,
     build_note_window_url, capture_note_window_state, clamp_note_opacity, clamp_note_scroll_top,
-    load_hide_note_windows_from_taskbar, locale, shake_existing_window,
+    load_hide_note_windows_from_taskbar, shake_existing_window,
 };
 
 const NOTE_WINDOW_PREFIX: &str = "note-";
@@ -435,9 +435,8 @@ pub fn show_settings_window(
         }
 
         info!("show_settings_window_create_begin");
-        let title = locale::current_text(app).settings_window_title;
         let window = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App(url.into()))
-            .title(title)
+            .title("Pinote")
             .inner_size(920.0, 620.0)
             .center()
             .decorations(true)
@@ -464,13 +463,6 @@ pub fn show_settings_window(
         Err(err) => error!("show_settings_window_failed error={err}"),
     }
     result
-}
-
-pub fn sync_locale(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
-    if let Some(window) = app.get_webview_window("settings") {
-        window.set_title(locale::current_text(app).settings_window_title)?;
-    }
-    Ok(())
 }
 
 pub fn open_startup_update_window(app: &tauri::AppHandle) {

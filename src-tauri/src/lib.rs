@@ -1033,7 +1033,6 @@ async fn sync_native_locale(
     let resolved = locale::resolve_preference(preference);
     locale::set(&app, resolved);
     tray::sync_locale(&app).map_err(|error| error.to_string())?;
-    window::sync_locale(&app).map_err(|error| error.to_string())?;
     #[cfg(target_os = "windows")]
     sync_windows_shell_locale(&app)?;
     Ok(())
