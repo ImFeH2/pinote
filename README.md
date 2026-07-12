@@ -8,67 +8,68 @@
 [![License](https://img.shields.io/github/license/ImFeH2/pinote)](./LICENSE)
 [![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-24292f)](#installation)
 
-A lightweight floating markdown scratchpad app for your desktop. Pinote stays on top of your workflow, providing a quick-access area to jot down notes, TODOs, code snippets, and ideas — without breaking your focus.
+Pinote is a lightweight floating Markdown note app for desktop. Keep multiple notes close at hand for TODOs, code snippets, and temporary ideas without leaving your current workspace.
 
 ![Pinote Screenshot](./preview/pinote-screenshot.png)
 
 ## Installation
 
-Download the latest release from [GitHub Releases](https://github.com/ImFeH2/pinote/releases/latest).
+Download the latest version from [GitHub Releases](https://github.com/ImFeH2/pinote/releases/latest).
 
 | Platform | Recommended Package |
-| -------- | ------------------- |
-| Windows  | winget or `.msi` installer |
-| macOS    | `.dmg` installer for Apple Silicon or Intel |
-| Linux    | `.AppImage`, `.deb`, or `.rpm` |
+| --- | --- |
+| Windows | WinGet, `.msi`, or `.exe` |
+| macOS | `.dmg` for Apple Silicon or Intel |
+| Linux | `.AppImage`, `.deb`, or `.rpm` |
 
-For Windows:
+Windows users can install Pinote with WinGet:
 
 ```powershell
 winget install ImFeH2.Pinote
 ```
 
-Pinote checks for app updates when it starts.
+Pinote checks for updates when it starts.
 
 ## Features
 
 - **Markdown Notes** — Edit Markdown in lightweight WYSIWYG windows, with multiple notes open at once.
-- **File Sync** — Detects external file changes and reloads them when it is safe.
-- **Window States** — Toggle always-on-top, read-only, opacity, and visibility per note.
-- **Window Shortcuts** — Restore hidden notes, show all hidden notes, or toggle the current visible set.
-- **Custom Controls** — Change keyboard shortcuts, wheel modifiers, and the drag button in Settings.
-- **Session Restore** — Restores position, size, visibility, pin state, opacity, scroll, read-only state, and the last visible set.
+- **File Sync** — Detect external file changes and reload them when it is safe.
+- **Window States** — Set always-on-top, read-only, opacity, position, size, and visibility for each note.
+- **Window Shortcuts** — Create notes, restore hidden notes, show all hidden notes, or toggle the current visible set.
+- **Custom Controls** — Change keyboard shortcuts, wheel modifiers, and the mouse button used to move windows.
+- **Session Restore** — Restore window state, scroll position, and the last visible set after restarting Pinote.
 - **History Search** — Find and reopen previous notes by path or content.
-- **Appearance** — Adjust theme, typography, spacing, opacity, taskbar visibility, and glass effects.
-- **Desktop Tools** — Use tray controls, launch at startup, and open `.md` / `.markdown` files from the command line.
-- **Updates** — Pinote checks for app updates when it starts.
+- **Appearance** — Choose the interface language and theme, then adjust typography, spacing, and glass effects.
+- **Desktop Integration** — Use tray controls, launch at startup, and open files from the command line. Windows also supports File Explorer context menus and Markdown file association.
+- **Updates** — Check for updates automatically at startup or manually from Settings.
 
 ## Keyboard Shortcuts
 
-| Default Shortcut | Action                 |
-| ---------------- | ---------------------- |
-| `Alt+S`          | Restore hidden window  |
-| `Alt+Shift+H`    | Show all hidden windows |
-| `Alt+D`          | Toggle visible windows |
-| `Alt+C`          | New note               |
-| `Alt+A`          | Toggle always on top   |
-| `Alt+R`          | Toggle read-only mode  |
-| `Ctrl+Shift+D`   | Toggle dark mode       |
-| `Esc`            | Hide window            |
-| `Ctrl+Shift+W`   | Close window           |
+| Default Shortcut | Action |
+| --- | --- |
+| `Alt+S` | Restore hidden notes |
+| `Alt+Shift+H` | Show all hidden notes |
+| `Alt+D` | Show or hide notes |
+| `Alt+C` | New note |
+| `Alt+A` | Toggle always on top |
+| `Alt+R` | Toggle read-only mode |
+| `Ctrl+Shift+D` | Toggle theme |
+| `Esc` | Hide note |
+| `Ctrl+Shift+W` | Close note |
 
-Shortcuts can be changed in the Settings window.
+Shortcuts can be changed in Settings. New note, restore hidden notes, show all hidden notes, and show or hide notes are global shortcuts that work from other apps.
 
 ## Mouse Interactions
 
-| Default Interaction | Action                                |
-| ------------------- | ------------------------------------- |
-| `Alt+Wheel`         | Resize window around cursor           |
-| `Middle Click`      | Toggle always on top                  |
-| `Middle Drag`       | Move window (default, configurable)   |
-| `Right Click`       | Open context menu with common actions |
+| Default Interaction | Action |
+| --- | --- |
+| `Alt + Wheel` | Resize the window around the pointer |
+| `Ctrl + Wheel` | Adjust note opacity |
+| Middle click | Toggle always on top |
+| Middle drag | Move the note window |
+| Right click | Open the note menu |
 
-`Alt+Wheel` modifier can be changed to `Ctrl`, `Shift`, or `Meta` in Settings. Drag button can be changed to `Middle` or `Right`.
+Wheel modifiers and the mouse button used to move windows can be changed in Settings. When right drag is selected, a right click still opens the note menu.
 
 ## CLI
 
@@ -77,12 +78,12 @@ pinote /path/to/note.md
 pinote ./daily.markdown
 ```
 
-Each path opens a dedicated note window. Running the command again with the same path focuses the existing window.
+Each `.md` or `.markdown` path opens in its own note window. If the file is already open, Pinote focuses the existing window.
 
 ## Development
 
 ```bash
-pnpm install          # Install dependencies
-pnpm tauri dev        # Run in development mode
-pnpm tauri build      # Build for production
+pnpm install
+pnpm tauri dev
+pnpm tauri build
 ```
