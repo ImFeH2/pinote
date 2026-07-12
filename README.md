@@ -68,14 +68,6 @@ Shortcuts can be changed in the Settings window.
 
 `Alt+Wheel` modifier can be changed to `Ctrl`, `Shift`, or `Meta` in Settings. Drag button can be changed to `Middle` or `Right`.
 
-## Development
-
-```bash
-pnpm install          # Install dependencies
-pnpm tauri dev        # Run in development mode
-pnpm tauri build      # Build for production
-```
-
 ## CLI
 
 ```bash
@@ -84,3 +76,11 @@ pinote ./daily.markdown
 ```
 
 Each path opens a dedicated note window. Running the command again with the same path focuses the existing window.
+
+## Development
+
+```bash
+pnpm install          # Install dependencies
+pnpm tauri dev        # Run in development mode
+pnpm tauri build      # Build for production
+```
