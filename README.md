@@ -1,5 +1,7 @@
 # Pinote
 
+[English](./README.md) | [简体中文](./README.zh-CN.md)
+
 [![Tauri](https://img.shields.io/badge/Tauri-2-24c8db?logo=tauri&logoColor=white)](https://github.com/tauri-apps/tauri)
 [![Release](https://img.shields.io/github/v/release/ImFeH2/pinote?display_name=tag&sort=semver)](https://github.com/ImFeH2/pinote/releases/latest)
 [![CI](https://github.com/ImFeH2/pinote/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ImFeH2/pinote/actions/workflows/ci.yml)
