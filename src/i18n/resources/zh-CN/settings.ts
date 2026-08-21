@@ -32,7 +32,6 @@ export default {
     glass: {
       label: "玻璃效果",
       enable: "使用玻璃效果",
-      allNotes: "应用于所有便签。",
       options: {
         mica: "云母",
         acrylic: "亚克力",
@@ -103,14 +102,13 @@ export default {
       label: "通透度",
       description: "{{modifier}} + 滚轮可调整通透度，文字始终清晰。",
     },
-    dragButton: { label: "移动" },
+    dragButton: { label: "移动", description: "按住{{button}}拖动可移动窗口。" },
     currentInteractions: {
       label: "当前操作方式",
       resize: "{{modifier}} + 滚轮：围绕指针调整窗口大小",
       opacity: "{{modifier}} + 滚轮：调整通透度",
       alwaysOnTop: "单击中键：保持便签在最前方或取消",
       move: "按住{{button}}拖动：移动窗口",
-      rightClickWithDrag: "单击右键：打开菜单；按住右键拖动：移动窗口",
       rightClick: "单击右键：打开菜单",
     },
   },

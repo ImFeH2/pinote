@@ -161,6 +161,11 @@ export function ShortcutsSection({
             </button>
           ))}
         </div>
+        <div className="text-xs text-muted-foreground">
+          {t("shortcuts.dragButton.description", {
+            button: t(activeDragMouseButton.labelKey),
+          })}
+        </div>
       </div>
 
       <div className="flex flex-col gap-1 rounded-md border border-border bg-background/60 p-3">
@@ -184,9 +189,7 @@ export function ShortcutsSection({
           {t("shortcuts.currentInteractions.move", { button: t(activeDragMouseButton.labelKey) })}
         </div>
         <div className="text-xs text-muted-foreground">
-          {activeDragMouseButton.value === "right"
-            ? t("shortcuts.currentInteractions.rightClickWithDrag")
-            : t("shortcuts.currentInteractions.rightClick")}
+          {t("shortcuts.currentInteractions.rightClick")}
         </div>
       </div>
     </div>

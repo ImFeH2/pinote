@@ -59,7 +59,6 @@ export default {
     glass: {
       label: "Glass effect",
       enable: "Use glass effect",
-      allNotes: "Applies to all notes.",
       options: {
         mica: "Mica",
         acrylic: "Acrylic",
@@ -151,6 +150,7 @@ export default {
     },
     dragButton: {
       label: "Move",
+      description: "{{button}} drag moves the window.",
     },
     currentInteractions: {
       label: "Current interactions",
@@ -158,7 +158,6 @@ export default {
       opacity: "{{modifier}} + Wheel: Adjust see-through",
       alwaysOnTop: "Middle click: Keep note on top or release it",
       move: "{{button}} drag: Move window",
-      rightClickWithDrag: "Right click: Open menu on click or move window on drag",
       rightClick: "Right click: Open menu",
     },
   },
