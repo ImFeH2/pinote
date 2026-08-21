@@ -113,7 +113,6 @@ export function AppearanceSection({
                   </button>
                 ))}
               </div>
-              <div className="text-xs text-muted-foreground">{t("appearance.glass.allNotes")}</div>
             </div>
           ) : (
             <div className="flex items-center justify-between">
@@ -157,7 +156,7 @@ export function AppearanceSection({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2">
             <div className="text-xs text-muted-foreground">
               {t("appearance.typography.fontSize")}
             </div>
@@ -171,7 +170,7 @@ export function AppearanceSection({
               onValueChange={(editorFontSize) => updateSettings({ editorFontSize })}
             />
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2">
             <div className="text-xs text-muted-foreground">
               {t("appearance.typography.lineHeight")}
             </div>
@@ -194,7 +193,7 @@ export function AppearanceSection({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2">
             <div className="text-xs text-muted-foreground">
               {t("appearance.spacing.horizontal")}
             </div>
@@ -208,7 +207,7 @@ export function AppearanceSection({
               onValueChange={(editorPaddingX) => updateSettings({ editorPaddingX })}
             />
           </div>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2">
             <div className="text-xs text-muted-foreground">{t("appearance.spacing.vertical")}</div>
             <SettingsNumberInput
               value={settings.editorPaddingY}
