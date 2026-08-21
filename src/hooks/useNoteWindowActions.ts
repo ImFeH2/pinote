@@ -11,7 +11,7 @@ import {
   listenNoteContextMenuAction,
   type NoteContextMenuAction,
 } from "@/lib/contextMenuApi";
-import { logError } from "@/lib/logger";
+import { logError, logInfo } from "@/lib/logger";
 import { shortcutMatchesEvent } from "@/lib/shortcuts";
 import { openSettingsWindow } from "@/lib/windowApi";
 import { openAndTrackNoteWindow } from "@/lib/windowManager";
@@ -116,10 +116,12 @@ export function useNoteWindowActions(options: UseNoteWindowActionsOptions) {
     const nextReadOnly = !noteReadOnlyRef.current;
     noteReadOnlyRef.current = nextReadOnly;
     setNoteReadOnly(nextReadOnly);
+    logInfo("note-window", "toggle_read_only", { windowId: windowLabel, next: nextReadOnly });
     void persistWindowState(undefined, false, undefined, undefined, nextReadOnly);
-  }, [noteReadOnlyRef, persistWindowState, setNoteReadOnly]);
+  }, [noteReadOnlyRef, persistWindowState, setNoteReadOnly, windowLabel]);
 
   const closeWindow = useCallback(() => {
+    logInfo("note-window", "close_window", { windowId: windowLabel });
     appWindow.close().catch((error) => {
       logError("note-window", "close_window_failed", error, { windowId: windowLabel });
     });
@@ -129,6 +131,7 @@ export function useNoteWindowActions(options: UseNoteWindowActionsOptions) {
     (event: ReactMouseEvent<HTMLDivElement>) => {
       if (event.button !== 0) return;
       event.preventDefault();
+      logInfo("note-window", "window_drag_start", { windowId: windowLabel });
       appWindow.startDragging().catch((error) => {
         logError("note-window", "start_dragging_failed", error, { windowId: windowLabel });
       });

@@ -1,3 +1,4 @@
+import { logInfo } from "@/lib/logger";
 import { emitSettingsUpdated, listenSettingsUpdated } from "@/lib/settingsEvents";
 import { DEFAULT_SETTINGS, loadSettings, type Settings, saveSettings } from "@/stores/settings";
 
@@ -77,6 +78,7 @@ export async function updateSettingsStore(patch: SettingsPatch) {
   const next = mergeSettings(current, patch);
   if (JSON.stringify(current) === JSON.stringify(next)) return;
   setSettingsSnapshot(next);
+  logInfo("settings", "settings_updated", { patch });
   updatePromise = updatePromise
     .catch(() => {})
     .then(async () => {

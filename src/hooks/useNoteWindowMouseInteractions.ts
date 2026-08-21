@@ -8,7 +8,8 @@ import {
   useRef,
 } from "react";
 import { closeNoteContextMenu, openNoteContextMenu } from "@/lib/contextMenuApi";
-import { logDebug, logError, logInfo } from "@/lib/logger";
+import { logError, logInfo } from "@/lib/logger";
+
 import type { DragMouseButton, WheelResizeModifier } from "@/stores/settings";
 
 const WINDOW_MIN_WIDTH = 1;
@@ -132,7 +133,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
     appWindow
       .setPosition(new PhysicalPosition(target.x, target.y))
       .then(() => {
-        logDebug("note-window", "drag_position_applied", {
+        logInfo("note-window", "drag_position_applied", {
           windowId: windowLabel,
           target: [target.x, target.y],
         });
@@ -380,6 +381,11 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
         const nextY = Math.round(position.y + (size.height - height) * anchorRatioY);
         await appWindow.setSize(new PhysicalSize(width, height));
         await appWindow.setPosition(new PhysicalPosition(nextX, nextY));
+        logInfo("note-window", "window_resized_by_wheel", {
+          windowId: windowLabel,
+          size: [width, height],
+          position: [nextX, nextY],
+        });
       } catch (error) {
         logError("note-window", "resize_window_by_wheel_failed", error, { windowId: windowLabel });
       } finally {
@@ -403,9 +409,13 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
       if (nextOpacity === noteOpacityRef.current) return;
       noteOpacityRef.current = nextOpacity;
       setNoteOpacityState(nextOpacity);
+      logInfo("note-window", "opacity_adjusted", {
+        windowId: windowLabel,
+        next: nextOpacity,
+      });
       void persistWindowState(undefined, false, nextOpacity);
     },
-    [noteOpacityRef, persistWindowState, setNoteOpacityState],
+    [noteOpacityRef, persistWindowState, setNoteOpacityState, windowLabel],
   );
 
   useEffect(() => {

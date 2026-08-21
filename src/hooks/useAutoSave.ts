@@ -1,7 +1,7 @@
 import { dirname } from "@tauri-apps/api/path";
 import { exists, mkdir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { useCallback, useEffect, useRef } from "react";
-import { logError } from "@/lib/logger";
+import { logError, logInfo } from "@/lib/logger";
 
 const DEBOUNCE_MS = 500;
 
@@ -38,6 +38,7 @@ export function useAutoSave(notePath: string, options: UseAutoSaveOptions = {}) 
         try {
           await ensureParentDir(notePath);
           await writeTextFile(notePath, content);
+          logInfo("auto-save", "saved", { notePath, length: content.length });
           onPersistedRef.current?.(content, "save");
         } catch (e) {
           logError("auto-save", "save_failed", e, { notePath });
@@ -57,6 +58,7 @@ export function useAutoSave(notePath: string, options: UseAutoSaveOptions = {}) 
         return "";
       }
       const content = await readTextFile(notePath);
+      logInfo("auto-save", "loaded", { notePath, length: content.length });
       onPersistedRef.current?.(content, "load");
       return content;
     } catch (e) {

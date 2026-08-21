@@ -1,7 +1,7 @@
 import { setTheme } from "@tauri-apps/api/app";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useSettings } from "@/hooks/useSettings";
-import { logError } from "@/lib/logger";
+import { logError, logInfo } from "@/lib/logger";
 
 type ResolvedTheme = "light" | "dark";
 
@@ -30,6 +30,7 @@ export function useTheme() {
   const toggleTheme = useCallback(() => {
     const next = resolvedTheme === "dark" ? "light" : "dark";
     updateSettings({ theme: next });
+    logInfo("theme", "toggle_theme", { next });
   }, [resolvedTheme, updateSettings]);
 
   return { theme: resolvedTheme, toggleTheme };
