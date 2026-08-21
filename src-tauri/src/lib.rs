@@ -312,6 +312,39 @@ fn level_allowed_for_filter(level: Level, minimum: LevelFilter) -> bool {
     }
 }
 
+fn collect_system_environment(app: &tauri::AppHandle) -> serde_json::Value {
+    let monitors = app
+        .available_monitors()
+        .map(|monitors| {
+            monitors
+                .iter()
+                .map(|monitor| {
+                    serde_json::json!({
+                        "name": monitor.name(),
+                        "position": [monitor.position().x, monitor.position().y],
+                        "size": [monitor.size().width, monitor.size().height],
+                        "scaleFactor": monitor.scale_factor(),
+                    })
+                })
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+    let primary_monitor = app.primary_monitor().ok().flatten().map(|monitor| {
+        serde_json::json!({
+            "name": monitor.name(),
+            "position": [monitor.position().x, monitor.position().y],
+            "size": [monitor.size().width, monitor.size().height],
+            "scaleFactor": monitor.scale_factor(),
+        })
+    });
+    serde_json::json!({
+        "osVersion": tauri_plugin_os::version().to_string(),
+        "webview2Version": tauri::webview_version().unwrap_or_else(|_| String::from("unknown")),
+        "monitors": monitors,
+        "primaryMonitor": primary_monitor,
+    })
+}
+
 fn current_unix_timestamp_seconds() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -394,12 +427,17 @@ fn export_diagnostic_report_to_path(
         .map_err(|error| format!("Could not create diagnostic report: {error}"))?;
     let mut zip = ZipWriter::new(destination);
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+    let system_environment = collect_system_environment(app);
     let metadata = serde_json::json!({
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "appName": "Pinote",
         "appVersion": app.package_info().version.to_string(),
         "platform": std::env::consts::OS,
         "arch": std::env::consts::ARCH,
+        "osVersion": system_environment["osVersion"],
+        "webview2Version": system_environment["webview2Version"],
+        "monitors": system_environment["monitors"],
+        "primaryMonitor": system_environment["primaryMonitor"],
         "generatedAtUnixSeconds": current_unix_timestamp_seconds(),
         "logFileCount": log_files.len(),
     });
@@ -1105,6 +1143,8 @@ pub fn run() {
                 ])
                 .build();
             handle.plugin(log_plugin)?;
+            let system_environment = collect_system_environment(&handle);
+            info!("system_environment {}", system_environment);
             let stored_settings = load_stored_settings(&handle);
             let language = locale::parse_stored_preference(stored_settings.language.as_deref());
             let native_locale = locale::resolve_preference(language);
