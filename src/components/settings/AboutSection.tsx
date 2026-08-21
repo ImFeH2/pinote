@@ -166,9 +166,6 @@ export function AboutSection({
         <div className="text-xs font-medium text-muted-foreground">
           {t("about.troubleshooting.label")}
         </div>
-        <div className="text-xs text-muted-foreground">
-          {t("about.troubleshooting.description")}
-        </div>
         <button
           type="button"
           disabled={diagnosticBusy}
@@ -186,6 +183,9 @@ export function AboutSection({
             {diagnosticBusy ? t("about.troubleshooting.saving") : t("about.troubleshooting.save")}
           </span>
         </button>
+        <div className="text-xs text-muted-foreground">
+          {t("about.troubleshooting.description")}
+        </div>
         {diagnosticMessage && (
           <div className="text-xs text-muted-foreground">{diagnosticMessage}</div>
         )}

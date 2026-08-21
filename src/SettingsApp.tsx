@@ -702,6 +702,9 @@ export function SettingsApp() {
         setHistoryQuery={setHistoryQuery}
         onOpenHistoryItem={handleOpenHistoryItem}
         formatDateTime={(value) => formatDateTime(value, i18n.resolvedLanguage ?? "en-US")}
+        editorFontFamily={settings.editorFontFamily}
+        editorFontSize={settings.editorFontSize}
+        editorLineHeight={settings.editorLineHeight}
       />
     ) : activeSection === "shortcuts" ? (
       <ShortcutsSection
