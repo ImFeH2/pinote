@@ -21,6 +21,12 @@ const WINDOW_RESIZE_HEIGHT_STEP = 30;
 const NOTE_OPACITY_MIN = 0;
 const NOTE_OPACITY_MAX = 1;
 const NOTE_OPACITY_STEP = 0.05;
+const DRAG_SAMPLE_INTERVAL_MS = 100;
+
+interface DragPosition {
+  x: number;
+  y: number;
+}
 
 interface MiddleDragState {
   button: number;
@@ -34,6 +40,16 @@ interface MiddleDragState {
   scaleFactor: number;
   moved: boolean;
   ready: boolean;
+  startedAt: number;
+  lastSampleAt: number;
+  inputEvents: number;
+  positionRequests: number;
+  positionApplied: number;
+  coalescedUpdates: number;
+  positionErrors: number;
+  totalSetPositionMs: number;
+  maxSetPositionMs: number;
+  lastRequestedPosition: DragPosition | null;
 }
 
 interface ModifierState {
@@ -112,9 +128,9 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
   } = options;
   const wheelResizeLock = useRef(false);
   const middleDragState = useRef<MiddleDragState | null>(null);
-  const middleDragPendingPosition = useRef<{ x: number; y: number } | null>(null);
-  const middleDragLastPosition = useRef<{ x: number; y: number } | null>(null);
-  const middleDragFrame = useRef<number | null>(null);
+  const middleDragPendingPosition = useRef<DragPosition | null>(null);
+  const middleDragLastPosition = useRef<DragPosition | null>(null);
+  const middleDragPositionInFlight = useRef(false);
   const suppressNextContextMenu = useRef(false);
   const suppressEditorScrollUntilRef = useRef(0);
   const suppressEditorScrollTopRef = useRef(0);
@@ -123,32 +139,56 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
     void closeNoteContextMenu(windowLabel);
   }, [windowLabel]);
 
-  const applyMiddleDragPosition = useCallback(() => {
-    middleDragFrame.current = null;
-    const target = middleDragPendingPosition.current;
-    if (!target) return;
-    const last = middleDragLastPosition.current;
-    if (last && last.x === target.x && last.y === target.y) return;
-    middleDragLastPosition.current = target;
-    appWindow
-      .setPosition(new PhysicalPosition(target.x, target.y))
-      .then(() => {
-        logInfo("note-window", "drag_position_applied", {
-          windowId: windowLabel,
-          target: [target.x, target.y],
-        });
-      })
-      .catch((error) => {
-        logError("note-window", "move_window_by_drag_failed", error, { windowId: windowLabel });
-      });
+  const applyMiddleDragPosition = useCallback(async () => {
+    if (middleDragPositionInFlight.current) return;
+    middleDragPositionInFlight.current = true;
+    try {
+      while (middleDragPendingPosition.current) {
+        const target = middleDragPendingPosition.current;
+        middleDragPendingPosition.current = null;
+        const last = middleDragLastPosition.current;
+        if (last && last.x === target.x && last.y === target.y) continue;
+        const state = middleDragState.current;
+        const requestStartedAt = performance.now();
+        if (state) state.positionRequests += 1;
+        try {
+          await appWindow.setPosition(new PhysicalPosition(target.x, target.y));
+          middleDragLastPosition.current = target;
+          if (state) state.positionApplied += 1;
+        } catch (error) {
+          if (state) state.positionErrors += 1;
+          logError("note-window", "move_window_by_drag_failed", error, {
+            windowId: windowLabel,
+            target: [target.x, target.y],
+          });
+        } finally {
+          if (state) {
+            const duration = performance.now() - requestStartedAt;
+            state.totalSetPositionMs += duration;
+            state.maxSetPositionMs = Math.max(state.maxSetPositionMs, duration);
+          }
+        }
+      }
+    } finally {
+      middleDragPositionInFlight.current = false;
+    }
   }, [appWindow, windowLabel]);
 
   const scheduleMiddleDragPosition = useCallback(() => {
-    if (middleDragFrame.current !== null) return;
-    middleDragFrame.current = window.requestAnimationFrame(() => {
-      applyMiddleDragPosition();
-    });
+    void applyMiddleDragPosition();
   }, [applyMiddleDragPosition]);
+
+  const queueMiddleDragPosition = useCallback(
+    (state: MiddleDragState, target: DragPosition) => {
+      const pending = middleDragPendingPosition.current;
+      if (pending && pending.x === target.x && pending.y === target.y) return;
+      if (pending) state.coalescedUpdates += 1;
+      state.lastRequestedPosition = target;
+      middleDragPendingPosition.current = target;
+      scheduleMiddleDragPosition();
+    },
+    [scheduleMiddleDragPosition],
+  );
 
   useEffect(() => {
     const handleScrollCapture = (event: Event) => {
@@ -181,6 +221,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
       if (!isDragButton && !isMiddleToggleButton) return;
       consumeMouseEvent(event);
       closeContextMenu();
+      const startedAt = performance.now();
       const nextState: MiddleDragState = {
         button: event.button,
         allowMove: isDragButton,
@@ -193,6 +234,16 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
         scaleFactor: 1,
         moved: false,
         ready: false,
+        startedAt,
+        lastSampleAt: startedAt,
+        inputEvents: 0,
+        positionRequests: 0,
+        positionApplied: 0,
+        coalescedUpdates: 0,
+        positionErrors: 0,
+        totalSetPositionMs: 0,
+        maxSetPositionMs: 0,
+        lastRequestedPosition: null,
       };
       middleDragState.current = nextState;
       middleDragPendingPosition.current = null;
@@ -224,11 +275,10 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
             delta: [deltaX, deltaY],
           });
           if (deltaX === 0 && deltaY === 0) return;
-          middleDragPendingPosition.current = {
+          queueMiddleDragPosition(state, {
             x: state.windowStartX + Math.round(deltaX * state.scaleFactor),
             y: state.windowStartY + Math.round(deltaY * state.scaleFactor),
-          };
-          scheduleMiddleDragPosition();
+          });
         })
         .catch((error) => {
           logError("note-window", "prepare_drag_state_failed", error, { windowId: windowLabel });
@@ -241,7 +291,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
       window.removeEventListener("auxclick", handleMiddleAuxClick, true);
       window.removeEventListener("mousedown", handlePointerMouseDown, true);
     };
-  }, [appWindow, closeContextMenu, dragMouseButton, scheduleMiddleDragPosition, windowLabel]);
+  }, [appWindow, closeContextMenu, dragMouseButton, queueMiddleDragPosition, windowLabel]);
 
   useEffect(() => {
     const suppressContextMenuOnce = () => {
@@ -255,6 +305,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
       const state = middleDragState.current;
       if (!state) return;
       consumeMouseEvent(event);
+      state.inputEvents += 1;
       state.pointerCurrentX = event.screenX;
       state.pointerCurrentY = event.screenY;
       const deltaX = state.pointerCurrentX - state.pointerStartX;
@@ -271,23 +322,73 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
       }
       if (!state.ready) return;
       if (!state.allowMove) return;
-      middleDragPendingPosition.current = {
+      queueMiddleDragPosition(state, {
         x: state.windowStartX + Math.round(deltaX * state.scaleFactor),
         y: state.windowStartY + Math.round(deltaY * state.scaleFactor),
-      };
-      scheduleMiddleDragPosition();
+      });
+      const now = performance.now();
+      if (now - state.lastSampleAt >= DRAG_SAMPLE_INTERVAL_MS) {
+        state.lastSampleAt = now;
+        const lastApplied = middleDragLastPosition.current;
+        logInfo("note-window", "mouse_drag_sample", {
+          windowId: windowLabel,
+          elapsedMs: Math.round(now - state.startedAt),
+          pointer: [state.pointerCurrentX, state.pointerCurrentY],
+          requested: state.lastRequestedPosition
+            ? [state.lastRequestedPosition.x, state.lastRequestedPosition.y]
+            : null,
+          applied: lastApplied ? [lastApplied.x, lastApplied.y] : null,
+          positionInFlight: middleDragPositionInFlight.current,
+          inputEvents: state.inputEvents,
+          positionRequests: state.positionRequests,
+          positionApplied: state.positionApplied,
+          coalescedUpdates: state.coalescedUpdates,
+        });
+      }
     };
 
     const finishMiddleInteraction = (shouldToggleAlwaysOnTop: boolean) => {
       const state = middleDragState.current;
+      const pendingPosition = middleDragPendingPosition.current;
+      const lastAppliedPosition = middleDragLastPosition.current;
+      const positionInFlight = middleDragPositionInFlight.current;
       middleDragState.current = null;
       middleDragPendingPosition.current = null;
       middleDragLastPosition.current = null;
-      if (middleDragFrame.current !== null) {
-        window.cancelAnimationFrame(middleDragFrame.current);
-        middleDragFrame.current = null;
-      }
       if (!state) return;
+      const completedRequests = state.positionApplied + state.positionErrors;
+      logInfo("note-window", "mouse_drag_finished", {
+        windowId: windowLabel,
+        button: state.button,
+        allowMove: state.allowMove,
+        moved: state.moved,
+        ready: state.ready,
+        durationMs: Math.round(performance.now() - state.startedAt),
+        pointerStart: [state.pointerStartX, state.pointerStartY],
+        pointerEnd: [state.pointerCurrentX, state.pointerCurrentY],
+        delta: [
+          state.pointerCurrentX - state.pointerStartX,
+          state.pointerCurrentY - state.pointerStartY,
+        ],
+        windowStart: [state.windowStartX, state.windowStartY],
+        scaleFactor: state.scaleFactor,
+        requested: state.lastRequestedPosition
+          ? [state.lastRequestedPosition.x, state.lastRequestedPosition.y]
+          : null,
+        applied: lastAppliedPosition ? [lastAppliedPosition.x, lastAppliedPosition.y] : null,
+        pending: pendingPosition ? [pendingPosition.x, pendingPosition.y] : null,
+        positionInFlight,
+        inputEvents: state.inputEvents,
+        positionRequests: state.positionRequests,
+        positionApplied: state.positionApplied,
+        coalescedUpdates: state.coalescedUpdates,
+        positionErrors: state.positionErrors,
+        averageSetPositionMs:
+          completedRequests > 0
+            ? Math.round((state.totalSetPositionMs / completedRequests) * 10) / 10
+            : null,
+        maxSetPositionMs: Math.round(state.maxSetPositionMs * 10) / 10,
+      });
       if (state.allowMove && state.button === 2) {
         suppressContextMenuOnce();
         if (!state.moved) {
@@ -346,7 +447,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
     notePath,
     noteOpacityRef,
     noteReadOnlyRef,
-    scheduleMiddleDragPosition,
+    queueMiddleDragPosition,
     toggleAlwaysOnTop,
     windowLabel,
   ]);
