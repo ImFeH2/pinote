@@ -1,4 +1,11 @@
-import { createElement, Fragment, type ReactNode, useEffect, useSyncExternalStore } from "react";
+import {
+  createElement,
+  Fragment,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
 import { DEFAULT_SETTINGS } from "@/stores/settings";
 import {
   ensureSettingsStoreReady,
@@ -29,9 +36,9 @@ export function useSettings() {
 
   return {
     settings: settings ?? DEFAULT_SETTINGS,
-    updateSettings: (patch: SettingsPatch) => {
+    updateSettings: useCallback((patch: SettingsPatch) => {
       void updateSettingsStore(patch);
-    },
+    }, []),
     ready: settings !== null,
   };
 }

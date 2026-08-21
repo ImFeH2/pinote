@@ -469,6 +469,7 @@ export function SettingsApp() {
     isEnabled()
       .then((enabled) => {
         if (!active) return;
+        if (settings.launchAtStartup === enabled) return;
         updateSettings({ launchAtStartup: enabled });
       })
       .catch((error) => {
@@ -478,7 +479,7 @@ export function SettingsApp() {
     return () => {
       active = false;
     };
-  }, [t, updateSettings]);
+  }, [settings.launchAtStartup, t, updateSettings]);
 
   useEffect(() => {
     let active = true;

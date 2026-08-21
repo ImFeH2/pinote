@@ -75,6 +75,7 @@ export async function updateSettingsStore(patch: SettingsPatch) {
   const current = settingsSnapshot;
   if (!current) return;
   const next = mergeSettings(current, patch);
+  if (JSON.stringify(current) === JSON.stringify(next)) return;
   setSettingsSnapshot(next);
   updatePromise = updatePromise
     .catch(() => {})
