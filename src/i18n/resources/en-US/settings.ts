@@ -64,6 +64,11 @@ export default {
         mica: "Mica",
         acrylic: "Acrylic",
         blur: "Blur",
+        none: "Transparent",
+        micaDescription: "Opaque wallpaper tint",
+        acrylicDescription: "Blurred material",
+        blurDescription: "Classic blur",
+        noneDescription: "True transparency, see windows behind",
       },
     },
     spacing: {
@@ -96,8 +101,8 @@ export default {
       description: "Notes won't appear on the taskbar.",
     },
     contextMenuOpacity: {
-      label: "Match note opacity in menus",
-      description: "Match each note's opacity.",
+      label: "Match note see-through in menus",
+      description: "Match each note's see-through level.",
     },
     explorerMenu: {
       label: 'Add "Open with Pinote"',
@@ -145,8 +150,8 @@ export default {
       description: "{{modifier}} + Wheel resizes the window around the pointer.",
     },
     wheelOpacity: {
-      label: "Opacity",
-      description: "{{modifier}} + Wheel adjusts window opacity.",
+      label: "See-through",
+      description: "{{modifier}} + Wheel adjusts see-through level. Text stays readable.",
     },
     dragButton: {
       label: "Move",
@@ -155,7 +160,7 @@ export default {
     currentInteractions: {
       label: "Current interactions",
       resize: "{{modifier}} + Wheel: Resize around the pointer",
-      opacity: "{{modifier}} + Wheel: Adjust opacity",
+      opacity: "{{modifier}} + Wheel: Adjust see-through",
       alwaysOnTop: "Middle click: Keep note on top or release it",
       move: "{{button}} drag: Move window",
       rightClickWithDrag: "Right click: Open menu on click or move window on drag",

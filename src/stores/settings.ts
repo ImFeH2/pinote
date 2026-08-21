@@ -58,7 +58,7 @@ export const DEFAULT_SETTINGS: Settings = {
   language: "system",
   theme: "system",
   newNoteDirectory: "",
-  noteGlassEffectWindows: "mica",
+  noteGlassEffectWindows: "none",
   noteGlassEffectMacos: true,
   editorFontFamily: "system",
   editorFontSize: 15,

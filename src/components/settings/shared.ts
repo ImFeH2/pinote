@@ -53,11 +53,28 @@ export const dragMouseButtonOptions: Array<{ value: DragMouseButton; labelKey: s
 export const windowsGlassEffectOptions: Array<{
   value: WindowsGlassEffect;
   labelKey: string;
+  descriptionKey: string;
 }> = [
-  { value: "mica", labelKey: "appearance.glass.options.mica" },
-  { value: "acrylic", labelKey: "appearance.glass.options.acrylic" },
-  { value: "blur", labelKey: "appearance.glass.options.blur" },
-  { value: "none", labelKey: "common.disabled" },
+  {
+    value: "none",
+    labelKey: "appearance.glass.options.none",
+    descriptionKey: "appearance.glass.options.noneDescription",
+  },
+  {
+    value: "mica",
+    labelKey: "appearance.glass.options.mica",
+    descriptionKey: "appearance.glass.options.micaDescription",
+  },
+  {
+    value: "acrylic",
+    labelKey: "appearance.glass.options.acrylic",
+    descriptionKey: "appearance.glass.options.acrylicDescription",
+  },
+  {
+    value: "blur",
+    labelKey: "appearance.glass.options.blur",
+    descriptionKey: "appearance.glass.options.blurDescription",
+  },
 ];
 
 export const sections = [
