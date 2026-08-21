@@ -79,63 +79,6 @@ export function AppearanceSection({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">
-          {t("appearance.typography.label")}
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="text-xs text-muted-foreground">
-            {t("appearance.typography.fontFamily")}
-          </div>
-          <div className="flex items-center gap-2">
-            {fontFamilyOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => updateSettings({ editorFontFamily: option.value })}
-                className={cn(
-                  "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
-                  settings.editorFontFamily === option.value
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:bg-accent",
-                )}
-              >
-                {t(option.labelKey)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">{t("appearance.typography.fontSize")}</div>
-          <SettingsNumberInput
-            value={settings.editorFontSize}
-            min={12}
-            max={24}
-            step={1}
-            suffix="px"
-            label={t("appearance.typography.fontSize")}
-            onValueChange={(editorFontSize) => updateSettings({ editorFontSize })}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">
-            {t("appearance.typography.lineHeight")}
-          </div>
-          <SettingsNumberInput
-            value={settings.editorLineHeight}
-            min={1.2}
-            max={2.2}
-            step={0.1}
-            precision={1}
-            label={t("appearance.typography.lineHeight")}
-            onValueChange={(editorLineHeight) => updateSettings({ editorLineHeight })}
-          />
-        </div>
-      </div>
-
       {runtimePlatform !== "other" && (
         <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
           <div className="text-xs font-medium text-muted-foreground">
@@ -187,33 +130,96 @@ export function AppearanceSection({
 
       <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
         <div className="text-xs font-medium text-muted-foreground">
+          {t("appearance.typography.label")}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <div className="text-xs text-muted-foreground">
+            {t("appearance.typography.fontFamily")}
+          </div>
+          <div className="flex items-center gap-2">
+            {fontFamilyOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => updateSettings({ editorFontFamily: option.value })}
+                className={cn(
+                  "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
+                  settings.editorFontFamily === option.value
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:bg-accent",
+                )}
+              >
+                {t(option.labelKey)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <div className="text-xs text-muted-foreground">
+              {t("appearance.typography.fontSize")}
+            </div>
+            <SettingsNumberInput
+              value={settings.editorFontSize}
+              min={12}
+              max={24}
+              step={1}
+              suffix="px"
+              label={t("appearance.typography.fontSize")}
+              onValueChange={(editorFontSize) => updateSettings({ editorFontSize })}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <div className="text-xs text-muted-foreground">
+              {t("appearance.typography.lineHeight")}
+            </div>
+            <SettingsNumberInput
+              value={settings.editorLineHeight}
+              min={1.2}
+              max={2.2}
+              step={0.1}
+              precision={1}
+              label={t("appearance.typography.lineHeight")}
+              onValueChange={(editorLineHeight) => updateSettings({ editorLineHeight })}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-md border border-border bg-background/60 p-3">
+        <div className="text-xs font-medium text-muted-foreground">
           {t("appearance.spacing.label")}
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">{t("appearance.spacing.horizontal")}</div>
-          <SettingsNumberInput
-            value={settings.editorPaddingX}
-            min={0}
-            max={64}
-            step={1}
-            suffix="px"
-            label={t("appearance.spacing.horizontal")}
-            onValueChange={(editorPaddingX) => updateSettings({ editorPaddingX })}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">{t("appearance.spacing.vertical")}</div>
-          <SettingsNumberInput
-            value={settings.editorPaddingY}
-            min={0}
-            max={64}
-            step={1}
-            suffix="px"
-            label={t("appearance.spacing.vertical")}
-            onValueChange={(editorPaddingY) => updateSettings({ editorPaddingY })}
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <div className="text-xs text-muted-foreground">
+              {t("appearance.spacing.horizontal")}
+            </div>
+            <SettingsNumberInput
+              value={settings.editorPaddingX}
+              min={0}
+              max={64}
+              step={1}
+              suffix="px"
+              label={t("appearance.spacing.horizontal")}
+              onValueChange={(editorPaddingX) => updateSettings({ editorPaddingX })}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <div className="text-xs text-muted-foreground">{t("appearance.spacing.vertical")}</div>
+            <SettingsNumberInput
+              value={settings.editorPaddingY}
+              min={0}
+              max={64}
+              step={1}
+              suffix="px"
+              label={t("appearance.spacing.vertical")}
+              onValueChange={(editorPaddingY) => updateSettings({ editorPaddingY })}
+            />
+          </div>
         </div>
       </div>
     </div>
