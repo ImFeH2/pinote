@@ -189,7 +189,7 @@ export function HistorySection({
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <div className="flex min-w-0 items-baseline gap-0.5">
+                  <div className="flex min-w-0 flex-1 items-baseline gap-0.5">
                     <span
                       className="min-w-0 truncate text-xs text-muted-foreground/80"
                       title={item.notePath}
@@ -204,7 +204,7 @@ export function HistorySection({
                     </span>
                   </div>
                   {item.matchedByContent && (
-                    <span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
                       {t("history.contentMatch")}
                     </span>
                   )}
