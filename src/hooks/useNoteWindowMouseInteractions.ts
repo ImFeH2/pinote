@@ -8,7 +8,7 @@ import {
   useRef,
 } from "react";
 import { closeNoteContextMenu, openNoteContextMenu } from "@/lib/contextMenuApi";
-import { logError } from "@/lib/logger";
+import { logDebug, logError, logInfo } from "@/lib/logger";
 import type { DragMouseButton, WheelResizeModifier } from "@/stores/settings";
 
 const WINDOW_MIN_WIDTH = 1;
@@ -129,9 +129,17 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
     const last = middleDragLastPosition.current;
     if (last && last.x === target.x && last.y === target.y) return;
     middleDragLastPosition.current = target;
-    appWindow.setPosition(new PhysicalPosition(target.x, target.y)).catch((error) => {
-      logError("note-window", "move_window_by_drag_failed", error, { windowId: windowLabel });
-    });
+    appWindow
+      .setPosition(new PhysicalPosition(target.x, target.y))
+      .then(() => {
+        logDebug("note-window", "drag_position_applied", {
+          windowId: windowLabel,
+          target: [target.x, target.y],
+        });
+      })
+      .catch((error) => {
+        logError("note-window", "move_window_by_drag_failed", error, { windowId: windowLabel });
+      });
   }, [appWindow, windowLabel]);
 
   const scheduleMiddleDragPosition = useCallback(() => {
@@ -188,6 +196,14 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
       middleDragState.current = nextState;
       middleDragPendingPosition.current = null;
       middleDragLastPosition.current = null;
+      logInfo("note-window", "mouse_drag_down", {
+        windowId: windowLabel,
+        button: event.button,
+        dragButton,
+        allowMove: isDragButton,
+        screenX: event.screenX,
+        screenY: event.screenY,
+      });
       Promise.all([appWindow.outerPosition(), appWindow.scaleFactor()])
         .then(([position, scaleFactor]) => {
           const state = middleDragState.current;
@@ -200,6 +216,12 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
           if (!state.allowMove) return;
           const deltaX = state.pointerCurrentX - state.pointerStartX;
           const deltaY = state.pointerCurrentY - state.pointerStartY;
+          logInfo("note-window", "mouse_drag_ready", {
+            windowId: windowLabel,
+            outerPosition: [position.x, position.y],
+            scaleFactor,
+            delta: [deltaX, deltaY],
+          });
           if (deltaX === 0 && deltaY === 0) return;
           middleDragPendingPosition.current = {
             x: state.windowStartX + Math.round(deltaX * state.scaleFactor),
@@ -239,6 +261,12 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
       if (deltaX === 0 && deltaY === 0) return;
       if (!state.moved && Math.abs(deltaX) + Math.abs(deltaY) >= 3) {
         state.moved = true;
+        logInfo("note-window", "mouse_drag_moved", {
+          windowId: windowLabel,
+          delta: [deltaX, deltaY],
+          ready: state.ready,
+          scaleFactor: state.scaleFactor,
+        });
       }
       if (!state.ready) return;
       if (!state.allowMove) return;
