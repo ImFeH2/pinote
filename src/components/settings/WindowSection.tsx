@@ -63,10 +63,6 @@ export function WindowSection({
   const { t } = useTranslation("settings");
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-md border border-border bg-background/60 p-3 text-xs text-muted-foreground">
-        {t("window.alwaysOnTopHelp")}
-      </div>
-
       <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
         <div className="flex min-w-0 flex-col gap-1">
           <div className="text-xs font-medium text-muted-foreground">

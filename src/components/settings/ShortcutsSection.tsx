@@ -81,7 +81,6 @@ export function ShortcutsSection({
             }
           />
         ))}
-        <div className="text-xs text-muted-foreground">{t("shortcuts.global.description")}</div>
         {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
       </div>
 
@@ -161,11 +160,6 @@ export function ShortcutsSection({
               {t(option.labelKey)}
             </button>
           ))}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {t("shortcuts.dragButton.description", {
-            button: t(activeDragMouseButton.labelKey),
-          })}
         </div>
       </div>
 

@@ -78,8 +78,6 @@ export default {
     },
   },
   window: {
-    alwaysOnTopHelp:
-      "Always-on-top is set separately for each note. Use middle click or the note shortcut to change it.",
     lostNotes: {
       label: "Off-screen notes",
       description: "Bring off-screen notes back into view.",
@@ -132,8 +130,6 @@ export default {
       registered: "Shortcut is ready to use anywhere",
       notRegistered: "Shortcut is unavailable",
       checking: "Checking shortcut availability",
-      description:
-        "Create note, Restore hidden window, Show all hidden windows, and Show or hide visible windows work anywhere. A shortcut is skipped if another app already uses it. The Global badge shows whether it is available.",
     },
     modifiers: {
       alt: "Alt",
@@ -155,7 +151,6 @@ export default {
     },
     dragButton: {
       label: "Move",
-      description: "{{button}} drag moves the window.",
     },
     currentInteractions: {
       label: "Current interactions",

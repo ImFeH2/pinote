@@ -47,7 +47,6 @@ export default {
     spacing: { label: "页面间距", horizontal: "水平边距", vertical: "垂直边距" },
   },
   window: {
-    alwaysOnTopHelp: "每个便签可单独保持在最前方。使用鼠标中键或便签快捷键切换。",
     lostNotes: {
       label: "屏幕外的便签",
       description: "将屏幕外的便签移回可见区域。",
@@ -93,8 +92,6 @@ export default {
       registered: "快捷键可在任意位置使用",
       notRegistered: "快捷键不可用",
       checking: "正在检查快捷键是否可用",
-      description:
-        "新建便签、恢复隐藏窗口、显示所有隐藏窗口以及显示或隐藏可见窗口可在任意位置使用。如果快捷键已被其他应用占用，将不会启用。全局标记会显示它当前是否可用。",
     },
     modifiers: { alt: "Alt", ctrl: "Ctrl", shift: "Shift", meta: "Meta" },
     mouseButtons: { middle: "中键", right: "右键" },
@@ -106,7 +103,7 @@ export default {
       label: "通透度",
       description: "{{modifier}} + 滚轮可调整通透度，文字始终清晰。",
     },
-    dragButton: { label: "移动", description: "按住{{button}}拖动可移动窗口。" },
+    dragButton: { label: "移动" },
     currentInteractions: {
       label: "当前操作方式",
       resize: "{{modifier}} + 滚轮：围绕指针调整窗口大小",
