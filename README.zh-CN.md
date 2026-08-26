@@ -10,7 +10,7 @@
 
 Pinote 是一款轻量的桌面悬浮 Markdown 便签，适合随手记录待办、代码片段和临时想法。每个便签都对应一个独立文件，可以自由摆放，并单独设置置顶、只读和透明度。
 
-![Pinote 截图](./preview/pinote-screenshot.png)
+https://github.com/user-attachments/assets/69cefbd0-77a1-4144-973d-2c21055058da
 
 ## 安装
 

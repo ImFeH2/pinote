@@ -10,7 +10,7 @@
 
 Pinote is a lightweight floating Markdown note app for desktop. Keep multiple notes close at hand for TODOs, code snippets, and temporary ideas without leaving your current workspace.
 
-![Pinote Screenshot](./preview/pinote-screenshot.png)
+https://github.com/user-attachments/assets/69cefbd0-77a1-4144-973d-2c21055058da
 
 ## Installation
 
