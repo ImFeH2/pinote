@@ -9,14 +9,17 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "check": "biome check src",
+    "check": "pnpm check:web && pnpm check:rust",
+    "check:web": "biome check src && pnpm typecheck",
+    "check:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo clippy --manifest-path src-tauri/Cargo.toml --locked -- -D warnings",
     "check:write": "biome check --write src",
     "typecheck": "tsc --noEmit",
+    "test": "pnpm test:web && pnpm test:rust",
+    "test:web": "vitest run --dir src",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --locked",
+    "format": "pnpm check:write && cargo fmt --manifest-path src-tauri/Cargo.toml",
     "release": "cd src-tauri && cargo release",
-    "prepare": "husky"
-  },
-  "lint-staged": {
-    "src/**/*.{ts,tsx,css}": "biome check --write --no-errors-on-unmatched"
+    "prepare": "prek install"
   },
   "dependencies": {
     "@milkdown/crepe": "^7.18.0",
@@ -47,14 +50,16 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
+    "@commitlint/cli": "21.2.1",
+    "@commitlint/config-conventional": "21.2.0",
+    "@j178/prek": "0.5.2",
     "@tauri-apps/cli": "^2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
     "typescript": "~5.8.3",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vitest": "4.1.10"
   },
   "packageManager": "pnpm@12.3.4"
 }
