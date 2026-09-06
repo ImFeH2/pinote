@@ -4,93 +4,107 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to release (e.g. v0.1.0)"
-        required: true
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
   build:
+    name: App (${{ matrix.name }})
+    needs: ci
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - platform: macos-latest
-            target: aarch64-apple-darwin
-          - platform: macos-latest
-            target: x86_64-apple-darwin
-          - platform: windows-latest
-            target: x86_64-pc-windows-msvc
-
-    runs-on: ${{ matrix.platform }}
-
+          - name: Linux x64
+            os: ubuntu-latest
+          - name: Windows x64
+            os: windows-latest
+          - name: macOS arm64
+            os: macos-15
+          - name: macOS x64
+            os: macos-15-intel
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+      - name: Set up Node
+        uses: actions/setup-node@v7
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
-
-      - uses: pnpm/action-setup@v5
-        with:
-          version: latest
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
-
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          targets: ${{ matrix.target }}
-
-      - uses: swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
+          toolchain: stable
+          rustflags: ""
+          cache-workspaces: src-tauri -> target
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
-
-      - run: pnpm install --frozen-lockfile
-
-      - uses: tauri-apps/tauri-action@action-v0.6.2
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
+      - name: Build and upload app
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.event.inputs.tag || github.ref_name }}
-          releaseName: Pinote ${{ github.event.inputs.tag || github.ref_name }}
-          releaseBody: "See the assets below to download Pinote for your platform."
-          releaseDraft: false
-          prerelease: false
-          includeUpdaterJson: true
-          args: --target ${{ matrix.target }}
+          tagName: ${{ github.ref_name }}
+          releaseName: Pinote ${{ github.ref_name }}
+          releaseBody: See the assets below to download Pinote for your platform.
+          releaseDraft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          uploadUpdaterJson: true
+
+  publish:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish release
+        run: gh release edit "$TAG_NAME" --draft=false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG_NAME: ${{ github.ref_name }}
 
   winget:
-    needs: build
+    name: Publish to WinGet
+    needs: publish
+    if: ${{ !contains(github.ref_name, '-') }}
     runs-on: windows-latest
-
     steps:
       - name: Resolve release version
         id: version
         shell: pwsh
         run: |
-          $tag = "${{ github.event.inputs.tag || github.ref_name }}"
+          $tag = $env:GITHUB_REF_NAME
           $version = $tag.TrimStart("v")
-          "tag=$tag" >> $env:GITHUB_OUTPUT
           "version=$version" >> $env:GITHUB_OUTPUT
-
       - name: Download wingetcreate
         shell: pwsh
         run: Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
-
-      - name: Submit winget package update
+      - name: Submit WinGet update
         env:
           WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
         shell: pwsh
