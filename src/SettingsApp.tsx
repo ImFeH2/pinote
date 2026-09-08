@@ -25,7 +25,10 @@ import { WindowSection } from "@/components/settings/WindowSection";
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/hooks/useTheme";
 import { saveDiagnosticReport } from "@/lib/diagnostics";
-import { type NoteHistorySearchResult, searchNoteHistory } from "@/lib/noteHistory";
+import {
+  type NoteHistorySearchResult,
+  searchNoteHistory,
+} from "@/lib/noteHistory";
 import { resolveDefaultNotesDirectory } from "@/lib/notes";
 import { normalizeShortcut } from "@/lib/shortcuts";
 import {
@@ -52,8 +55,13 @@ import { openAndTrackNoteWindow } from "@/lib/windowManager";
 const REPOSITORY_URL = "https://github.com/ImFeH2/pinote";
 const HISTORY_SEARCH_LIMIT = 80;
 const HISTORY_SEARCH_DEBOUNCE_MS = 120;
-const settingsSections = new Set<SettingsSection>(sections.map((section) => section.id));
-const emptyGlobalShortcutRegistration: Record<GlobalShortcutKey, boolean | null> = {
+const settingsSections = new Set<SettingsSection>(
+  sections.map((section) => section.id),
+);
+const emptyGlobalShortcutRegistration: Record<
+  GlobalShortcutKey,
+  boolean | null
+> = {
   newNote: null,
   restoreWindow: null,
   showAllHiddenWindows: null,
@@ -77,7 +85,10 @@ function formatDateTime(value: string, locale: string) {
   }).format(date);
 }
 
-function getUpdateStatusText(snapshot: UpdateSnapshot, t: TFunction<"settings">) {
+function getUpdateStatusText(
+  snapshot: UpdateSnapshot,
+  t: TFunction<"settings">,
+) {
   if (snapshot.state === "idle") return t("updateStatus.idle");
   if (snapshot.state === "checking") return t("updateStatus.checking");
   if (snapshot.state === "available") {
@@ -88,7 +99,9 @@ function getUpdateStatusText(snapshot: UpdateSnapshot, t: TFunction<"settings">)
   if (snapshot.state === "upToDate") return t("updateStatus.upToDate");
   if (snapshot.state === "downloading") {
     if (snapshot.downloadProgress !== null) {
-      return t("updateStatus.downloadingProgress", { progress: snapshot.downloadProgress });
+      return t("updateStatus.downloadingProgress", {
+        progress: snapshot.downloadProgress,
+      });
     }
     return t("updateStatus.downloading");
   }
@@ -113,23 +126,32 @@ export function SettingsApp() {
   const { t, i18n } = useTranslation("settings");
   const { settings, updateSettings } = useSettings();
   const settingsWindow = useMemo(() => getCurrentWindow(), []);
-  const [activeSection, setActiveSection] = useState<SettingsSection>(() => getInitialSection());
+  const [activeSection, setActiveSection] = useState<SettingsSection>(() =>
+    getInitialSection(),
+  );
   const [shortcutInvalid, setShortcutInvalid] = useState(false);
   const [startupError, setStartupError] = useState<string | null>(null);
   const [startupBusy, setStartupBusy] = useState(false);
   const [updateBusy, setUpdateBusy] = useState(false);
-  const [updateActionError, setUpdateActionError] = useState<string | null>(null);
-  const [updateSnapshot, setUpdateSnapshot] = useState<UpdateSnapshot>(() => getUpdateState());
-  const [updateDialogDismissedVersion, setUpdateDialogDismissedVersion] = useState<string | null>(
+  const [updateActionError, setUpdateActionError] = useState<string | null>(
     null,
   );
+  const [updateSnapshot, setUpdateSnapshot] = useState<UpdateSnapshot>(() =>
+    getUpdateState(),
+  );
+  const [updateDialogDismissedVersion, setUpdateDialogDismissedVersion] =
+    useState<string | null>(null);
   const pendingUpdateCheckVersionRef = useRef<string | null>(null);
   const [appVersion, setAppVersion] = useState<string | null>(null);
   const [aboutError, setAboutError] = useState<string | null>(null);
   const [diagnosticBusy, setDiagnosticBusy] = useState(false);
-  const [diagnosticFileCount, setDiagnosticFileCount] = useState<number | null>(null);
+  const [diagnosticFileCount, setDiagnosticFileCount] = useState<number | null>(
+    null,
+  );
   const [diagnosticError, setDiagnosticError] = useState<string | null>(null);
-  const [notesDirectoryError, setNotesDirectoryError] = useState<string | null>(null);
+  const [notesDirectoryError, setNotesDirectoryError] = useState<string | null>(
+    null,
+  );
   const [notesDirectoryBusy, setNotesDirectoryBusy] = useState(false);
   const [defaultNotesDirectory, setDefaultNotesDirectory] = useState("");
   const [contextMenuBusy, setContextMenuBusy] = useState(false);
@@ -139,15 +161,24 @@ export function SettingsApp() {
   const [taskbarBusy, setTaskbarBusy] = useState(false);
   const [taskbarError, setTaskbarError] = useState<string | null>(null);
   const [bringNotesBackBusy, setBringNotesBackBusy] = useState(false);
-  const [bringNotesBackError, setBringNotesBackError] = useState<string | null>(null);
-  const [bringNotesBackCount, setBringNotesBackCount] = useState<number | null>(null);
+  const [bringNotesBackError, setBringNotesBackError] = useState<string | null>(
+    null,
+  );
+  const [bringNotesBackCount, setBringNotesBackCount] = useState<number | null>(
+    null,
+  );
   const [historyQuery, setHistoryQuery] = useState("");
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const [historyResults, setHistoryResults] = useState<NoteHistorySearchResult[]>([]);
-  const [historyOpeningPath, setHistoryOpeningPath] = useState<string | null>(null);
+  const [historyResults, setHistoryResults] = useState<
+    NoteHistorySearchResult[]
+  >([]);
+  const [historyOpeningPath, setHistoryOpeningPath] = useState<string | null>(
+    null,
+  );
   const [historyReloadToken, setHistoryReloadToken] = useState(0);
-  const [runtimePlatform, setRuntimePlatform] = useState<RuntimePlatform>("other");
+  const [runtimePlatform, setRuntimePlatform] =
+    useState<RuntimePlatform>("other");
   const [globalShortcutRegistration, setGlobalShortcutRegistration] = useState<{
     signature: string;
     values: Record<GlobalShortcutKey, boolean | null>;
@@ -158,7 +189,8 @@ export function SettingsApp() {
     (updateSnapshot.available && updateSnapshot.state === "error");
   const canInstallUpdate = updateSnapshot.state === "readyToRestart";
   const updateStatusText = getUpdateStatusText(updateSnapshot, t);
-  const updateError = updateActionError || updateSnapshot.error ? t("updateStatus.failed") : null;
+  const updateError =
+    updateActionError || updateSnapshot.error ? t("updateStatus.failed") : null;
   const isCheckingUpdate = updateSnapshot.state === "checking";
   const isDownloadingUpdate = updateSnapshot.state === "downloading";
   const shouldShowUpdateDialog =
@@ -172,14 +204,17 @@ export function SettingsApp() {
       updateSnapshot.state === "readyToRestart" ||
       updateSnapshot.state === "error");
   const activeWheelResizeModifier =
-    wheelResizeModifierOptions.find((item) => item.value === settings.wheelResizeModifier) ??
-    wheelResizeModifierOptions[0];
+    wheelResizeModifierOptions.find(
+      (item) => item.value === settings.wheelResizeModifier,
+    ) ?? wheelResizeModifierOptions[0];
   const activeWheelOpacityModifier =
-    wheelResizeModifierOptions.find((item) => item.value === settings.wheelOpacityModifier) ??
-    wheelResizeModifierOptions[1];
+    wheelResizeModifierOptions.find(
+      (item) => item.value === settings.wheelOpacityModifier,
+    ) ?? wheelResizeModifierOptions[1];
   const activeDragMouseButton =
-    dragMouseButtonOptions.find((item) => item.value === settings.dragMouseButton) ??
-    dragMouseButtonOptions[0];
+    dragMouseButtonOptions.find(
+      (item) => item.value === settings.dragMouseButton,
+    ) ?? dragMouseButtonOptions[0];
   const customNotesDirectory = settings.newNoteDirectory.trim();
   const effectiveNotesDirectory = customNotesDirectory || defaultNotesDirectory;
   const globalShortcutRegistrationSignature = [
@@ -190,7 +225,8 @@ export function SettingsApp() {
   ].join("\n");
   const displayedGlobalShortcutRegistration =
     activeSection !== "shortcuts" ||
-    globalShortcutRegistration?.signature !== globalShortcutRegistrationSignature
+    globalShortcutRegistration?.signature !==
+      globalShortcutRegistrationSignature
       ? emptyGlobalShortcutRegistration
       : globalShortcutRegistration.values;
 
@@ -597,7 +633,11 @@ export function SettingsApp() {
     ) {
       return;
     }
-    if (updateSnapshot.available && updateSnapshot.latestVersion === pendingVersion) return;
+    if (
+      updateSnapshot.available &&
+      updateSnapshot.latestVersion === pendingVersion
+    )
+      return;
     pendingUpdateCheckVersionRef.current = pendingVersion;
     checkForUpdates("silent").catch(() => {});
   }, [
@@ -617,7 +657,11 @@ export function SettingsApp() {
     if (!updateSnapshot.lastCheckedAt) return;
     if (settings.lastUpdateCheckAt === updateSnapshot.lastCheckedAt) return;
     updateSettings({ lastUpdateCheckAt: updateSnapshot.lastCheckedAt });
-  }, [settings.lastUpdateCheckAt, updateSettings, updateSnapshot.lastCheckedAt]);
+  }, [
+    settings.lastUpdateCheckAt,
+    updateSettings,
+    updateSnapshot.lastCheckedAt,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -701,7 +745,9 @@ export function SettingsApp() {
         historyError={historyError}
         setHistoryQuery={setHistoryQuery}
         onOpenHistoryItem={handleOpenHistoryItem}
-        formatDateTime={(value) => formatDateTime(value, i18n.resolvedLanguage ?? "en-US")}
+        formatDateTime={(value) =>
+          formatDateTime(value, i18n.resolvedLanguage ?? "en-US")
+        }
         editorFontFamily={settings.editorFontFamily}
         editorFontSize={settings.editorFontSize}
         editorLineHeight={settings.editorLineHeight}
@@ -719,7 +765,11 @@ export function SettingsApp() {
       />
     ) : (
       <AboutSection
-        appVersion={appVersion === null ? t("common.loading") : appVersion || t("common.unknown")}
+        appVersion={
+          appVersion === null
+            ? t("common.loading")
+            : appVersion || t("common.unknown")
+        }
         updateBusy={updateBusy}
         isCheckingUpdate={isCheckingUpdate}
         isDownloadingUpdate={isDownloadingUpdate}
@@ -738,7 +788,9 @@ export function SettingsApp() {
         }
         diagnosticError={diagnosticError}
         repositoryUrl={REPOSITORY_URL}
-        formatDateTime={(value) => formatDateTime(value, i18n.resolvedLanguage ?? "en-US")}
+        formatDateTime={(value) =>
+          formatDateTime(value, i18n.resolvedLanguage ?? "en-US")
+        }
         onManualUpdateCheck={handleManualUpdateCheck}
         onDownloadUpdate={handleDownloadUpdate}
         onInstallUpdate={handleInstallUpdate}

@@ -1,4 +1,9 @@
-import { type KeyboardEvent, type ReactNode, useCallback, useState } from "react";
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  useCallback,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { eventToShortcut } from "@/lib/shortcuts";
 
@@ -9,7 +14,12 @@ interface ShortcutInputProps {
   labelMeta?: ReactNode;
 }
 
-export function ShortcutInput({ label, value, onChange, labelMeta }: ShortcutInputProps) {
+export function ShortcutInput({
+  label,
+  value,
+  onChange,
+  labelMeta,
+}: ShortcutInputProps) {
   const { t } = useTranslation("settings");
   const [isRecording, setIsRecording] = useState(false);
 

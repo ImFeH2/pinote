@@ -24,10 +24,12 @@ export function useWindowControl(defaultAlwaysOnTop = false) {
         windowId: appWindow.label,
         next,
       });
+      return true;
     } catch (error) {
       logError("window-control", "toggle_always_on_top_failed", error, {
         windowId: appWindow.label,
       });
+      return false;
     }
   }, [alwaysOnTop, appWindow]);
 

@@ -7,7 +7,10 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { closeNoteContextMenu, openNoteContextMenu } from "@/lib/contextMenuApi";
+import {
+  closeNoteContextMenu,
+  openNoteContextMenu,
+} from "@/lib/contextMenuApi";
 import { logError, logInfo } from "@/lib/logger";
 
 import type { DragMouseButton, WheelResizeModifier } from "@/stores/settings";
@@ -85,7 +88,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function wheelModifierMatchesEvent(event: ModifierState, modifier: WheelResizeModifier) {
+function wheelModifierMatchesEvent(
+  event: ModifierState,
+  modifier: WheelResizeModifier,
+) {
   if (modifier === "alt") {
     return event.altKey && !event.ctrlKey && !event.shiftKey && !event.metaKey;
   }
@@ -110,7 +116,9 @@ function consumeMouseEvent(event: MouseEvent) {
   }
 }
 
-export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseInteractionsOptions) {
+export function useNoteWindowMouseInteractions(
+  options: UseNoteWindowMouseInteractionsOptions,
+) {
   const {
     appWindow,
     noteId,
@@ -281,7 +289,9 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
           });
         })
         .catch((error) => {
-          logError("note-window", "prepare_drag_state_failed", error, { windowId: windowLabel });
+          logError("note-window", "prepare_drag_state_failed", error, {
+            windowId: windowLabel,
+          });
         });
     };
 
@@ -291,7 +301,13 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
       window.removeEventListener("auxclick", handleMiddleAuxClick, true);
       window.removeEventListener("mousedown", handlePointerMouseDown, true);
     };
-  }, [appWindow, closeContextMenu, dragMouseButton, queueMiddleDragPosition, windowLabel]);
+  }, [
+    appWindow,
+    closeContextMenu,
+    dragMouseButton,
+    queueMiddleDragPosition,
+    windowLabel,
+  ]);
 
   useEffect(() => {
     const suppressContextMenuOnce = () => {
@@ -375,8 +391,12 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
         requested: state.lastRequestedPosition
           ? [state.lastRequestedPosition.x, state.lastRequestedPosition.y]
           : null,
-        applied: lastAppliedPosition ? [lastAppliedPosition.x, lastAppliedPosition.y] : null,
-        pending: pendingPosition ? [pendingPosition.x, pendingPosition.y] : null,
+        applied: lastAppliedPosition
+          ? [lastAppliedPosition.x, lastAppliedPosition.y]
+          : null,
+        pending: pendingPosition
+          ? [pendingPosition.x, pendingPosition.y]
+          : null,
         positionInFlight,
         inputEvents: state.inputEvents,
         positionRequests: state.positionRequests,
@@ -385,7 +405,8 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
         positionErrors: state.positionErrors,
         averageSetPositionMs:
           completedRequests > 0
-            ? Math.round((state.totalSetPositionMs / completedRequests) * 10) / 10
+            ? Math.round((state.totalSetPositionMs / completedRequests) * 10) /
+              10
             : null,
         maxSetPositionMs: Math.round(state.maxSetPositionMs * 10) / 10,
       });
@@ -409,9 +430,14 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
               });
             })
             .catch((error) => {
-              logError("note-window", "open_context_menu_by_right_click_failed", error, {
-                windowId: windowLabel,
-              });
+              logError(
+                "note-window",
+                "open_context_menu_by_right_click_failed",
+                error,
+                {
+                  windowId: windowLabel,
+                },
+              );
             });
         }
       }
@@ -478,8 +504,12 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
         const viewportHeight = Math.max(window.innerHeight, 1);
         const anchorRatioX = clamp(anchorX / viewportWidth, 0, 1);
         const anchorRatioY = clamp(anchorY / viewportHeight, 0, 1);
-        const nextX = Math.round(position.x + (size.width - width) * anchorRatioX);
-        const nextY = Math.round(position.y + (size.height - height) * anchorRatioY);
+        const nextX = Math.round(
+          position.x + (size.width - width) * anchorRatioX,
+        );
+        const nextY = Math.round(
+          position.y + (size.height - height) * anchorRatioY,
+        );
         await appWindow.setSize(new PhysicalSize(width, height));
         await appWindow.setPosition(new PhysicalPosition(nextX, nextY));
         logInfo("note-window", "window_resized_by_wheel", {
@@ -488,7 +518,9 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
           position: [nextX, nextY],
         });
       } catch (error) {
-        logError("note-window", "resize_window_by_wheel_failed", error, { windowId: windowLabel });
+        logError("note-window", "resize_window_by_wheel_failed", error, {
+          windowId: windowLabel,
+        });
       } finally {
         window.setTimeout(() => {
           wheelResizeLock.current = false;
@@ -526,7 +558,8 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
           event.target instanceof HTMLElement
             ? event.target.closest<HTMLElement>(".milkdown-editor")
             : document.querySelector<HTMLElement>(".milkdown-editor");
-        suppressEditorScrollTopRef.current = editor?.scrollTop ?? noteScrollTopRef.current;
+        suppressEditorScrollTopRef.current =
+          editor?.scrollTop ?? noteScrollTopRef.current;
         suppressEditorScrollUntilRef.current = Date.now() + 140;
         event.preventDefault();
         event.stopPropagation();
@@ -585,7 +618,7 @@ export function useNoteWindowMouseInteractions(options: UseNoteWindowMouseIntera
   }, [wheelOpacityModifier, wheelResizeModifier]);
 
   const openContextMenu = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
+    (event: ReactMouseEvent<HTMLElement>) => {
       if (suppressNextContextMenu.current) {
         suppressNextContextMenu.current = false;
         event.preventDefault();

@@ -1,0 +1,16 @@
+pre-commit:
+  fail_on_changes: always
+  jobs:
+    - name: format
+      run: pnpm format:check
+
+    - name: check
+      run: pnpm check
+
+    - name: test
+      run: pnpm test
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit "{1}"

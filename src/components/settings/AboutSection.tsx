@@ -60,20 +60,26 @@ export function AboutSection({
           {t("about.application.label")}
         </div>
         <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">{t("about.application.name")}</div>
+          <div className="text-xs text-muted-foreground">
+            {t("about.application.name")}
+          </div>
           <div className="text-xs font-medium text-foreground">Pinote</div>
         </div>
         <div className="flex items-center justify-between">
           <div className="text-xs text-muted-foreground">
             {t("about.application.currentVersion")}
           </div>
-          <div className="text-xs font-medium text-foreground">{appVersion}</div>
+          <div className="text-xs font-medium text-foreground">
+            {appVersion}
+          </div>
         </div>
         <div className="flex items-center justify-between">
           <div className="text-xs text-muted-foreground">
             {t("about.application.releaseChannel")}
           </div>
-          <div className="text-xs font-medium text-foreground">{t("about.application.stable")}</div>
+          <div className="text-xs font-medium text-foreground">
+            {t("about.application.stable")}
+          </div>
         </div>
       </div>
 
@@ -95,7 +101,9 @@ export function AboutSection({
                 "cursor-not-allowed opacity-60",
             )}
           >
-            {isCheckingUpdate ? t("about.updates.checking") : t("about.updates.check")}
+            {isCheckingUpdate
+              ? t("about.updates.checking")
+              : t("about.updates.check")}
           </button>
         </div>
 
@@ -104,7 +112,8 @@ export function AboutSection({
         {updateSnapshot.latestVersion && (
           <div className="text-xs text-muted-foreground">
             {t("about.updates.versions", {
-              currentVersion: updateSnapshot.currentVersion || t("common.unknown"),
+              currentVersion:
+                updateSnapshot.currentVersion || t("common.unknown"),
               latestVersion: updateSnapshot.latestVersion,
             })}
           </div>
@@ -112,7 +121,9 @@ export function AboutSection({
 
         {isDownloadingUpdate && updateSnapshot.downloadProgress !== null && (
           <div className="text-xs text-muted-foreground">
-            {t("about.updates.progress", { progress: updateSnapshot.downloadProgress })}
+            {t("about.updates.progress", {
+              progress: updateSnapshot.downloadProgress,
+            })}
           </div>
         )}
 
@@ -130,7 +141,9 @@ export function AboutSection({
                 "cursor-not-allowed opacity-60",
             )}
           >
-            {isDownloadingUpdate ? t("about.updates.downloading") : t("about.updates.download")}
+            {isDownloadingUpdate
+              ? t("about.updates.downloading")
+              : t("about.updates.download")}
           </button>
         )}
 
@@ -147,7 +160,9 @@ export function AboutSection({
               updateBusy && "cursor-not-allowed opacity-60",
             )}
           >
-            {updateBusy ? t("about.updates.installing") : t("about.updates.restart")}
+            {updateBusy
+              ? t("about.updates.installing")
+              : t("about.updates.restart")}
           </button>
         )}
 
@@ -159,7 +174,9 @@ export function AboutSection({
           </div>
         )}
 
-        {updateError && <div className="text-xs text-destructive">{updateError}</div>}
+        {updateError && (
+          <div className="text-xs text-destructive">{updateError}</div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
@@ -180,20 +197,28 @@ export function AboutSection({
         >
           <Download size={14} />
           <span>
-            {diagnosticBusy ? t("about.troubleshooting.saving") : t("about.troubleshooting.save")}
+            {diagnosticBusy
+              ? t("about.troubleshooting.saving")
+              : t("about.troubleshooting.save")}
           </span>
         </button>
         <div className="text-xs text-muted-foreground">
           {t("about.troubleshooting.description")}
         </div>
         {diagnosticMessage && (
-          <div className="text-xs text-muted-foreground">{diagnosticMessage}</div>
+          <div className="text-xs text-muted-foreground">
+            {diagnosticMessage}
+          </div>
         )}
-        {diagnosticError && <div className="text-xs text-destructive">{diagnosticError}</div>}
+        {diagnosticError && (
+          <div className="text-xs text-destructive">{diagnosticError}</div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">{t("about.project")}</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("about.project")}
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -204,10 +229,14 @@ export function AboutSection({
           <Github size={14} />
           <span>Pinote</span>
         </button>
-        <div className="truncate text-[11px] text-muted-foreground">{repositoryUrl}</div>
+        <div className="truncate text-[11px] text-muted-foreground">
+          {repositoryUrl}
+        </div>
       </div>
 
-      {aboutError && <div className="text-xs text-destructive">{aboutError}</div>}
+      {aboutError && (
+        <div className="text-xs text-destructive">{aboutError}</div>
+      )}
     </div>
   );
 }

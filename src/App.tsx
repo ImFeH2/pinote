@@ -1,8 +1,16 @@
 import { Effect, getCurrentWindow } from "@tauri-apps/api/window";
 import { Lock, Pin } from "lucide-react";
-import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Editor } from "@/components/Editor";
+import { WindowDragHandle } from "@/components/WindowDragHandle";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useNoteExternalSync } from "@/hooks/useNoteExternalSync";
 import { useNoteWindowActions } from "@/hooks/useNoteWindowActions";
@@ -65,23 +73,32 @@ function App({
 }) {
   const { t } = useTranslation("note");
   const { toggleTheme } = useTheme();
-  const { alwaysOnTop, toggleAlwaysOnTop } = useWindowControl();
+  const { alwaysOnTop, toggleAlwaysOnTop: toggleWindowAlwaysOnTop } =
+    useWindowControl();
   const { settings } = useSettings();
   const appWindow = useMemo(() => getCurrentWindow(), []);
   const windowLabel = appWindow.label;
-  const initialWindowOpacity = clamp(initialOpacity ?? 1, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX);
+  const initialWindowOpacity = clamp(
+    initialOpacity ?? 1,
+    NOTE_OPACITY_MIN,
+    NOTE_OPACITY_MAX,
+  );
   const [initialContent, setInitialContent] = useState<string | null>(null);
   const [noteOpacity, setNoteOpacityState] = useState(initialWindowOpacity);
   const noteOpacityRef = useRef(initialWindowOpacity);
   const noteReadOnlyRef = useRef(false);
-  const scrollPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const noteScrollTopRef = useRef(0);
   const latestEditorContentRef = useRef("");
   const isSavePendingRef = useRef<() => boolean>(() => false);
+  const windowStateReadyRef = useRef(false);
   const closeRequestState = useRef<"idle" | "persisting" | "ready">("idle");
   const forceHiddenVisibilityRef = useRef(false);
   const hideInProgressRef = useRef(false);
-  const [runtimePlatform, setRuntimePlatform] = useState<RuntimePlatform>("other");
+  const [runtimePlatform, setRuntimePlatform] =
+    useState<RuntimePlatform>("other");
   const [editorReloadToken, setEditorReloadToken] = useState(0);
   const [noteReadOnly, setNoteReadOnly] = useState(false);
   const [broughtBackFeedback, setBroughtBackFeedback] = useState(false);
@@ -216,9 +233,9 @@ function App({
     initialEditorScrollTop,
     persistWindowState,
     setInitialEditorScrollTop,
+    windowStateReady,
   } = useNoteWindowState({
     appWindow,
-    alwaysOnTop,
     closeRequestState,
     forceHiddenVisibilityRef,
     hideInProgressRef,
@@ -232,6 +249,15 @@ function App({
     setNoteReadOnly,
     windowLabel,
   });
+
+  useEffect(() => {
+    windowStateReadyRef.current = windowStateReady;
+  }, [windowStateReady]);
+
+  const toggleAlwaysOnTop = useCallback(async () => {
+    const changed = await toggleWindowAlwaysOnTop();
+    if (changed && windowStateReadyRef.current) await persistWindowState();
+  }, [persistWindowState, toggleWindowAlwaysOnTop]);
 
   const {
     applyLoadedContent,
@@ -317,7 +343,10 @@ function App({
           });
           return;
         }
-        const effectsToTry = [primaryEffect, ...getWindowsFallbackEffects(selectedEffect)];
+        const effectsToTry = [
+          primaryEffect,
+          ...getWindowsFallbackEffects(selectedEffect),
+        ];
         for (const effect of effectsToTry) {
           const applied = await appWindow
             .setEffects({
@@ -364,12 +393,19 @@ function App({
       });
     };
     void applyEffects();
-  }, [appWindow, runtimePlatform, settings.noteGlassEffectMacos, settings.noteGlassEffectWindows]);
+  }, [
+    appWindow,
+    runtimePlatform,
+    settings.noteGlassEffectMacos,
+    settings.noteGlassEffectWindows,
+  ]);
 
   const editorStyle = useMemo(
     () =>
       ({
-        "--editor-font-family": resolveEditorFontFamily(settings.editorFontFamily),
+        "--editor-font-family": resolveEditorFontFamily(
+          settings.editorFontFamily,
+        ),
         "--editor-font-size": `${settings.editorFontSize}px`,
         "--editor-line-height": settings.editorLineHeight.toString(),
         "--editor-padding-x": `${settings.editorPaddingX}px`,
@@ -402,7 +438,11 @@ function App({
   if (initialContent === null) {
     return (
       <div className="flex h-screen items-center justify-center rounded-lg bg-background">
-        <div className="text-sm text-muted-foreground" role="status" aria-live="polite">
+        <div
+          className="text-sm text-muted-foreground"
+          role="status"
+          aria-live="polite"
+        >
           {t("loading")}
         </div>
       </div>
@@ -410,7 +450,7 @@ function App({
   }
 
   return (
-    <div
+    <main
       data-pinned={alwaysOnTop ? "true" : "false"}
       data-read-only={noteReadOnly ? "true" : "false"}
       data-brought-back={broughtBackFeedback ? "true" : "false"}
@@ -418,17 +458,19 @@ function App({
       style={pinnedVisualStyle}
       onContextMenu={openContextMenu}
     >
-      <div className="absolute inset-0 bg-background" style={noteBackgroundStyle} />
       <div
-        onMouseDown={startWindowDrag}
-        className="absolute left-0 right-0 top-0 z-20 h-1.5 cursor-grab"
+        className="absolute inset-0 bg-background"
+        style={noteBackgroundStyle}
       />
+      <WindowDragHandle onMouseDown={startWindowDrag} />
       {hasExternalFileChange ? (
         <div
           className="absolute left-2 right-2 top-2 z-40 flex items-center gap-2 rounded-md border border-amber-400/50 bg-amber-300/20 px-2.5 py-1.5 text-xs text-amber-950 shadow-sm dark:border-amber-300/45 dark:bg-amber-200/12 dark:text-amber-100"
           role="alert"
         >
-          <span className="min-w-0 flex-1 truncate">{t("externalChange.message")}</span>
+          <span className="min-w-0 flex-1 truncate">
+            {t("externalChange.message")}
+          </span>
           <button
             type="button"
             onClick={reloadExternalFileContent}
@@ -478,7 +520,7 @@ function App({
           style={editorStyle}
         />
       </div>
-    </div>
+    </main>
   );
 }
 

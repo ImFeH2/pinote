@@ -142,11 +142,13 @@ export default {
     },
     wheelResize: {
       label: "Resize",
-      description: "{{modifier}} + Wheel resizes the window around the pointer.",
+      description:
+        "{{modifier}} + Wheel resizes the window around the pointer.",
     },
     wheelOpacity: {
       label: "See-through",
-      description: "{{modifier}} + Wheel adjusts see-through level. Text stays readable.",
+      description:
+        "{{modifier}} + Wheel adjusts see-through level. Text stays readable.",
     },
     dragButton: {
       label: "Move",
@@ -190,7 +192,8 @@ export default {
     },
     troubleshooting: {
       label: "Troubleshooting",
-      description: "The report may include recent file paths and app error details.",
+      description:
+        "The report may include recent file paths and app error details.",
       save: "Save report",
       saving: "Saving...",
     },

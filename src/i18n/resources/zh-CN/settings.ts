@@ -27,7 +27,11 @@ export default {
       fontFamily: "字体",
       fontSize: "字号",
       lineHeight: "行高",
-      fontFamilyOptions: { system: "系统字体", serif: "衬线字体", mono: "等宽字体" },
+      fontFamilyOptions: {
+        system: "系统字体",
+        serif: "衬线字体",
+        mono: "等宽字体",
+      },
     },
     glass: {
       label: "玻璃效果",
@@ -43,7 +47,11 @@ export default {
         noneDescription: "真正透明，可透视后方窗口",
       },
     },
-    spacing: { label: "页面间距", horizontal: "水平边距", vertical: "垂直边距" },
+    spacing: {
+      label: "页面间距",
+      horizontal: "水平边距",
+      vertical: "垂直边距",
+    },
   },
   window: {
     lostNotes: {
@@ -61,8 +69,14 @@ export default {
       open: "打开文件夹",
     },
     launchAtStartup: "开机时打开 Pinote",
-    taskbar: { label: "在任务栏中隐藏便签", description: "便签不会显示在任务栏中。" },
-    contextMenuOpacity: { label: "菜单跟随便签通透度", description: "跟随当前便签的通透度。" },
+    taskbar: {
+      label: "在任务栏中隐藏便签",
+      description: "便签不会显示在任务栏中。",
+    },
+    contextMenuOpacity: {
+      label: "菜单跟随便签通透度",
+      description: "跟随当前便签的通透度。",
+    },
     explorerMenu: {
       label: "添加“使用 Pinote 打开”",
       description: "在 .md 和 .markdown 文件菜单中显示此操作。",
@@ -102,7 +116,10 @@ export default {
       label: "通透度",
       description: "{{modifier}} + 滚轮可调整通透度，文字始终清晰。",
     },
-    dragButton: { label: "移动", description: "按住{{button}}拖动可移动窗口。" },
+    dragButton: {
+      label: "移动",
+      description: "按住{{button}}拖动可移动窗口。",
+    },
     currentInteractions: {
       label: "当前操作方式",
       resize: "{{modifier}} + 滚轮：围绕指针调整窗口大小",
@@ -173,5 +190,8 @@ export default {
     saved: "已保存，共 {{count}} 个文件。",
     dialog: { title: "保存报告", zipArchive: "Zip 压缩包" },
   },
-  errors: { unknown: "无法完成操作。", invalidShortcut: "请输入有效的快捷键。" },
+  errors: {
+    unknown: "无法完成操作。",
+    invalidShortcut: "请输入有效的快捷键。",
+  },
 };

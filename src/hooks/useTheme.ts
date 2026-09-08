@@ -6,7 +6,9 @@ import { logError, logInfo } from "@/lib/logger";
 type ResolvedTheme = "light" | "dark";
 
 function getSystemTheme(): ResolvedTheme {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
 }
 
 function subscribeSystemTheme(callback: () => void) {
@@ -17,14 +19,20 @@ function subscribeSystemTheme(callback: () => void) {
 
 export function useTheme() {
   const { settings, updateSettings } = useSettings();
-  const systemTheme = useSyncExternalStore(subscribeSystemTheme, getSystemTheme);
-  const resolvedTheme: ResolvedTheme = settings.theme === "system" ? systemTheme : settings.theme;
+  const systemTheme = useSyncExternalStore(
+    subscribeSystemTheme,
+    getSystemTheme,
+  );
+  const resolvedTheme: ResolvedTheme =
+    settings.theme === "system" ? systemTheme : settings.theme;
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", resolvedTheme);
-    setTheme(settings.theme === "system" ? null : resolvedTheme).catch((error) => {
-      logError("theme", "set_native_theme_failed", error);
-    });
+    setTheme(settings.theme === "system" ? null : resolvedTheme).catch(
+      (error) => {
+        logError("theme", "set_native_theme_failed", error);
+      },
+    );
   }, [resolvedTheme, settings.theme]);
 
   const toggleTheme = useCallback(() => {

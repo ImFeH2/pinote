@@ -106,9 +106,13 @@ function sanitizeHistoryStore(value: unknown): NoteHistoryStore {
 }
 
 async function readStore() {
-  const fileExists = await exists(STORE_FILE, { baseDir: BaseDirectory.AppData });
+  const fileExists = await exists(STORE_FILE, {
+    baseDir: BaseDirectory.AppData,
+  });
   if (!fileExists) return buildEmptyStore();
-  const content = await readTextFile(STORE_FILE, { baseDir: BaseDirectory.AppData });
+  const content = await readTextFile(STORE_FILE, {
+    baseDir: BaseDirectory.AppData,
+  });
   try {
     return sanitizeHistoryStore(JSON.parse(content) as unknown);
   } catch {
@@ -159,7 +163,9 @@ async function releaseStoreLock() {
   }).catch(() => {});
 }
 
-async function mutateStore<T>(updater: (store: NoteHistoryStore) => Promise<T> | T): Promise<T> {
+async function mutateStore<T>(
+  updater: (store: NoteHistoryStore) => Promise<T> | T,
+): Promise<T> {
   let resolveValue: ((value: T | PromiseLike<T>) => void) | null = null;
   let rejectValue: ((reason?: unknown) => void) | null = null;
   const result = new Promise<T>((resolve, reject) => {

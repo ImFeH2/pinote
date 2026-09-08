@@ -16,11 +16,11 @@ https://github.com/user-attachments/assets/69cefbd0-77a1-4144-973d-2c21055058da
 
 Download the latest version from [GitHub Releases](https://github.com/ImFeH2/pinote/releases/latest).
 
-| Platform | Recommended Package |
-| --- | --- |
-| Windows | WinGet, `.msi`, or `.exe` |
-| macOS | `.dmg` for Apple Silicon or Intel |
-| Linux | `.AppImage`, `.deb`, or `.rpm` |
+| Platform | Recommended Package               |
+| -------- | --------------------------------- |
+| Windows  | WinGet, `.msi`, or `.exe`         |
+| macOS    | `.dmg` for Apple Silicon or Intel |
+| Linux    | `.AppImage`, `.deb`, or `.rpm`    |
 
 Windows users can install Pinote with WinGet:
 
@@ -45,29 +45,29 @@ Pinote checks for updates when it starts.
 
 ## Keyboard Shortcuts
 
-| Default Shortcut | Action |
-| --- | --- |
-| `Alt+S` | Restore hidden notes |
-| `Alt+Shift+H` | Show all hidden notes |
-| `Alt+D` | Show or hide notes |
-| `Alt+C` | New note |
-| `Alt+A` | Toggle always on top |
-| `Alt+R` | Toggle read-only mode |
-| `Ctrl+Shift+D` | Toggle theme |
-| `Esc` | Hide note |
-| `Ctrl+Shift+W` | Close note |
+| Default Shortcut | Action                |
+| ---------------- | --------------------- |
+| `Alt+S`          | Restore hidden notes  |
+| `Alt+Shift+H`    | Show all hidden notes |
+| `Alt+D`          | Show or hide notes    |
+| `Alt+C`          | New note              |
+| `Alt+A`          | Toggle always on top  |
+| `Alt+R`          | Toggle read-only mode |
+| `Ctrl+Shift+D`   | Toggle theme          |
+| `Esc`            | Hide note             |
+| `Ctrl+Shift+W`   | Close note            |
 
 Shortcuts can be changed in Settings. New note, restore hidden notes, show all hidden notes, and show or hide notes are global shortcuts that work from other apps.
 
 ## Mouse Interactions
 
-| Default Interaction | Action |
-| --- | --- |
-| `Alt + Wheel` | Resize the window around the pointer |
-| `Ctrl + Wheel` | Adjust note opacity |
-| Middle click | Toggle always on top |
-| Middle drag | Move the note window |
-| Right click | Open the note menu |
+| Default Interaction | Action                               |
+| ------------------- | ------------------------------------ |
+| `Alt + Wheel`       | Resize the window around the pointer |
+| `Ctrl + Wheel`      | Adjust note opacity                  |
+| Middle click        | Toggle always on top                 |
+| Middle drag         | Move the note window                 |
+| Right click         | Open the note menu                   |
 
 Wheel modifiers and the mouse button used to move windows can be changed in Settings. When right drag is selected, a right click still opens the note menu.
 

@@ -28,7 +28,9 @@ export function UpdateDialog({
   const actionDisabled = busy || snapshot.state === "checking";
   const progressText =
     isDownloading && snapshot.downloadProgress !== null
-      ? t("updateDialog.downloadingProgress", { progress: snapshot.downloadProgress })
+      ? t("updateDialog.downloadingProgress", {
+          progress: snapshot.downloadProgress,
+        })
       : t("updateDialog.readyToDownload");
 
   return (
@@ -39,7 +41,9 @@ export function UpdateDialog({
             <Download size={17} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold text-foreground">{t("updateDialog.title")}</div>
+            <div className="text-sm font-semibold text-foreground">
+              {t("updateDialog.title")}
+            </div>
             <div className="mt-1 text-xs text-muted-foreground">
               {t("updateDialog.versions", { latestVersion, currentVersion })}
             </div>
@@ -82,7 +86,8 @@ export function UpdateDialog({
             }}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-md border border-primary bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90",
-              (actionDisabled || isDownloading) && "cursor-not-allowed opacity-60",
+              (actionDisabled || isDownloading) &&
+                "cursor-not-allowed opacity-60",
             )}
           >
             {isReady ? <RefreshCw size={14} /> : <Download size={14} />}

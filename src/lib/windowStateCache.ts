@@ -75,7 +75,9 @@ export async function getWindowState(windowId: string) {
 }
 
 export async function getMostRecentHiddenWindowState() {
-  return invoke<CachedWindowState | null>("get_most_recent_hidden_window_state");
+  return invoke<CachedWindowState | null>(
+    "get_most_recent_hidden_window_state",
+  );
 }
 
 export async function listWindowStatesInOrder() {

@@ -71,7 +71,9 @@ function buildNoteContextMenuWindowLabel(parentWindowLabel: string) {
 
 async function resolveContextMenuPosition(options: OpenNoteContextMenuOptions) {
   const scaleFactor =
-    Number.isFinite(options.scaleFactor) && options.scaleFactor > 0 ? options.scaleFactor : 1;
+    Number.isFinite(options.scaleFactor) && options.scaleFactor > 0
+      ? options.scaleFactor
+      : 1;
   return {
     x: Math.round(options.screenX * scaleFactor),
     y: Math.round(options.screenY * scaleFactor),
@@ -102,9 +104,17 @@ async function resolveContextMenuWindowPosition(
     minY,
     workArea.position.y + workArea.size.height - height - NOTE_CONTEXT_MENU_GAP,
   );
-  const rightSpace = workArea.position.x + workArea.size.width - pointerX - NOTE_CONTEXT_MENU_GAP;
+  const rightSpace =
+    workArea.position.x +
+    workArea.size.width -
+    pointerX -
+    NOTE_CONTEXT_MENU_GAP;
   const leftSpace = pointerX - workArea.position.x - NOTE_CONTEXT_MENU_GAP;
-  const bottomSpace = workArea.position.y + workArea.size.height - pointerY - NOTE_CONTEXT_MENU_GAP;
+  const bottomSpace =
+    workArea.position.y +
+    workArea.size.height -
+    pointerY -
+    NOTE_CONTEXT_MENU_GAP;
   const topSpace = pointerY - workArea.position.y - NOTE_CONTEXT_MENU_GAP;
   let x = pointerX;
   let y = pointerY;
@@ -126,7 +136,8 @@ function buildNoteContextMenuUrl(
   maximized: boolean,
 ) {
   const noteOpacity = clamp(
-    typeof options.noteOpacity === "number" && Number.isFinite(options.noteOpacity)
+    typeof options.noteOpacity === "number" &&
+      Number.isFinite(options.noteOpacity)
       ? options.noteOpacity
       : 1,
     0,
@@ -152,7 +163,8 @@ function buildNoteContextMenuContext(
   maximized: boolean,
 ): NoteContextMenuContext {
   const noteOpacity = clamp(
-    typeof options.noteOpacity === "number" && Number.isFinite(options.noteOpacity)
+    typeof options.noteOpacity === "number" &&
+      Number.isFinite(options.noteOpacity)
       ? options.noteOpacity
       : 1,
     0,
@@ -170,8 +182,15 @@ function buildNoteContextMenuContext(
   };
 }
 
-async function emitNoteContextMenuSync(targetLabel: string, context: NoteContextMenuContext) {
-  await emitTo<NoteContextMenuContext>(targetLabel, NOTE_CONTEXT_MENU_SYNC_EVENT, context);
+async function emitNoteContextMenuSync(
+  targetLabel: string,
+  context: NoteContextMenuContext,
+) {
+  await emitTo<NoteContextMenuContext>(
+    targetLabel,
+    NOTE_CONTEXT_MENU_SYNC_EVENT,
+    context,
+  );
 }
 
 export async function closeNoteContextMenu(parentWindowLabel: string) {
@@ -184,9 +203,15 @@ export async function closeNoteContextMenu(parentWindowLabel: string) {
 export async function openNoteContextMenu(options: OpenNoteContextMenuOptions) {
   const label = buildNoteContextMenuWindowLabel(options.parentWindowLabel);
   const pointer = await resolveContextMenuPosition(options);
-  const targetWindow = await WebviewWindow.getByLabel(options.targetWindowLabel);
+  const targetWindow = await WebviewWindow.getByLabel(
+    options.targetWindowLabel,
+  );
   const maximized = await targetWindow?.isMaximized().catch(() => false);
-  const context = buildNoteContextMenuContext(options, pointer, maximized ?? false);
+  const context = buildNoteContextMenuContext(
+    options,
+    pointer,
+    maximized ?? false,
+  );
   let menuWindow = await WebviewWindow.getByLabel(label);
   if (!menuWindow) {
     menuWindow = new WebviewWindow(label, {
@@ -244,28 +269,39 @@ export async function emitNoteContextMenuAction(
   targetWindowLabel: string,
   action: NoteContextMenuAction,
 ) {
-  await emitTo<NoteContextMenuActionPayload>(targetWindowLabel, NOTE_CONTEXT_MENU_ACTION_EVENT, {
-    action,
-  });
+  await emitTo<NoteContextMenuActionPayload>(
+    targetWindowLabel,
+    NOTE_CONTEXT_MENU_ACTION_EVENT,
+    {
+      action,
+    },
+  );
 }
 
 export async function listenNoteContextMenuSync(
   handler: (context: NoteContextMenuContext) => void,
 ): Promise<UnlistenFn> {
   const window = getCurrentWindow();
-  return window.listen<NoteContextMenuContext>(NOTE_CONTEXT_MENU_SYNC_EVENT, ({ payload }) => {
-    if (!payload) return;
-    if (typeof payload.targetWindowLabel !== "string") return;
-    if (typeof payload.noteId !== "string") return;
-    if (typeof payload.notePath !== "string") return;
-    if (typeof payload.anchorX !== "number") return;
-    if (typeof payload.anchorY !== "number") return;
-    const noteOpacity = clamp(Number.isFinite(payload.noteOpacity) ? payload.noteOpacity : 1, 0, 1);
-    handler({
-      ...payload,
-      noteOpacity,
-      noteReadOnly: payload.noteReadOnly === true,
-      maximized: payload.maximized === true,
-    });
-  });
+  return window.listen<NoteContextMenuContext>(
+    NOTE_CONTEXT_MENU_SYNC_EVENT,
+    ({ payload }) => {
+      if (!payload) return;
+      if (typeof payload.targetWindowLabel !== "string") return;
+      if (typeof payload.noteId !== "string") return;
+      if (typeof payload.notePath !== "string") return;
+      if (typeof payload.anchorX !== "number") return;
+      if (typeof payload.anchorY !== "number") return;
+      const noteOpacity = clamp(
+        Number.isFinite(payload.noteOpacity) ? payload.noteOpacity : 1,
+        0,
+        1,
+      );
+      handler({
+        ...payload,
+        noteOpacity,
+        noteReadOnly: payload.noteReadOnly === true,
+        maximized: payload.maximized === true,
+      });
+    },
+  );
 }

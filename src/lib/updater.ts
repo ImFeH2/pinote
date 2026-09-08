@@ -1,7 +1,15 @@
 import { getVersion } from "@tauri-apps/api/app";
-import { error as logError, info as logInfo, warn as logWarn } from "@tauri-apps/plugin-log";
+import {
+  error as logError,
+  info as logInfo,
+  warn as logWarn,
+} from "@tauri-apps/plugin-log";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { check, type DownloadEvent, type Update } from "@tauri-apps/plugin-updater";
+import {
+  check,
+  type DownloadEvent,
+  type Update,
+} from "@tauri-apps/plugin-updater";
 
 export type UpdateCheckMode = "silent" | "manual";
 
@@ -182,7 +190,9 @@ export function subscribeUpdateState(listener: UpdateListener): () => void {
   };
 }
 
-export async function checkForUpdates(mode: UpdateCheckMode): Promise<UpdateResult> {
+export async function checkForUpdates(
+  mode: UpdateCheckMode,
+): Promise<UpdateResult> {
   if (activeCheck) return activeCheck;
 
   activeCheck = (async () => {
@@ -303,7 +313,9 @@ export async function downloadUpdate(): Promise<void> {
         downloadProgress: 100,
       });
 
-      void logInfo(`update_downloaded latest=${snapshot.latestVersion ?? "unknown"}`);
+      void logInfo(
+        `update_downloaded latest=${snapshot.latestVersion ?? "unknown"}`,
+      );
     } catch (value) {
       const errorMessage = mapUpdaterError(value);
       setSnapshot({
@@ -343,7 +355,9 @@ export async function installUpdate(): Promise<void> {
   }
 
   try {
-    void logInfo(`update_install_started latest=${snapshot.latestVersion ?? "unknown"}`);
+    void logInfo(
+      `update_install_started latest=${snapshot.latestVersion ?? "unknown"}`,
+    );
     await activeUpdate.install();
     pendingRestartOnly = true;
     activeUpdate = null;
@@ -356,7 +370,9 @@ export async function installUpdate(): Promise<void> {
       error: errorMessage,
       downloadProgress: null,
     });
-    void logError(`update_install_or_restart_failed message=${toErrorMessage(value)}`);
+    void logError(
+      `update_install_or_restart_failed message=${toErrorMessage(value)}`,
+    );
     throw new Error(errorMessage);
   }
 }

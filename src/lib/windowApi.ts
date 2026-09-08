@@ -54,7 +54,8 @@ export interface GlobalShortcutRegistrationSnapshot {
 
 function isNoteWindowLabel(label: string) {
   return (
-    label.startsWith(NOTE_WINDOW_LABEL_PREFIX) && !label.endsWith(NOTE_CONTEXT_MENU_WINDOW_SUFFIX)
+    label.startsWith(NOTE_WINDOW_LABEL_PREFIX) &&
+    !label.endsWith(NOTE_CONTEXT_MENU_WINDOW_SUFFIX)
   );
 }
 
@@ -94,22 +95,31 @@ export async function getRuntimePlatform() {
 }
 
 export async function setGlobalShortcuts(shortcuts: GlobalShortcutConfig) {
-  return invoke<GlobalShortcutRegistrationSnapshot>("set_global_shortcuts", { shortcuts });
+  return invoke<GlobalShortcutRegistrationSnapshot>("set_global_shortcuts", {
+    shortcuts,
+  });
 }
 
 export async function setNoteWindowsSkipTaskbar(skipTaskbar: boolean) {
   const windows = await WebviewWindow.getAll();
   const targets = windows.filter((window) => isNoteWindowLabel(window.label));
-  await Promise.all(targets.map((window) => window.setSkipTaskbar(skipTaskbar)));
+  await Promise.all(
+    targets.map((window) => window.setSkipTaskbar(skipTaskbar)),
+  );
 }
 
 export async function bringNoteWindowsBackOnScreen() {
   return invoke<number>("bring_note_windows_back_on_screen");
 }
 
-export async function openNoteWindow(noteId: string, options: OpenNoteWindowOptions = {}) {
+export async function openNoteWindow(
+  noteId: string,
+  options: OpenNoteWindowOptions = {},
+) {
   const normalizedNoteId = normalizeNoteId(noteId);
-  const notePath = options.notePath?.trim() || (await resolveManagedNotePath(normalizedNoteId));
+  const notePath =
+    options.notePath?.trim() ||
+    (await resolveManagedNotePath(normalizedNoteId));
   logInfo("window-api", "open_note_window_requested", {
     noteId: normalizedNoteId,
     notePath,

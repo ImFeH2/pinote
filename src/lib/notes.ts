@@ -11,10 +11,16 @@ function randomHexByte(byte: number) {
 }
 
 export function buildGeneratedNoteId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
-  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.getRandomValues === "function"
+  ) {
     const bytes = new Uint8Array(16);
     crypto.getRandomValues(bytes);
     bytes[6] = (bytes[6] & 0x0f) | 0x40;
@@ -78,7 +84,10 @@ export function buildNoteWindowUrl(params: {
     noteId: normalizeNoteId(params.noteId),
     notePath: params.notePath,
   });
-  if (typeof params.noteOpacity === "number" && Number.isFinite(params.noteOpacity)) {
+  if (
+    typeof params.noteOpacity === "number" &&
+    Number.isFinite(params.noteOpacity)
+  ) {
     query.set("noteOpacity", params.noteOpacity.toString());
   }
   return `index.html?${query.toString()}`;
@@ -98,7 +107,10 @@ export async function resolveManagedNotesDirectory() {
 
 export async function resolveManagedNotePath(noteId: string) {
   const notesDirectory = await resolveManagedNotesDirectory();
-  return resolve(notesDirectory, `${normalizeNoteId(noteId)}${NOTE_FILE_EXTENSION}`);
+  return resolve(
+    notesDirectory,
+    `${normalizeNoteId(noteId)}${NOTE_FILE_EXTENSION}`,
+  );
 }
 
 async function ensureParentDirectory(path: string) {

@@ -12,11 +12,12 @@ import type { RuntimePlatform } from "@/lib/windowApi";
 import type { Settings } from "@/stores/settings";
 import type { SettingsPatch } from "@/stores/settingsStore";
 
-const languageOptions: Array<{ value: LanguagePreference; labelKey: string }> = [
-  { value: "system", labelKey: "appearance.language.options.system" },
-  { value: "en-US", labelKey: "appearance.language.options.enUS" },
-  { value: "zh-CN", labelKey: "appearance.language.options.zhCN" },
-];
+const languageOptions: Array<{ value: LanguagePreference; labelKey: string }> =
+  [
+    { value: "system", labelKey: "appearance.language.options.system" },
+    { value: "en-US", labelKey: "appearance.language.options.enUS" },
+    { value: "zh-CN", labelKey: "appearance.language.options.zhCN" },
+  ];
 
 interface AppearanceSectionProps {
   settings: Settings;
@@ -91,7 +92,9 @@ export function AppearanceSection({
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => updateSettings({ noteGlassEffectWindows: option.value })}
+                    onClick={() =>
+                      updateSettings({ noteGlassEffectWindows: option.value })
+                    }
                     className={cn(
                       "rounded-md border px-2 py-1.5 text-left text-xs font-medium transition-colors",
                       settings.noteGlassEffectWindows === option.value
@@ -116,11 +119,15 @@ export function AppearanceSection({
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <div className="text-xs text-muted-foreground">{t("appearance.glass.enable")}</div>
+              <div className="text-xs text-muted-foreground">
+                {t("appearance.glass.enable")}
+              </div>
               <SettingsSwitch
                 checked={settings.noteGlassEffectMacos}
                 label={t("appearance.glass.enable")}
-                onCheckedChange={(checked) => updateSettings({ noteGlassEffectMacos: checked })}
+                onCheckedChange={(checked) =>
+                  updateSettings({ noteGlassEffectMacos: checked })
+                }
               />
             </div>
           )}
@@ -141,7 +148,9 @@ export function AppearanceSection({
               <button
                 key={option.value}
                 type="button"
-                onClick={() => updateSettings({ editorFontFamily: option.value })}
+                onClick={() =>
+                  updateSettings({ editorFontFamily: option.value })
+                }
                 className={cn(
                   "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
                   settings.editorFontFamily === option.value
@@ -167,7 +176,9 @@ export function AppearanceSection({
               step={1}
               suffix="px"
               label={t("appearance.typography.fontSize")}
-              onValueChange={(editorFontSize) => updateSettings({ editorFontSize })}
+              onValueChange={(editorFontSize) =>
+                updateSettings({ editorFontSize })
+              }
             />
           </div>
           <div className="flex items-center justify-between gap-2">
@@ -181,7 +192,9 @@ export function AppearanceSection({
               step={0.1}
               precision={1}
               label={t("appearance.typography.lineHeight")}
-              onValueChange={(editorLineHeight) => updateSettings({ editorLineHeight })}
+              onValueChange={(editorLineHeight) =>
+                updateSettings({ editorLineHeight })
+              }
             />
           </div>
         </div>
@@ -204,11 +217,15 @@ export function AppearanceSection({
               step={1}
               suffix="px"
               label={t("appearance.spacing.horizontal")}
-              onValueChange={(editorPaddingX) => updateSettings({ editorPaddingX })}
+              onValueChange={(editorPaddingX) =>
+                updateSettings({ editorPaddingX })
+              }
             />
           </div>
           <div className="flex items-center justify-between gap-2">
-            <div className="text-xs text-muted-foreground">{t("appearance.spacing.vertical")}</div>
+            <div className="text-xs text-muted-foreground">
+              {t("appearance.spacing.vertical")}
+            </div>
             <SettingsNumberInput
               value={settings.editorPaddingY}
               min={0}
@@ -216,7 +233,9 @@ export function AppearanceSection({
               step={1}
               suffix="px"
               label={t("appearance.spacing.vertical")}
-              onValueChange={(editorPaddingY) => updateSettings({ editorPaddingY })}
+              onValueChange={(editorPaddingY) =>
+                updateSettings({ editorPaddingY })
+              }
             />
           </div>
         </div>

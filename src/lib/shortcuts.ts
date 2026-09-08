@@ -32,7 +32,12 @@ const keyMap: Record<string, string> = {
   arrowright: "ArrowRight",
 };
 
-const modifierOrder: Array<"Ctrl" | "Alt" | "Shift" | "Meta"> = ["Ctrl", "Alt", "Shift", "Meta"];
+const modifierOrder: Array<"Ctrl" | "Alt" | "Shift" | "Meta"> = [
+  "Ctrl",
+  "Alt",
+  "Shift",
+  "Meta",
+];
 
 export interface ShortcutLikeEvent {
   key: string;
@@ -58,7 +63,9 @@ function normalizeToken(token: string): string | null {
 }
 
 function isModifier(value: string) {
-  return value === "Ctrl" || value === "Alt" || value === "Shift" || value === "Meta";
+  return (
+    value === "Ctrl" || value === "Alt" || value === "Shift" || value === "Meta"
+  );
 }
 
 export function normalizeShortcut(shortcut: string): string | null {
@@ -85,7 +92,9 @@ export function normalizeShortcut(shortcut: string): string | null {
 
   if (!key) return null;
 
-  const orderedModifiers = modifierOrder.filter((modifier) => modifiers.has(modifier));
+  const orderedModifiers = modifierOrder.filter((modifier) =>
+    modifiers.has(modifier),
+  );
   return [...orderedModifiers, key].join("+");
 }
 
@@ -100,7 +109,10 @@ export function eventToShortcut(event: ShortcutLikeEvent): string | null {
   return normalizeShortcut([...modifiers, key].join("+"));
 }
 
-export function shortcutMatchesEvent(shortcut: string, event: ShortcutLikeEvent) {
+export function shortcutMatchesEvent(
+  shortcut: string,
+  event: ShortcutLikeEvent,
+) {
   const expected = normalizeShortcut(shortcut);
   const incoming = eventToShortcut(event);
   if (!expected || !incoming) return false;

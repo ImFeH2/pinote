@@ -29,7 +29,8 @@ function toErrorFields(value: unknown) {
 }
 
 function buildMessage(scope: string, event: string, payload?: LogPayload) {
-  const fields = payload && Object.keys(payload).length > 0 ? payload : undefined;
+  const fields =
+    payload && Object.keys(payload).length > 0 ? payload : undefined;
   if (!fields) return `${scope}:${event}`;
   try {
     return `${scope}:${event} ${JSON.stringify(fields)}`;
@@ -67,6 +68,14 @@ export function logWarn(scope: string, event: string, payload?: LogPayload) {
   emit("warn", buildMessage(scope, event, payload));
 }
 
-export function logError(scope: string, event: string, error?: unknown, payload?: LogPayload) {
-  emit("error", buildMessage(scope, event, { ...(payload ?? {}), ...toErrorFields(error) }));
+export function logError(
+  scope: string,
+  event: string,
+  error?: unknown,
+  payload?: LogPayload,
+) {
+  emit(
+    "error",
+    buildMessage(scope, event, { ...(payload ?? {}), ...toErrorFields(error) }),
+  );
 }

@@ -1,5 +1,10 @@
 import { dirname } from "@tauri-apps/api/path";
-import { exists, mkdir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import {
+  exists,
+  mkdir,
+  readTextFile,
+  writeTextFile,
+} from "@tauri-apps/plugin-fs";
 import { useCallback, useEffect, useRef } from "react";
 import { logError, logInfo } from "@/lib/logger";
 
@@ -19,7 +24,10 @@ async function ensureParentDir(notePath: string) {
   }
 }
 
-export function useAutoSave(notePath: string, options: UseAutoSaveOptions = {}) {
+export function useAutoSave(
+  notePath: string,
+  options: UseAutoSaveOptions = {},
+) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingSaveRef = useRef(false);
   const onPersistedRef = useRef(options.onPersisted);

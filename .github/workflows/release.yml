@@ -35,29 +35,36 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
+
       - name: Set up Node
         uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
+
       - name: Set up Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           rustflags: ""
           cache-workspaces: src-tauri -> target
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
+
       - name: Build and upload app
         uses: tauri-apps/tauri-action@v1
         env:
@@ -78,6 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - name: Publish release
         run: gh release edit "$TAG_NAME" --draft=false
@@ -91,6 +99,7 @@ jobs:
     needs: publish
     if: ${{ !contains(github.ref_name, '-') }}
     runs-on: windows-latest
+
     steps:
       - name: Resolve release version
         id: version
@@ -99,9 +108,11 @@ jobs:
           $tag = $env:GITHUB_REF_NAME
           $version = $tag.TrimStart("v")
           "version=$version" >> $env:GITHUB_OUTPUT
+
       - name: Download wingetcreate
         shell: pwsh
         run: Invoke-WebRequest https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+
       - name: Submit WinGet update
         env:
           WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}

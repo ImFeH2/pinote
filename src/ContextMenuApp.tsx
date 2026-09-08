@@ -176,11 +176,19 @@ function ContextMenuApp({
     const viewport = titleViewportRef.current;
     const text = titleTextRef.current;
     if (!viewport || !text) return;
-    const distance = Math.max(0, Math.ceil(text.scrollWidth - viewport.clientWidth));
+    const distance = Math.max(
+      0,
+      Math.ceil(text.scrollWidth - viewport.clientWidth),
+    );
     const nextDistance = distance > 2 ? distance : 0;
-    const nextDuration = nextDistance > 0 ? clamp((nextDistance + 56) / 34, 3.6, 18) : 0;
-    setTitleScrollDistance((prev) => (prev === nextDistance ? prev : nextDistance));
-    setTitleScrollDuration((prev) => (Math.abs(prev - nextDuration) < 0.001 ? prev : nextDuration));
+    const nextDuration =
+      nextDistance > 0 ? clamp((nextDistance + 56) / 34, 3.6, 18) : 0;
+    setTitleScrollDistance((prev) =>
+      prev === nextDistance ? prev : nextDistance,
+    );
+    setTitleScrollDuration((prev) =>
+      Math.abs(prev - nextDuration) < 0.001 ? prev : nextDuration,
+    );
   }, []);
 
   const titleStyle = useMemo(
@@ -192,98 +200,123 @@ function ContextMenuApp({
     [titleScrollDistance, titleScrollDuration],
   );
 
-  const fitWindowToContent = useCallback(() => {
-    const shell = shellRef.current;
-    const panel = panelRef.current;
-    const actions = actionsRef.current;
-    if (!shell || !panel || !actions) return;
-    const shellStyles = window.getComputedStyle(shell);
-    const panelStyles = window.getComputedStyle(panel);
-    const shellPaddingX = parsePx(shellStyles.paddingLeft) + parsePx(shellStyles.paddingRight);
-    const panelPaddingX =
-      parsePx(panelStyles.paddingLeft) +
-      parsePx(panelStyles.paddingRight) +
-      parsePx(panelStyles.borderLeftWidth) +
-      parsePx(panelStyles.borderRightWidth);
-    const actionsRect = actions.getBoundingClientRect();
-    const widthCss = clamp(
-      Math.ceil(actionsRect.width + shellPaddingX + panelPaddingX),
-      1,
-      MENU_MAX_WIDTH,
-    );
-    const panelWidthCss = Math.max(1, widthCss - shellPaddingX);
-    const panelWidthValue = `${panelWidthCss}px`;
-    if (panel.style.width !== panelWidthValue) {
-      panel.style.width = panelWidthValue;
-    }
-    updateTitleOverflow();
-    const measuredShellRect = shell.getBoundingClientRect();
-    const heightCss = clamp(Math.ceil(measuredShellRect.height), MENU_MIN_HEIGHT, MENU_MAX_HEIGHT);
-    void Promise.all([menuWindow.scaleFactor(), menuWindow.innerSize()])
-      .then(async ([scaleFactor, size]) => {
-        const factor = Number.isFinite(scaleFactor) && scaleFactor > 0 ? scaleFactor : 1;
-        const width = Math.max(1, Math.round(widthCss * factor));
-        const height = Math.max(1, Math.round(heightCss * factor));
-        const pointerX = context.anchorX;
-        const pointerY = context.anchorY;
-        let nextX = pointerX;
-        let nextY = pointerY;
-        const monitor = await monitorFromPoint(pointerX, pointerY).catch(() => null);
-        if (monitor) {
-          const minX = monitor.workArea.position.x + MENU_EDGE_GAP;
-          const minY = monitor.workArea.position.y + MENU_EDGE_GAP;
-          const maxX = Math.max(
-            minX,
-            monitor.workArea.position.x + monitor.workArea.size.width - width - MENU_EDGE_GAP,
+  const fitWindowToContent = useCallback(
+    (menuContext: NoteContextMenuContext) => {
+      const shell = shellRef.current;
+      const panel = panelRef.current;
+      const actions = actionsRef.current;
+      if (!shell || !panel || !actions) return;
+      const shellStyles = window.getComputedStyle(shell);
+      const panelStyles = window.getComputedStyle(panel);
+      const shellPaddingX =
+        parsePx(shellStyles.paddingLeft) + parsePx(shellStyles.paddingRight);
+      const panelPaddingX =
+        parsePx(panelStyles.paddingLeft) +
+        parsePx(panelStyles.paddingRight) +
+        parsePx(panelStyles.borderLeftWidth) +
+        parsePx(panelStyles.borderRightWidth);
+      const actionsRect = actions.getBoundingClientRect();
+      const widthCss = clamp(
+        Math.ceil(actionsRect.width + shellPaddingX + panelPaddingX),
+        1,
+        MENU_MAX_WIDTH,
+      );
+      const panelWidthCss = Math.max(1, widthCss - shellPaddingX);
+      const panelWidthValue = `${panelWidthCss}px`;
+      if (panel.style.width !== panelWidthValue) {
+        panel.style.width = panelWidthValue;
+      }
+      updateTitleOverflow();
+      const measuredShellRect = shell.getBoundingClientRect();
+      const heightCss = clamp(
+        Math.ceil(measuredShellRect.height),
+        MENU_MIN_HEIGHT,
+        MENU_MAX_HEIGHT,
+      );
+      void Promise.all([menuWindow.scaleFactor(), menuWindow.innerSize()])
+        .then(async ([scaleFactor, size]) => {
+          const factor =
+            Number.isFinite(scaleFactor) && scaleFactor > 0 ? scaleFactor : 1;
+          const width = Math.max(1, Math.round(widthCss * factor));
+          const height = Math.max(1, Math.round(heightCss * factor));
+          const pointerX = menuContext.anchorX;
+          const pointerY = menuContext.anchorY;
+          let nextX = pointerX;
+          let nextY = pointerY;
+          const monitor = await monitorFromPoint(pointerX, pointerY).catch(
+            () => null,
           );
-          const maxY = Math.max(
-            minY,
-            monitor.workArea.position.y + monitor.workArea.size.height - height - MENU_EDGE_GAP,
-          );
-          const rightSpace =
-            monitor.workArea.position.x + monitor.workArea.size.width - pointerX - MENU_EDGE_GAP;
-          const leftSpace = pointerX - monitor.workArea.position.x - MENU_EDGE_GAP;
-          const bottomSpace =
-            monitor.workArea.position.y + monitor.workArea.size.height - pointerY - MENU_EDGE_GAP;
-          const topSpace = pointerY - monitor.workArea.position.y - MENU_EDGE_GAP;
-          if (rightSpace < width && leftSpace >= width) {
-            nextX = pointerX - width;
+          if (monitor) {
+            const minX = monitor.workArea.position.x + MENU_EDGE_GAP;
+            const minY = monitor.workArea.position.y + MENU_EDGE_GAP;
+            const maxX = Math.max(
+              minX,
+              monitor.workArea.position.x +
+                monitor.workArea.size.width -
+                width -
+                MENU_EDGE_GAP,
+            );
+            const maxY = Math.max(
+              minY,
+              monitor.workArea.position.y +
+                monitor.workArea.size.height -
+                height -
+                MENU_EDGE_GAP,
+            );
+            const rightSpace =
+              monitor.workArea.position.x +
+              monitor.workArea.size.width -
+              pointerX -
+              MENU_EDGE_GAP;
+            const leftSpace =
+              pointerX - monitor.workArea.position.x - MENU_EDGE_GAP;
+            const bottomSpace =
+              monitor.workArea.position.y +
+              monitor.workArea.size.height -
+              pointerY -
+              MENU_EDGE_GAP;
+            const topSpace =
+              pointerY - monitor.workArea.position.y - MENU_EDGE_GAP;
+            if (rightSpace < width && leftSpace >= width) {
+              nextX = pointerX - width;
+            }
+            if (bottomSpace < height && topSpace >= height) {
+              nextY = pointerY - height;
+            }
+            nextX = clamp(nextX, minX, maxX);
+            nextY = clamp(nextY, minY, maxY);
           }
-          if (bottomSpace < height && topSpace >= height) {
-            nextY = pointerY - height;
+          const position = await menuWindow.outerPosition().catch(() => null);
+          if (!position) {
+            await menuWindow.setSize(new PhysicalSize(width, height));
+            await menuWindow.setPosition(new PhysicalPosition(nextX, nextY));
+            return;
           }
-          nextX = clamp(nextX, minX, maxX);
-          nextY = clamp(nextY, minY, maxY);
-        }
-        const position = await menuWindow.outerPosition().catch(() => null);
-        if (!position) {
+          if (
+            size.width === width &&
+            size.height === height &&
+            nextX === position.x &&
+            nextY === position.y
+          ) {
+            return;
+          }
           await menuWindow.setSize(new PhysicalSize(width, height));
           await menuWindow.setPosition(new PhysicalPosition(nextX, nextY));
-          return;
-        }
-        if (
-          size.width === width &&
-          size.height === height &&
-          nextX === position.x &&
-          nextY === position.y
-        ) {
-          return;
-        }
-        await menuWindow.setSize(new PhysicalSize(width, height));
-        await menuWindow.setPosition(new PhysicalPosition(nextX, nextY));
-      })
-      .catch((error) => {
-        logError("context-menu", "fit_window_to_content_failed", error, {
-          windowId: menuWindow.label,
-          anchorX: context.anchorX,
-          anchorY: context.anchorY,
+        })
+        .catch((error) => {
+          logError("context-menu", "fit_window_to_content_failed", error, {
+            windowId: menuWindow.label,
+            anchorX: menuContext.anchorX,
+            anchorY: menuContext.anchorY,
+          });
         });
-      });
-  }, [context.anchorX, context.anchorY, menuWindow, updateTitleOverflow]);
+    },
+    [menuWindow, updateTitleOverflow],
+  );
 
   useLayoutEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      fitWindowToContent();
+      fitWindowToContent(context);
     });
     return () => {
       window.cancelAnimationFrame(frame);
@@ -295,41 +328,31 @@ function ContextMenuApp({
     if (!shell) return;
     if (typeof ResizeObserver !== "function") return;
     const observer = new ResizeObserver(() => {
-      fitWindowToContent();
+      fitWindowToContent(context);
       updateTitleOverflow();
     });
     observer.observe(shell);
     return () => {
       observer.disconnect();
     };
-  }, [fitWindowToContent, updateTitleOverflow]);
+  }, [context, fitWindowToContent, updateTitleOverflow]);
 
   useEffect(() => {
     const viewport = titleViewportRef.current;
     const text = titleTextRef.current;
     if (!viewport || !text) return;
-    let frame: number | null = null;
-    if (typeof ResizeObserver !== "function") {
-      frame = window.requestAnimationFrame(() => {
-        updateTitleOverflow();
-      });
-      return;
-    }
-    const observer = new ResizeObserver(() => {
-      updateTitleOverflow();
-    });
-    observer.observe(viewport);
-    observer.observe(text);
-    frame = window.requestAnimationFrame(() => {
-      updateTitleOverflow();
-    });
+    const frame = window.requestAnimationFrame(updateTitleOverflow);
+    const sizeObserver =
+      typeof ResizeObserver === "function"
+        ? new ResizeObserver(updateTitleOverflow)
+        : null;
+    sizeObserver?.observe(viewport);
+    sizeObserver?.observe(text);
     return () => {
-      if (frame !== null) {
-        window.cancelAnimationFrame(frame);
-      }
-      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+      sizeObserver?.disconnect();
     };
-  }, [context.noteId, updateTitleOverflow]);
+  }, [updateTitleOverflow]);
 
   return (
     <div ref={shellRef} className="inline-block">
@@ -355,7 +378,9 @@ function ContextMenuApp({
                 style={titleStyle}
                 className={cn(
                   "pinote-menu-title-text px-2 py-1 text-[11px] font-medium text-muted-foreground",
-                  titleShouldScroll ? "pinote-menu-title-text-scroll" : "truncate",
+                  titleShouldScroll
+                    ? "pinote-menu-title-text-scroll"
+                    : "truncate",
                 )}
               >
                 {title}
@@ -409,7 +434,9 @@ function ContextMenuApp({
               }}
               className="flex items-center whitespace-nowrap rounded px-2 py-1.5 text-left text-xs text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-              {context.noteReadOnly ? t("disableReadOnly") : t("enableReadOnly")}
+              {context.noteReadOnly
+                ? t("disableReadOnly")
+                : t("enableReadOnly")}
             </button>
             <button
               type="button"

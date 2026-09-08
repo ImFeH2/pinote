@@ -9,7 +9,14 @@ import { gfm } from "@milkdown/kit/preset/gfm";
 import { Milkdown, MilkdownProvider, useEditor } from "@milkdown/react";
 import { nord } from "@milkdown/theme-nord";
 import { readTextFile } from "@tauri-apps/plugin-fs";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { NoteHistorySearchResult } from "@/lib/noteHistory";
@@ -92,6 +99,8 @@ export function HistorySection({
 }: HistorySectionProps) {
   const { t } = useTranslation("settings");
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  const previewId = useId();
+  const previewRequestRef = useRef(0);
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previewCacheRef = useRef(new Map<string, string>());
@@ -102,6 +111,7 @@ export function HistorySection({
 
   useEffect(() => {
     return () => {
+      previewRequestRef.current += 1;
       if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     };
@@ -117,28 +127,40 @@ export function HistorySection({
       const viewport = titleViewportRef.current;
       const text = titleTextRef.current;
       if (!viewport || !text) return;
-      const distance = Math.max(0, Math.ceil(text.scrollWidth - viewport.clientWidth));
+      const distance = Math.max(
+        0,
+        Math.ceil(text.scrollWidth - viewport.clientWidth),
+      );
       const nextDistance = distance > 2 ? distance : 0;
       const nextDuration =
-        nextDistance > 0 ? Math.min(18, Math.max(3.6, (nextDistance + 56) / 34)) : 0;
+        nextDistance > 0
+          ? Math.min(18, Math.max(3.6, (nextDistance + 56) / 34))
+          : 0;
       setTitleScrollDistance(nextDistance);
       setTitleScrollDuration(nextDuration);
     });
     return () => cancelAnimationFrame(raf);
   }, [preview?.notePath]);
 
-  const schedulePreview = (item: NoteHistorySearchResult, x: number, y: number) => {
+  const schedulePreview = (
+    item: NoteHistorySearchResult,
+    x: number,
+    y: number,
+  ) => {
+    const request = ++previewRequestRef.current;
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     previewTimerRef.current = setTimeout(() => {
       const cached = previewCacheRef.current.get(item.notePath);
       if (cached !== undefined) {
-        if (cached) setPreview({ x, y, notePath: item.notePath, content: cached });
+        if (cached)
+          setPreview({ x, y, notePath: item.notePath, content: cached });
         return;
       }
       readTextFile(item.notePath)
         .then((content) => {
           previewCacheRef.current.set(item.notePath, content);
+          if (request !== previewRequestRef.current) return;
           if (content) setPreview({ x, y, notePath: item.notePath, content });
         })
         .catch(() => {});
@@ -146,9 +168,19 @@ export function HistorySection({
   };
 
   const cancelPreview = () => {
+    previewRequestRef.current += 1;
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-    hideTimerRef.current = setTimeout(() => setPreview(null), PREVIEW_HIDE_DELAY_MS);
+    hideTimerRef.current = setTimeout(
+      () => setPreview(null),
+      PREVIEW_HIDE_DELAY_MS,
+    );
+  };
+
+  const handlePreviewKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Escape") return;
+    cancelPreview();
+    setPreview(null);
   };
 
   return (
@@ -164,9 +196,13 @@ export function HistorySection({
       />
       <div className="pinote-scrollbar min-h-0 flex-1 overflow-y-auto rounded-md border border-border bg-background/70">
         {historyLoading ? (
-          <div className="px-2 py-2 text-xs text-muted-foreground">{t("history.searching")}</div>
+          <div className="px-2 py-2 text-xs text-muted-foreground">
+            {t("history.searching")}
+          </div>
         ) : historyResults.length === 0 ? (
-          <div className="px-2 py-2 text-xs text-muted-foreground">{t("history.noResults")}</div>
+          <div className="px-2 py-2 text-xs text-muted-foreground">
+            {t("history.noResults")}
+          </div>
         ) : (
           historyResults.map((item) => {
             const key = `${item.notePath}::${item.windowId}`;
@@ -176,10 +212,22 @@ export function HistorySection({
                 key={key}
                 type="button"
                 disabled={opening}
+                aria-describedby={
+                  preview?.notePath === item.notePath ? previewId : undefined
+                }
+                onFocus={(event) => {
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  schedulePreview(item, bounds.left, bounds.bottom);
+                }}
+                onBlur={cancelPreview}
+                onKeyDown={handlePreviewKeyDown}
                 onMouseEnter={(event) => {
                   schedulePreview(item, event.clientX, event.clientY);
                 }}
-                onMouseLeave={cancelPreview}
+                onMouseLeave={(event) => {
+                  if (event.currentTarget !== document.activeElement)
+                    cancelPreview();
+                }}
                 onClick={() => {
                   void onOpenHistoryItem(item);
                 }}
@@ -210,7 +258,9 @@ export function HistorySection({
                   )}
                 </div>
                 <div className="text-[11px] text-muted-foreground">
-                  {t("history.lastOpened", { date: formatDateTime(item.lastOpenedAt) })}
+                  {t("history.lastOpened", {
+                    date: formatDateTime(item.lastOpenedAt),
+                  })}
                 </div>
               </button>
             );
@@ -219,22 +269,36 @@ export function HistorySection({
       </div>
       {preview &&
         createPortal(
-          <div
+          <aside
+            id={previewId}
+            aria-label="Note preview"
             className="fixed z-50"
             style={{ left: preview.x + 14, top: preview.y + 14 }}
             onMouseEnter={() => {
               if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
             }}
-            onMouseLeave={cancelPreview}
+            onMouseLeave={(event) => {
+              if (!event.currentTarget.contains(document.activeElement))
+                cancelPreview();
+            }}
+            onFocus={() => {
+              if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+            }}
+            onBlur={cancelPreview}
+            onKeyDown={handlePreviewKeyDown}
           >
             <div className="max-w-xs overflow-hidden rounded-md border border-border bg-background shadow-lg">
               <div className="border-b border-border/70 px-2.5 py-1.5">
-                <div ref={titleViewportRef} className="pinote-menu-title-viewport">
+                <div
+                  ref={titleViewportRef}
+                  className="pinote-menu-title-viewport"
+                >
                   <div
                     ref={titleTextRef}
                     className={cn(
                       "pinote-menu-title-text text-[10px] text-muted-foreground",
-                      titleScrollDistance > 0 && "pinote-menu-title-text-scroll",
+                      titleScrollDistance > 0 &&
+                        "pinote-menu-title-text-scroll",
                     )}
                     style={
                       {
@@ -251,21 +315,27 @@ export function HistorySection({
                 className="milkdown-editor pinote-scrollbar max-h-48 overflow-y-auto px-2.5 py-2"
                 style={
                   {
-                    "--editor-font-family": resolveEditorFontFamily(editorFontFamily),
+                    "--editor-font-family":
+                      resolveEditorFontFamily(editorFontFamily),
                     "--editor-font-size": `${editorFontSize}px`,
                     "--editor-line-height": editorLineHeight.toString(),
                   } as CSSProperties
                 }
               >
                 <MilkdownProvider>
-                  <NotePreview key={preview.notePath} markdown={preview.content} />
+                  <NotePreview
+                    key={preview.notePath}
+                    markdown={preview.content}
+                  />
                 </MilkdownProvider>
               </div>
             </div>
-          </div>,
+          </aside>,
           document.body,
         )}
-      {historyError && <div className="text-xs text-destructive">{historyError}</div>}
+      {historyError && (
+        <div className="text-xs text-destructive">{historyError}</div>
+      )}
     </div>
   );
 }

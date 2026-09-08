@@ -1,6 +1,12 @@
 import { dirname } from "@tauri-apps/api/path";
 import { readTextFile, watchImmediate } from "@tauri-apps/plugin-fs";
-import { type MutableRefObject, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type MutableRefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { logDebug, logError } from "@/lib/logger";
 
 const EXTERNAL_FILE_RELOAD_DEBOUNCE_MS = 120;
@@ -37,7 +43,9 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
   const persistedContentRef = useRef("");
   const pendingExternalContentRef = useRef<string | null>(null);
   const ignoreExternalWatchUntilRef = useRef(0);
-  const externalReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const externalReloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const [hasExternalFileChange, setHasExternalFileChange] = useState(false);
 
   const applyLoadedContent = useCallback(
@@ -51,12 +59,16 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
     [latestEditorContentRef, setInitialContent],
   );
 
-  const handlePersistedContent = useCallback((content: string, source: PersistSource) => {
-    persistedContentRef.current = content;
-    if (source === "save") {
-      ignoreExternalWatchUntilRef.current = Date.now() + SELF_FILE_WRITE_IGNORE_MS;
-    }
-  }, []);
+  const handlePersistedContent = useCallback(
+    (content: string, source: PersistSource) => {
+      persistedContentRef.current = content;
+      if (source === "save") {
+        ignoreExternalWatchUntilRef.current =
+          Date.now() + SELF_FILE_WRITE_IGNORE_MS;
+      }
+    },
+    [],
+  );
 
   const applyExternalFileContent = useCallback(
     (content: string) => {
@@ -123,7 +135,8 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
           if (fileContent === null) return;
           if (fileContent === latestEditorContentRef.current) return;
           const hasLocalUnsavedChanges =
-            isSavePending() || latestEditorContentRef.current !== persistedContentRef.current;
+            isSavePending() ||
+            latestEditorContentRef.current !== persistedContentRef.current;
           if (hasLocalUnsavedChanges) {
             logDebug("note-window", "external_watch_detect_conflict", {
               notePath,
@@ -190,7 +203,13 @@ export function useNoteExternalSync(options: UseNoteExternalSyncOptions) {
         unwatch();
       }
     };
-  }, [applyExternalFileContent, initialContent, isSavePending, latestEditorContentRef, notePath]);
+  }, [
+    applyExternalFileContent,
+    initialContent,
+    isSavePending,
+    latestEditorContentRef,
+    notePath,
+  ]);
 
   return {
     applyLoadedContent,

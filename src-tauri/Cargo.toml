@@ -7,37 +7,6 @@ repository = "https://github.com/ImFeH2/pinote"
 license = "Apache-2.0"
 edition = "2024"
 
-[lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "pinote_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
-
-[build-dependencies]
-tauri-build = { version = "2", features = [] }
-
-[dependencies]
-log = "0.4"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
-tauri-plugin-autostart = "2"
-tauri-plugin-dialog = "2"
-tauri-plugin-fs = { version = "2", features = ["watch"] }
-tauri-plugin-global-shortcut = "2"
-tauri-plugin-log = "2"
-tauri-plugin-opener = "2"
-tauri-plugin-os = "2"
-tauri-plugin-process = "2.3.1"
-tauri-plugin-single-instance = "2"
-tauri-plugin-updater = "2"
-uuid = { version = "1", features = ["v4"] }
-zip = { version = "4.6.1", default-features = false }
-
-[target.'cfg(target_os = "windows")'.dependencies]
-winreg = "0.55"
-
 [package.metadata.release]
 tag-prefix = ""
 tag-name = "v{{version}}"
@@ -47,6 +16,37 @@ sign-commit = true
 sign-tag = true
 publish = false
 pre-release-replacements = [
-    { file = "tauri.conf.json", search = "\"version\": \"[^\"]+\"", replace = "\"version\": \"{{version}}\"", exactly = 1 },
-    { file = "../package.json", search = "\"version\": \"[^\"]+\"", replace = "\"version\": \"{{version}}\"", exactly = 1 },
+  { file = "tauri.conf.json", search = "\"version\": \"[^\"]+\"", replace = "\"version\": \"{{version}}\"", exactly = 1 },
+  { file = "../package.json", search = "\"version\": \"[^\"]+\"", replace = "\"version\": \"{{version}}\"", exactly = 1 },
 ]
+
+[lib]
+crate-type = ["cdylib", "rlib", "staticlib"]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "pinote_lib"
+
+[dependencies]
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = ["macos-private-api", "tray-icon"] }
+tauri-plugin-autostart = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = { version = "2", features = ["watch"] }
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-log = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-os = "2"
+tauri-plugin-process = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
+uuid = { version = "1", features = ["v4"] }
+zip = { version = "4", default-features = false }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winreg = "0.55"

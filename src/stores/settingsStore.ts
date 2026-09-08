@@ -1,6 +1,14 @@
 import { logInfo } from "@/lib/logger";
-import { emitSettingsUpdated, listenSettingsUpdated } from "@/lib/settingsEvents";
-import { DEFAULT_SETTINGS, loadSettings, type Settings, saveSettings } from "@/stores/settings";
+import {
+  emitSettingsUpdated,
+  listenSettingsUpdated,
+} from "@/lib/settingsEvents";
+import {
+  DEFAULT_SETTINGS,
+  loadSettings,
+  type Settings,
+  saveSettings,
+} from "@/stores/settings";
 
 export type SettingsPatch = Partial<Omit<Settings, "shortcuts">> & {
   shortcuts?: Partial<Settings["shortcuts"]>;

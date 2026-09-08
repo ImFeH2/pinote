@@ -1,4 +1,11 @@
-import { AppWindow, History, Info, Keyboard, type LucideIcon, Palette } from "lucide-react";
+import {
+  AppWindow,
+  History,
+  Info,
+  Keyboard,
+  type LucideIcon,
+  Palette,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { type SettingsSection, sections } from "@/components/settings/shared";
 import { cn } from "@/lib/utils";
@@ -17,9 +24,14 @@ interface SettingsSidebarProps {
   onSelect: (section: SettingsSection) => void;
 }
 
-export function SettingsSidebar({ activeSection, appVersion, onSelect }: SettingsSidebarProps) {
+export function SettingsSidebar({
+  activeSection,
+  appVersion,
+  onSelect,
+}: SettingsSidebarProps) {
   const { t } = useTranslation("settings");
-  const versionText = appVersion === null ? "…" : appVersion ? `v${appVersion}` : "—";
+  const versionText =
+    appVersion === null ? "…" : appVersion ? `v${appVersion}` : "—";
   const renderSection = (section: (typeof sections)[number]) => {
     const Icon = sectionIcons[section.id];
     return (
@@ -35,7 +47,11 @@ export function SettingsSidebar({ activeSection, appVersion, onSelect }: Setting
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
         )}
       >
-        <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+        <Icon
+          className="h-3.5 w-3.5 shrink-0"
+          strokeWidth={1.8}
+          aria-hidden="true"
+        />
         <span>{t(section.labelKey)}</span>
       </button>
     );
@@ -51,12 +67,16 @@ export function SettingsSidebar({ activeSection, appVersion, onSelect }: Setting
           <div className="truncate text-sm font-semibold tracking-tight text-foreground">
             Pinote
           </div>
-          <div className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">{versionText}</div>
+          <div className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
+            {versionText}
+          </div>
         </div>
       </div>
       {sections.filter((section) => section.id !== "about").map(renderSection)}
       <div className="mt-auto pt-2">
-        {sections.filter((section) => section.id === "about").map(renderSection)}
+        {sections
+          .filter((section) => section.id === "about")
+          .map(renderSection)}
       </div>
     </aside>
   );

@@ -62,7 +62,9 @@ export function useNoteWindowActions(options: UseNoteWindowActionsOptions) {
 
   const openSettings = useCallback(() => {
     openSettingsWindow().catch((error) => {
-      logError("note-window", "open_settings_window_failed", error, { windowId: windowLabel });
+      logError("note-window", "open_settings_window_failed", error, {
+        windowId: windowLabel,
+      });
     });
   }, [windowLabel]);
 
@@ -84,7 +86,13 @@ export function useNoteWindowActions(options: UseNoteWindowActionsOptions) {
           notePath,
         });
       });
-  }, [appWindow, noteOpacityRef, notePath, settings.hideNoteWindowsFromTaskbar, windowLabel]);
+  }, [
+    appWindow,
+    noteOpacityRef,
+    notePath,
+    settings.hideNoteWindowsFromTaskbar,
+    windowLabel,
+  ]);
 
   const minimizeWindow = useCallback(() => {
     if (settings.hideNoteWindowsFromTaskbar) {
@@ -92,7 +100,9 @@ export function useNoteWindowActions(options: UseNoteWindowActionsOptions) {
       return;
     }
     appWindow.minimize().catch((error) => {
-      logError("note-window", "minimize_window_failed", error, { windowId: windowLabel });
+      logError("note-window", "minimize_window_failed", error, {
+        windowId: windowLabel,
+      });
     });
   }, [appWindow, hideWindow, settings.hideNoteWindowsFromTaskbar, windowLabel]);
 
@@ -116,24 +126,37 @@ export function useNoteWindowActions(options: UseNoteWindowActionsOptions) {
     const nextReadOnly = !noteReadOnlyRef.current;
     noteReadOnlyRef.current = nextReadOnly;
     setNoteReadOnly(nextReadOnly);
-    logInfo("note-window", "toggle_read_only", { windowId: windowLabel, next: nextReadOnly });
-    void persistWindowState(undefined, false, undefined, undefined, nextReadOnly);
+    logInfo("note-window", "toggle_read_only", {
+      windowId: windowLabel,
+      next: nextReadOnly,
+    });
+    void persistWindowState(
+      undefined,
+      false,
+      undefined,
+      undefined,
+      nextReadOnly,
+    );
   }, [noteReadOnlyRef, persistWindowState, setNoteReadOnly, windowLabel]);
 
   const closeWindow = useCallback(() => {
     logInfo("note-window", "close_window", { windowId: windowLabel });
     appWindow.close().catch((error) => {
-      logError("note-window", "close_window_failed", error, { windowId: windowLabel });
+      logError("note-window", "close_window_failed", error, {
+        windowId: windowLabel,
+      });
     });
   }, [appWindow, windowLabel]);
 
   const startWindowDrag = useCallback(
-    (event: ReactMouseEvent<HTMLDivElement>) => {
+    (event: ReactMouseEvent<HTMLElement>) => {
       if (event.button !== 0) return;
       event.preventDefault();
       logInfo("note-window", "window_drag_start", { windowId: windowLabel });
       appWindow.startDragging().catch((error) => {
-        logError("note-window", "start_dragging_failed", error, { windowId: windowLabel });
+        logError("note-window", "start_dragging_failed", error, {
+          windowId: windowLabel,
+        });
       });
     },
     [appWindow, windowLabel],

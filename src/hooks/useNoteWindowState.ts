@@ -16,7 +16,6 @@ type CloseRequestState = "idle" | "persisting" | "ready";
 
 interface UseNoteWindowStateOptions {
   appWindow: ReturnType<typeof getCurrentWindow>;
-  alwaysOnTop: boolean;
   noteId: string;
   notePath: string;
   windowLabel: string;
@@ -38,7 +37,6 @@ function clamp(value: number, min: number, max: number) {
 export function useNoteWindowState(options: UseNoteWindowStateOptions) {
   const {
     appWindow,
-    alwaysOnTop,
     noteId,
     notePath,
     windowLabel,
@@ -53,7 +51,9 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
     setNoteReadOnly,
   } = options;
   const [initialEditorScrollTop, setInitialEditorScrollTop] = useState(0);
-  const [windowStateReadyKey, setWindowStateReadyKey] = useState<string | null>(null);
+  const [windowStateReadyKey, setWindowStateReadyKey] = useState<string | null>(
+    null,
+  );
   const windowStateKey = `${windowLabel}:${noteId}`;
   const windowStateReady = windowStateReadyKey === windowStateKey;
 
@@ -64,7 +64,9 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
         if (disposed) return;
         if (!state) return;
         if (state.noteId !== noteId) return;
-        setNoteOpacityState(clamp(state.opacity, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX));
+        setNoteOpacityState(
+          clamp(state.opacity, NOTE_OPACITY_MIN, NOTE_OPACITY_MAX),
+        );
         setNoteReadOnly(state.readOnly === true);
         const cachedScrollTop = Math.max(0, state.scrollTop);
         noteScrollTopRef.current = cachedScrollTop;
@@ -78,7 +80,14 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
     return () => {
       disposed = true;
     };
-  }, [noteId, noteScrollTopRef, setNoteOpacityState, setNoteReadOnly, windowLabel, windowStateKey]);
+  }, [
+    noteId,
+    noteScrollTopRef,
+    setNoteOpacityState,
+    setNoteReadOnly,
+    windowLabel,
+    windowStateKey,
+  ]);
 
   const persistWindowState = useCallback(
     async (
@@ -90,12 +99,14 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
       preserveHiddenVisibility = visibility === undefined,
     ) => {
       try {
-        const [position, size, currentAlwaysOnTop, visible] = await Promise.all([
-          appWindow.outerPosition(),
-          appWindow.innerSize(),
-          appWindow.isAlwaysOnTop(),
-          appWindow.isVisible(),
-        ]);
+        const [position, size, currentAlwaysOnTop, visible] = await Promise.all(
+          [
+            appWindow.outerPosition(),
+            appWindow.innerSize(),
+            appWindow.isAlwaysOnTop(),
+            appWindow.isVisible(),
+          ],
+        );
         let nextVisibility: WindowVisibility;
         if (visibility) {
           nextVisibility = visibility;
@@ -112,7 +123,10 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
           NOTE_OPACITY_MIN,
           NOTE_OPACITY_MAX,
         );
-        const nextScrollTop = Math.max(0, scrollTop ?? noteScrollTopRef.current);
+        const nextScrollTop = Math.max(
+          0,
+          scrollTop ?? noteScrollTopRef.current,
+        );
         await upsertWindowState(
           {
             windowId: windowLabel,
@@ -155,7 +169,10 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
 
   const handleScrollTopChange = useCallback(
     (scrollTop: number) => {
-      const nextScrollTop = Math.max(0, Number.isFinite(scrollTop) ? scrollTop : 0);
+      const nextScrollTop = Math.max(
+        0,
+        Number.isFinite(scrollTop) ? scrollTop : 0,
+      );
       noteScrollTopRef.current = nextScrollTop;
       if (scrollPersistTimerRef.current) {
         clearTimeout(scrollPersistTimerRef.current);
@@ -183,7 +200,9 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
       );
       await appWindow.hide();
     } catch (error) {
-      logError("note-window", "hide_window_failed", error, { windowId: windowLabel });
+      logError("note-window", "hide_window_failed", error, {
+        windowId: windowLabel,
+      });
       forceHiddenVisibilityRef.current = false;
     } finally {
       hideInProgressRef.current = false;
@@ -202,7 +221,7 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
   useEffect(() => {
     if (!windowStateReady) return;
     void persistWindowState();
-  }, [alwaysOnTop, persistWindowState, windowStateReady]);
+  }, [persistWindowState, windowStateReady]);
 
   useEffect(() => {
     let disposed = false;
@@ -221,7 +240,14 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
           if (!windowStateReady) return;
           if (!payload) return;
           if (hideInProgressRef.current) return;
-          void persistWindowState("visible", false, undefined, undefined, undefined, true);
+          void persistWindowState(
+            "visible",
+            false,
+            undefined,
+            undefined,
+            undefined,
+            true,
+          );
         }),
         appWindow.onCloseRequested((event) => {
           if (closeRequestState.current === "ready") {
@@ -241,9 +267,14 @@ export function useNoteWindowState(options: UseNoteWindowStateOptions) {
               closeRequestState.current = "ready";
               appWindow.close().catch((error) => {
                 closeRequestState.current = "idle";
-                logError("note-window", "close_window_failed_on_request", error, {
-                  windowId: windowLabel,
-                });
+                logError(
+                  "note-window",
+                  "close_window_failed_on_request",
+                  error,
+                  {
+                    windowId: windowLabel,
+                  },
+                );
               });
             });
         }),

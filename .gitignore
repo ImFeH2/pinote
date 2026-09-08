@@ -1,3 +1,12 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+/src-tauri/target/
+/src-tauri/gen/schemas
+
 # Logs
 logs
 *.log
@@ -7,18 +16,19 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Local files
 *.local
+*.tsbuildinfo
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+# Editor and local tools
+.vscode/
+.claude/
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# System files
+.DS_Store

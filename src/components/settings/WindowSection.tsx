@@ -72,10 +72,14 @@ export function WindowSection({
             {t("window.lostNotes.description")}
           </div>
           {bringNotesBackResult && (
-            <div className="text-[11px] text-muted-foreground">{bringNotesBackResult}</div>
+            <div className="text-[11px] text-muted-foreground">
+              {bringNotesBackResult}
+            </div>
           )}
           {bringNotesBackError && (
-            <div className="text-[11px] text-destructive">{bringNotesBackError}</div>
+            <div className="text-[11px] text-destructive">
+              {bringNotesBackError}
+            </div>
           )}
         </div>
         <button
@@ -91,7 +95,9 @@ export function WindowSection({
           )}
         >
           <Move className="h-3.5 w-3.5" />
-          {bringNotesBackBusy ? t("window.lostNotes.moving") : t("window.lostNotes.action")}
+          {bringNotesBackBusy
+            ? t("window.lostNotes.moving")
+            : t("window.lostNotes.action")}
         </button>
       </div>
 
@@ -107,7 +113,9 @@ export function WindowSection({
               updateSettings({ newNoteDirectory: event.target.value });
               setNotesDirectoryError(null);
             }}
-            placeholder={defaultNotesDirectory || t("window.notesDirectory.loading")}
+            placeholder={
+              defaultNotesDirectory || t("window.notesDirectory.loading")
+            }
             disabled={notesDirectoryBusy}
             className={cn(
               "h-8 flex-1 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none transition-colors focus:border-primary",
@@ -139,7 +147,8 @@ export function WindowSection({
             className={cn(
               "inline-flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground transition-colors",
               "border-border bg-background text-muted-foreground hover:bg-accent",
-              (notesDirectoryBusy || !effectiveNotesDirectory) && "cursor-not-allowed opacity-60",
+              (notesDirectoryBusy || !effectiveNotesDirectory) &&
+                "cursor-not-allowed opacity-60",
             )}
             aria-label={t("window.notesDirectory.open")}
             title={t("window.notesDirectory.open")}
@@ -166,14 +175,18 @@ export function WindowSection({
         />
       </div>
 
-      {startupError && <div className="text-xs text-destructive">{startupError}</div>}
+      {startupError && (
+        <div className="text-xs text-destructive">{startupError}</div>
+      )}
 
       <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
         <div className="flex flex-col gap-1">
           <div className="text-xs font-medium text-muted-foreground">
             {t("window.taskbar.label")}
           </div>
-          <div className="text-[11px] text-muted-foreground">{t("window.taskbar.description")}</div>
+          <div className="text-[11px] text-muted-foreground">
+            {t("window.taskbar.description")}
+          </div>
         </div>
         <SettingsSwitch
           checked={settings.hideNoteWindowsFromTaskbar}
@@ -185,7 +198,9 @@ export function WindowSection({
         />
       </div>
 
-      {taskbarError && <div className="text-xs text-destructive">{taskbarError}</div>}
+      {taskbarError && (
+        <div className="text-xs text-destructive">{taskbarError}</div>
+      )}
 
       <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
         <div className="flex flex-col gap-1">
@@ -199,7 +214,9 @@ export function WindowSection({
         <SettingsSwitch
           checked={settings.contextMenuFollowNoteOpacity}
           label={t("window.contextMenuOpacity.label")}
-          onCheckedChange={(checked) => updateSettings({ contextMenuFollowNoteOpacity: checked })}
+          onCheckedChange={(checked) =>
+            updateSettings({ contextMenuFollowNoteOpacity: checked })
+          }
         />
       </div>
 
@@ -222,7 +239,9 @@ export function WindowSection({
         />
       </div>
 
-      {contextMenuError && <div className="text-xs text-destructive">{contextMenuError}</div>}
+      {contextMenuError && (
+        <div className="text-xs text-destructive">{contextMenuError}</div>
+      )}
 
       <div className="flex items-center justify-between rounded-md border border-border bg-background/60 p-3">
         <div className="flex flex-col gap-1">
@@ -243,7 +262,9 @@ export function WindowSection({
         />
       </div>
 
-      {defaultOpenError && <div className="text-xs text-destructive">{defaultOpenError}</div>}
+      {defaultOpenError && (
+        <div className="text-xs text-destructive">{defaultOpenError}</div>
+      )}
     </div>
   );
 }

@@ -1,4 +1,8 @@
-import type { DragMouseButton, WheelResizeModifier, WindowsGlassEffect } from "@/stores/settings";
+import type {
+  DragMouseButton,
+  WheelResizeModifier,
+  WindowsGlassEffect,
+} from "@/stores/settings";
 
 export const globalShortcutKeys = [
   "newNote",
@@ -12,8 +16,14 @@ export type GlobalShortcutKey = (typeof globalShortcutKeys)[number];
 export const shortcutItems = [
   { key: "newNote", labelKey: "shortcuts.items.newNote" },
   { key: "restoreWindow", labelKey: "shortcuts.items.restoreWindow" },
-  { key: "showAllHiddenWindows", labelKey: "shortcuts.items.showAllHiddenWindows" },
-  { key: "toggleVisibleWindows", labelKey: "shortcuts.items.toggleVisibleWindows" },
+  {
+    key: "showAllHiddenWindows",
+    labelKey: "shortcuts.items.showAllHiddenWindows",
+  },
+  {
+    key: "toggleVisibleWindows",
+    labelKey: "shortcuts.items.toggleVisibleWindows",
+  },
   { key: "toggleAlwaysOnTop", labelKey: "shortcuts.items.toggleAlwaysOnTop" },
   { key: "toggleReadOnly", labelKey: "shortcuts.items.toggleReadOnly" },
   { key: "toggleTheme", labelKey: "shortcuts.items.toggleTheme" },
@@ -30,7 +40,10 @@ export const themeOptions = [
 ] as const;
 
 export const fontFamilyOptions = [
-  { value: "system", labelKey: "appearance.typography.fontFamilyOptions.system" },
+  {
+    value: "system",
+    labelKey: "appearance.typography.fontFamilyOptions.system",
+  },
   { value: "serif", labelKey: "appearance.typography.fontFamilyOptions.serif" },
   { value: "mono", labelKey: "appearance.typography.fontFamilyOptions.mono" },
 ] as const;
@@ -45,7 +58,10 @@ export const wheelResizeModifierOptions: Array<{
   { value: "meta", labelKey: "shortcuts.modifiers.meta" },
 ];
 
-export const dragMouseButtonOptions: Array<{ value: DragMouseButton; labelKey: string }> = [
+export const dragMouseButtonOptions: Array<{
+  value: DragMouseButton;
+  labelKey: string;
+}> = [
   { value: "middle", labelKey: "shortcuts.mouseButtons.middle" },
   { value: "right", labelKey: "shortcuts.mouseButtons.right" },
 ];

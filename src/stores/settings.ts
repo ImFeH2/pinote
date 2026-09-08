@@ -1,4 +1,9 @@
-import { BaseDirectory, exists, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import {
+  BaseDirectory,
+  exists,
+  readTextFile,
+  writeTextFile,
+} from "@tauri-apps/plugin-fs";
 import type { LanguagePreference } from "@/i18n/locale";
 import { logError } from "@/lib/logger";
 
@@ -101,8 +106,16 @@ function sanitizeNewNoteDirectory(value: unknown) {
   return value.trim();
 }
 
-function sanitizeWheelModifier(value: unknown, fallback: WheelResizeModifier): WheelResizeModifier {
-  if (value === "alt" || value === "ctrl" || value === "shift" || value === "meta") {
+function sanitizeWheelModifier(
+  value: unknown,
+  fallback: WheelResizeModifier,
+): WheelResizeModifier {
+  if (
+    value === "alt" ||
+    value === "ctrl" ||
+    value === "shift" ||
+    value === "meta"
+  ) {
     return value;
   }
   return fallback;
@@ -114,7 +127,12 @@ function sanitizeDragMouseButton(value: unknown): DragMouseButton {
 }
 
 function sanitizeWindowsGlassEffect(value: unknown): WindowsGlassEffect {
-  if (value === "none" || value === "mica" || value === "acrylic" || value === "blur") {
+  if (
+    value === "none" ||
+    value === "mica" ||
+    value === "acrylic" ||
+    value === "blur"
+  ) {
     return value;
   }
   return DEFAULT_SETTINGS.noteGlassEffectWindows;
@@ -126,11 +144,14 @@ function sanitizeBoolean(value: unknown, fallback: boolean) {
 }
 
 function sanitizeLanguage(value: unknown): LanguagePreference {
-  if (value === "system" || value === "en-US" || value === "zh-CN") return value;
+  if (value === "system" || value === "en-US" || value === "zh-CN")
+    return value;
   return DEFAULT_SETTINGS.language;
 }
 
-function stripExtraFields(stored: StoredSettings): Partial<Omit<Settings, "shortcuts">> {
+function stripExtraFields(
+  stored: StoredSettings,
+): Partial<Omit<Settings, "shortcuts">> {
   const copy = { ...stored } as Record<string, unknown>;
   delete copy.shortcuts;
   delete copy.noteGlassBlur;
@@ -149,7 +170,9 @@ function mergeSettings(stored: StoredSettings): Settings {
     ...rest,
     language: sanitizeLanguage(rest.language),
     newNoteDirectory: sanitizeNewNoteDirectory(rest.newNoteDirectory),
-    noteGlassEffectWindows: sanitizeWindowsGlassEffect(rest.noteGlassEffectWindows),
+    noteGlassEffectWindows: sanitizeWindowsGlassEffect(
+      rest.noteGlassEffectWindows,
+    ),
     noteGlassEffectMacos: sanitizeBoolean(
       rest.noteGlassEffectMacos,
       DEFAULT_SETTINGS.noteGlassEffectMacos,
@@ -174,9 +197,12 @@ function mergeSettings(stored: StoredSettings): Settings {
 function shouldMigrateLegacyShortcutDefaults(shortcuts: Settings["shortcuts"]) {
   return (
     shortcuts.restoreWindow === LEGACY_DEFAULT_SHORTCUTS.restoreWindow &&
-    shortcuts.showAllHiddenWindows === LEGACY_DEFAULT_SHORTCUTS.showAllHiddenWindows &&
-    shortcuts.toggleVisibleWindows === LEGACY_DEFAULT_SHORTCUTS.toggleVisibleWindows &&
-    shortcuts.toggleAlwaysOnTop === LEGACY_DEFAULT_SHORTCUTS.toggleAlwaysOnTop &&
+    shortcuts.showAllHiddenWindows ===
+      LEGACY_DEFAULT_SHORTCUTS.showAllHiddenWindows &&
+    shortcuts.toggleVisibleWindows ===
+      LEGACY_DEFAULT_SHORTCUTS.toggleVisibleWindows &&
+    shortcuts.toggleAlwaysOnTop ===
+      LEGACY_DEFAULT_SHORTCUTS.toggleAlwaysOnTop &&
     shortcuts.toggleReadOnly === LEGACY_DEFAULT_SHORTCUTS.toggleReadOnly &&
     shortcuts.toggleTheme === LEGACY_DEFAULT_SHORTCUTS.toggleTheme &&
     shortcuts.hideWindow === LEGACY_DEFAULT_SHORTCUTS.hideWindow &&

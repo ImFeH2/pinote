@@ -181,7 +181,11 @@
   .pinote-window[data-pinned="true"][data-read-only="true"] {
     border-color: color-mix(
       in srgb,
-      color-mix(in srgb, var(--color-pinned-border) 50%, var(--color-readonly-border) 50%)
+      color-mix(
+          in srgb,
+          var(--color-pinned-border) 50%,
+          var(--color-readonly-border) 50%
+        )
         var(--pinote-visual-opacity-percent),
       transparent
     );
@@ -268,8 +272,8 @@
 
   .pinote-menu-title-text-scroll {
     max-width: none;
-    animation: pinote-menu-title-marquee var(--pinote-menu-title-duration, 7s) linear infinite
-      alternate;
+    animation: pinote-menu-title-marquee var(--pinote-menu-title-duration, 7s)
+      linear infinite alternate;
     will-change: transform;
   }
 

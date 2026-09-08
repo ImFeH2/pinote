@@ -21,7 +21,10 @@ export async function saveDiagnosticReport() {
     title: i18n.t("diagnostics.dialog.title", { ns: "settings" }),
     defaultPath: getDiagnosticReportFileName(),
     filters: [
-      { name: i18n.t("diagnostics.dialog.zipArchive", { ns: "settings" }), extensions: ["zip"] },
+      {
+        name: i18n.t("diagnostics.dialog.zipArchive", { ns: "settings" }),
+        extensions: ["zip"],
+      },
     ],
   });
   if (!destinationPath) return null;

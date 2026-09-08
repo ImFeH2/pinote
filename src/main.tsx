@@ -38,7 +38,9 @@ function getNoteContext() {
     ? Math.min(Math.max(rawOpacity, 0), 1)
     : undefined;
   return {
-    noteId: rawNoteId ? normalizeNoteId(rawNoteId) : getNoteIdFromPath(notePath),
+    noteId: rawNoteId
+      ? normalizeNoteId(rawNoteId)
+      : getNoteIdFromPath(notePath),
     notePath,
     initialOpacity,
   };
@@ -59,7 +61,9 @@ function getContextMenuContext() {
     notePath,
     anchorX: Number.isFinite(rawAnchorX) ? rawAnchorX : 0,
     anchorY: Number.isFinite(rawAnchorY) ? rawAnchorY : 0,
-    noteOpacity: Number.isFinite(rawOpacity) ? Math.min(Math.max(rawOpacity, 0), 1) : 1,
+    noteOpacity: Number.isFinite(rawOpacity)
+      ? Math.min(Math.max(rawOpacity, 0), 1)
+      : 1,
     noteReadOnly: params.get("noteReadOnly") === "true",
     maximized: params.get("maximized") === "true",
   };
@@ -145,7 +149,9 @@ function Root() {
 
 async function bootstrap() {
   await ensureSettingsStoreReady();
-  const locale = await resolveAppLocale(getSettingsSnapshot()?.language ?? "system");
+  const locale = await resolveAppLocale(
+    getSettingsSnapshot()?.language ?? "system",
+  );
   await initializeI18n(locale);
   document.documentElement.lang = locale;
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

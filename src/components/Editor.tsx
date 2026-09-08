@@ -13,7 +13,12 @@ import { trailing } from "@milkdown/kit/plugin/trailing";
 import { commonmark } from "@milkdown/kit/preset/commonmark";
 import { gfm } from "@milkdown/kit/preset/gfm";
 import { TextSelection } from "@milkdown/kit/prose/state";
-import { Milkdown, MilkdownProvider, useEditor, useInstance } from "@milkdown/react";
+import {
+  Milkdown,
+  MilkdownProvider,
+  useEditor,
+  useInstance,
+} from "@milkdown/react";
 import { nord } from "@milkdown/theme-nord";
 import { type CSSProperties, useCallback, useEffect, useRef } from "react";
 import "@milkdown/theme-nord/style.css";
@@ -77,19 +82,20 @@ function EditorInner({ defaultValue, readOnly, onChange }: EditorInnerProps) {
       const editor = getInstance();
       if (!editor) return;
 
-      const target = e.target as HTMLElement;
-      if (target.closest(".ProseMirror")) return;
-
       editor.action((ctx) => {
         const view = ctx.get(editorViewCtx);
         const editorDom = view.dom as HTMLElement;
         const contentBottom = editorDom.getBoundingClientRect().bottom;
         const clickY = e.clientY;
 
-        if (clickY <= contentBottom) return;
+        if (e.detail !== 0 && clickY <= contentBottom) return;
 
-        const lineHeight = parseFloat(getComputedStyle(editorDom).lineHeight) || 20;
-        const linesToAdd = Math.max(1, Math.ceil((clickY - contentBottom) / lineHeight));
+        const lineHeight =
+          parseFloat(getComputedStyle(editorDom).lineHeight) || 20;
+        const linesToAdd =
+          e.detail === 0
+            ? 1
+            : Math.max(1, Math.ceil((clickY - contentBottom) / lineHeight));
 
         const { state, dispatch } = view;
         const { schema } = state;
@@ -109,8 +115,15 @@ function EditorInner({ defaultValue, readOnly, onChange }: EditorInnerProps) {
   );
 
   return (
-    <div className="mx-1 flex min-h-0 flex-1 cursor-text flex-col" onClick={handleContainerClick}>
+    <div className="mx-1 flex min-h-0 flex-1 cursor-text flex-col">
       <Milkdown />
+      <button
+        type="button"
+        aria-label="Add paragraph"
+        disabled={readOnly || loading}
+        onClick={handleContainerClick}
+        className="min-h-6 flex-1 cursor-text border-0 bg-transparent p-0 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+      />
     </div>
   );
 }
@@ -156,7 +169,7 @@ export function Editor({
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
-  }, [defaultValue, initialScrollTop]);
+  }, [initialScrollTop]);
 
   return (
     <div
@@ -166,7 +179,11 @@ export function Editor({
       style={style}
     >
       <MilkdownProvider>
-        <EditorInner defaultValue={defaultValue} readOnly={readOnly} onChange={onChange} />
+        <EditorInner
+          defaultValue={defaultValue}
+          readOnly={readOnly}
+          onChange={onChange}
+        />
       </MilkdownProvider>
     </div>
   );

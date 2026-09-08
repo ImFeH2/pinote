@@ -39,7 +39,9 @@ export function ShortcutsSection({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
-        <div className="text-xs font-medium text-muted-foreground">{t("shortcuts.keyboard")}</div>
+        <div className="text-xs font-medium text-muted-foreground">
+          {t("shortcuts.keyboard")}
+        </div>
         {shortcutItems.map((item) => (
           <ShortcutInput
             key={item.key}
@@ -50,17 +52,25 @@ export function ShortcutsSection({
               globalShortcutKeys.includes(item.key as GlobalShortcutKey) ? (
                 <span
                   title={
-                    globalShortcutRegistration[item.key as GlobalShortcutKey] === true
+                    globalShortcutRegistration[
+                      item.key as GlobalShortcutKey
+                    ] === true
                       ? t("shortcuts.global.registered")
-                      : globalShortcutRegistration[item.key as GlobalShortcutKey] === false
+                      : globalShortcutRegistration[
+                            item.key as GlobalShortcutKey
+                          ] === false
                         ? t("shortcuts.global.notRegistered")
                         : t("shortcuts.global.checking")
                   }
                   className={cn(
                     "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium",
-                    globalShortcutRegistration[item.key as GlobalShortcutKey] === true
+                    globalShortcutRegistration[
+                      item.key as GlobalShortcutKey
+                    ] === true
                       ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                      : globalShortcutRegistration[item.key as GlobalShortcutKey] === false
+                      : globalShortcutRegistration[
+                            item.key as GlobalShortcutKey
+                          ] === false
                         ? "border-destructive/40 bg-destructive/10 text-destructive"
                         : "border-border bg-background/60 text-muted-foreground",
                   )}
@@ -68,9 +78,13 @@ export function ShortcutsSection({
                   <span
                     className={cn(
                       "h-1.5 w-1.5 rounded-full",
-                      globalShortcutRegistration[item.key as GlobalShortcutKey] === true
+                      globalShortcutRegistration[
+                        item.key as GlobalShortcutKey
+                      ] === true
                         ? "bg-emerald-500"
-                        : globalShortcutRegistration[item.key as GlobalShortcutKey] === false
+                        : globalShortcutRegistration[
+                              item.key as GlobalShortcutKey
+                            ] === false
                           ? "bg-destructive"
                           : "bg-muted-foreground/50",
                     )}
@@ -81,7 +95,9 @@ export function ShortcutsSection({
             }
           />
         ))}
-        {shortcutError && <div className="text-xs text-destructive">{shortcutError}</div>}
+        {shortcutError && (
+          <div className="text-xs text-destructive">{shortcutError}</div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 rounded-md border border-border bg-background/60 p-3">
@@ -93,7 +109,9 @@ export function ShortcutsSection({
             <button
               key={option.value}
               type="button"
-              onClick={() => updateSettings({ wheelResizeModifier: option.value })}
+              onClick={() =>
+                updateSettings({ wheelResizeModifier: option.value })
+              }
               className={cn(
                 "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
                 settings.wheelResizeModifier === option.value
@@ -121,7 +139,9 @@ export function ShortcutsSection({
             <button
               key={option.value}
               type="button"
-              onClick={() => updateSettings({ wheelOpacityModifier: option.value })}
+              onClick={() =>
+                updateSettings({ wheelOpacityModifier: option.value })
+              }
               className={cn(
                 "flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors",
                 settings.wheelOpacityModifier === option.value
@@ -186,7 +206,9 @@ export function ShortcutsSection({
           {t("shortcuts.currentInteractions.alwaysOnTop")}
         </div>
         <div className="text-xs text-muted-foreground">
-          {t("shortcuts.currentInteractions.move", { button: t(activeDragMouseButton.labelKey) })}
+          {t("shortcuts.currentInteractions.move", {
+            button: t(activeDragMouseButton.labelKey),
+          })}
         </div>
         <div className="text-xs text-muted-foreground">
           {t("shortcuts.currentInteractions.rightClick")}

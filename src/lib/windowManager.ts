@@ -28,10 +28,13 @@ interface OpenAndTrackNoteWindowOptions {
   centerOnCreate?: boolean;
 }
 
-export async function openAndTrackNoteWindow(options: OpenAndTrackNoteWindowOptions = {}) {
+export async function openAndTrackNoteWindow(
+  options: OpenAndTrackNoteWindowOptions = {},
+) {
   const inputPath = options.notePath?.trim() ?? "";
   let nextNoteId = normalizeNoteId(
-    options.noteId?.trim() || (inputPath ? getNoteIdFromPath(inputPath) : undefined),
+    options.noteId?.trim() ||
+      (inputPath ? getNoteIdFromPath(inputPath) : undefined),
   );
   let nextNotePath = inputPath;
   if (!nextNotePath) {
