@@ -7,19 +7,6 @@ repository = "https://github.com/ImFeH2/pinote"
 license = "Apache-2.0"
 edition = "2024"
 
-[package.metadata.release]
-tag-prefix = ""
-tag-name = "v{{version}}"
-tag-message = "Release {{version}}"
-pre-release-commit-message = "chore: release Pinote v{{version}}"
-sign-commit = true
-sign-tag = true
-publish = false
-pre-release-replacements = [
-  { file = "tauri.conf.json", search = "\"version\": \"[^\"]+\"", replace = "\"version\": \"{{version}}\"", exactly = 1 },
-  { file = "../package.json", search = "\"version\": \"[^\"]+\"", replace = "\"version\": \"{{version}}\"", exactly = 1 },
-]
-
 [lib]
 crate-type = ["cdylib", "rlib", "staticlib"]
 # The `_lib` suffix may seem redundant but it is necessary
