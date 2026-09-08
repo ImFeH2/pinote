@@ -76,7 +76,6 @@ jobs:
           releaseName: Pinote ${{ github.ref_name }}
           releaseBody: See the assets below to download Pinote for your platform.
           releaseDraft: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
           uploadUpdaterJson: true
 
   publish:
@@ -97,7 +96,6 @@ jobs:
   winget:
     name: Publish to WinGet
     needs: publish
-    if: ${{ !contains(github.ref_name, '-') }}
     runs-on: windows-latest
 
     steps:
