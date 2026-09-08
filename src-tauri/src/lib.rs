@@ -975,7 +975,7 @@ async fn bring_note_windows_back_on_screen(app: tauri::AppHandle) -> Result<usiz
 async fn get_open_with_pinote_enabled() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
-        return Ok(is_open_with_pinote_enabled());
+        Ok(is_open_with_pinote_enabled())
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -991,7 +991,7 @@ async fn set_open_with_pinote_enabled(
     #[cfg(target_os = "windows")]
     {
         set_open_with_pinote_enabled_windows(&app, enabled)?;
-        return Ok(is_open_with_pinote_enabled());
+        Ok(is_open_with_pinote_enabled())
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -1005,7 +1005,7 @@ async fn set_open_with_pinote_enabled(
 async fn get_default_markdown_open_enabled() -> Result<bool, String> {
     #[cfg(target_os = "windows")]
     {
-        return Ok(is_default_markdown_open_enabled_windows());
+        Ok(is_default_markdown_open_enabled_windows())
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -1021,7 +1021,7 @@ async fn set_default_markdown_open_enabled(
     #[cfg(target_os = "windows")]
     {
         set_default_markdown_open_enabled_windows(&app, enabled)?;
-        return Ok(is_default_markdown_open_enabled_windows());
+        Ok(is_default_markdown_open_enabled_windows())
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -1035,11 +1035,11 @@ async fn set_default_markdown_open_enabled(
 fn get_runtime_platform() -> &'static str {
     #[cfg(target_os = "windows")]
     {
-        return "windows";
+        "windows"
     }
     #[cfg(target_os = "macos")]
     {
-        return "macos";
+        "macos"
     }
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     {
