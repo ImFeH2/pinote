@@ -1,14 +1,15 @@
 pre-commit:
   fail_on_changes: always
+  parallel: true
   jobs:
-    - name: format
-      run: pnpm format:check
+    - name: config
+      run: pnpm format:config:check && pnpm check:config
 
-    - name: check
-      run: pnpm check
+    - name: web
+      run: pnpm format:web:check && pnpm check:web && pnpm test:web
 
-    - name: test
-      run: pnpm test
+    - name: rust
+      run: pnpm format:rust:check && pnpm check:rust && pnpm test:rust
 
 commit-msg:
   jobs:
