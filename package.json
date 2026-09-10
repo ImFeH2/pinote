@@ -24,7 +24,7 @@
     "format:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml",
     "format:rust:check": "cargo fmt --manifest-path src-tauri/Cargo.toml --check",
     "check": "pnpm check:config && pnpm check:web && pnpm check:rust",
-    "check:config": "tombi lint --offline",
+    "check:config": "tombi lint --offline && actionlint && pnpm exec lefthook validate",
     "check:web": "biome check --formatter-enabled=false src && pnpm typecheck",
     "check:web:write": "biome check --formatter-enabled=false --write src",
     "check:rust": "cargo clippy --manifest-path src-tauri/Cargo.toml --locked -- -D warnings",
